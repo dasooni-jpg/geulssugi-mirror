@@ -1,6 +1,4 @@
 $root = Join-Path $PSScriptRoot "app"
-$dataDir = Join-Path $PSScriptRoot "data"
-if (-not (Test-Path $dataDir)) { New-Item -ItemType Directory -Path $dataDir | Out-Null }
 
 # ── 사용할 Claude 모델 (교실 비용을 줄이려면 "claude-haiku-4-5" 로 바꾸세요) ──
 $MODEL = "claude-opus-4-8"
@@ -26,12 +24,6 @@ function Send-Json($ctx, $obj, $status=200) {
   $ctx.Response.ContentType = "application/json; charset=utf-8"
   $ctx.Response.ContentLength64 = $bytes.Length
   $ctx.Response.OutputStream.Write($bytes, 0, $bytes.Length)
-}
-
-# ── 안전한 파일 이름(학생 별명 → 파일) ──
-function Safe-Name($s) {
-  if ([string]::IsNullOrWhiteSpace($s)) { return "이름없음" }
-  return ($s -replace '[^\p{L}\p{Nd}_-]', '_')
 }
 
 # ── API 키 찾기 (환경변수 우선, 없으면 apikey.txt) ──
@@ -107,23 +99,6 @@ while ($listener.IsListening) {
       $d = Read-Body $ctx | ConvertFrom-Json
       $fb = Get-AIFeedback $d.text $d.reader
       Send-Json $ctx $fb
-    }
-    elseif ($path -eq "/api/submit" -and $method -eq "POST") {
-      $raw = Read-Body $ctx
-      $d = $raw | ConvertFrom-Json
-      $name = Safe-Name $d.nick
-      $stamp = (Get-Date).ToString("yyyy-MM-ddTHH:mm:ss")
-      $record = $d | Add-Member -NotePropertyName submittedAt -NotePropertyValue $stamp -PassThru -Force
-      $file = Join-Path $dataDir ($name + ".json")
-      ($record | ConvertTo-Json -Depth 15) | Out-File -FilePath $file -Encoding utf8
-      Send-Json $ctx @{ ok = $true; name = $name }
-    }
-    elseif ($path -eq "/api/submissions" -and $method -eq "GET") {
-      $list = @()
-      Get-ChildItem -Path $dataDir -Filter "*.json" -File | ForEach-Object {
-        try { $list += (Get-Content $_.FullName -Raw -Encoding utf8 | ConvertFrom-Json) } catch {}
-      }
-      Send-Json $ctx @{ ok = $true; students = $list }
     }
     else {
       # 정적 파일

@@ -127,6 +127,18 @@
   .modal{background:#fff;border-radius:22px;padding:26px;max-width:380px;text-align:center}
   .modal .e{font-size:54px}
   .modal h3{margin:6px 0}
+
+  /* 선생님께 보여주기 전체 화면 */
+  .showcase-bg{position:fixed;inset:0;background:rgba(45,42,69,.55);display:none;
+    align-items:flex-start;justify-content:center;padding:20px;z-index:60;overflow:auto}
+  .showcase-bg.show{display:flex}
+  .showcase{background:#fff;border-radius:22px;padding:24px;max-width:760px;width:100%;
+    box-shadow:var(--shadow);position:relative;margin:auto}
+  .sc-close{position:sticky;top:0;float:right;border:none;background:#f1eeff;color:var(--brand-d);
+    font-weight:800;border-radius:12px;padding:8px 14px;cursor:pointer;font-family:inherit;font-size:15px}
+  .sc-check{font-size:15px;margin:4px 0}
+  .sc-badge{display:inline-block;background:#f1eeff;color:var(--brand-d);font-weight:700;
+    border-radius:12px;padding:6px 12px;font-size:13px;margin:0 6px 6px 0}
 </style>
 </head>
 <body>
@@ -248,7 +260,8 @@
       <textarea id="reflect" placeholder="예) 다시 읽으니 빠진 내용이 보였다."></textarea>
       <div class="row">
         <button class="btn primary" onclick="finishReflect()">돌아보기 완성!</button>
-        <button class="btn ghost" onclick="submitToTeacher()">👩‍🏫 선생님께 제출하기</button>
+        <button class="btn ghost" onclick="showcase()">👩‍🏫 선생님께 보여주기</button>
+        <button class="btn ghost" onclick="exportFile()">⬇ 파일로 내보내기</button>
         <span class="savetag" id="save3"></span>
       </div>
     </div>
@@ -260,8 +273,8 @@
   </section>
 
   <div style="text-align:center;color:var(--muted);font-size:12px;margin-top:10px">
-    프로토타입 v0.2 · 내 글은 이 기기에 저장돼요 · 제출하면 선생님만 볼 수 있어요<br>
-    <a href="teacher.html" style="color:var(--brand-d)">👩‍🏫 선생님 대시보드</a>
+    프로토타입 v0.3 · 내 글은 <b>이 기기에만</b> 저장돼요 (서버로 전송 안 함)<br>
+    선생님께는 <b>화면으로 보여주거나</b> 파일로 전달해요
   </div>
 </div>
 
@@ -278,6 +291,14 @@
     <h3 id="mTitle">배지 획득!</h3>
     <p id="mDesc"></p>
     <button class="btn primary wide" onclick="closeModal()">좋아요!</button>
+  </div>
+</div>
+
+<!-- 선생님께 보여주기 (전체 화면 요약) -->
+<div class="showcase-bg" id="showcaseBg" onclick="closeShowcase()">
+  <div class="showcase" onclick="event.stopPropagation()">
+    <button class="sc-close" onclick="closeShowcase()">✕ 닫기</button>
+    <div id="scBody"></div>
   </div>
 </div>
 
@@ -475,20 +496,51 @@ function finishReflect(){
   renderBadges();
 }
 
-/* ---------- 선생님께 제출 ---------- */
-async function submitToTeacher(){
-  const tag=$('save3');
-  if(!(state.nick||'').trim()){ tag.style.color='var(--yellow)'; tag.textContent='먼저 별명을 적어주세요!'; return; }
-  tag.style.color='var(--muted)'; tag.textContent='제출 중…';
-  try{
-    const r=await fetch('/api/submit',{
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify(state)
-    });
-    if(r.ok){ tag.style.color='var(--green)'; tag.textContent='선생님께 제출했어요! ✓'; }
-    else { throw new Error('fail'); }
-  }catch(e){ tag.style.color='var(--yellow)'; tag.textContent='제출 실패(서버 확인 필요)'; }
-  setTimeout(()=>{tag.textContent='';tag.style.color='var(--green)';},2500);
+/* ---------- 선생님께 보여주기 (전송·저장 없음, 내 기기 화면만) ---------- */
+const SC_CHECKS=[
+  "읽는 사람과 목적을 생각하며 썼다",
+  "처음·가운데·끝이 있도록 썼다",
+  "다시 읽고 고칠 곳을 스스로 찾았다",
+  "내가 무엇을 왜 고쳤는지 설명할 수 있다"
+];
+function showcase(){
+  const s=state;
+  const fb=s.feedback;
+  const badgeNames={mirror:'🪞 거울 탐험가',reviser:'✍️ 고쳐쓰기 작가',reviewer:'🌱 성장하는 작가',thinker:'💡 생각하는 작가'};
+  const badges=Object.keys(s.badges||{}).map(k=>badgeNames[k]).filter(Boolean);
+  const checksHtml=SC_CHECKS.map((q,i)=>`<div class="sc-check">${s.checks&&s.checks[i]?'✅':'⬜'} ${q}</div>`).join('');
+  $('scBody').innerHTML=`
+    <h2 style="margin:0 0 4px">🪞 ${esc(s.nick)||'학생'}의 글쓰기 과정</h2>
+    <p class="hint" style="margin:0 0 16px">종류 ${esc(s.genre)||'-'} · 읽는 사람 ${esc(s.reader)||'-'} · 목적 ${esc(s.purpose)||'-'}</p>
+    <div class="compare">
+      <div class="col"><h3>📄 처음 쓴 글</h3><div class="doc">${esc(s.draft)||'(없음)'}</div></div>
+      <div class="col"><h3>✨ 고쳐 쓴 글</h3><div class="doc">${esc(s.revised)||'(없음)'}</div></div>
+    </div>
+    ${s.changeNote?`<div class="selfq" style="margin-top:14px"><b>🔧 무엇을·왜 고쳤나</b>${esc(s.changeNote)}</div>`:''}
+    ${fb?`<div style="margin-top:14px">
+      <div class="fbcard fb-green"><h4>🟢 잘한 점</h4><p>${esc(fb.green)}</p></div>
+      <div class="fbcard fb-yellow"><h4>🟡 다시 볼 곳</h4><p>${esc(fb.yellow)}</p></div>
+      <div class="fbcard fb-blue"><h4>🔵 생각해 볼 질문</h4><p>${esc(fb.blue)}</p></div>
+    </div>`:''}
+    ${s.reflect?`<div class="selfq" style="margin-top:14px"><b>🌱 가장 크게 배운 점</b>${esc(s.reflect)}</div>`:''}
+    <div style="margin-top:14px"><b style="font-size:14px">✅ 스스로 평가</b>${checksHtml}</div>
+    ${badges.length?`<div style="margin-top:14px"><b style="font-size:14px">🏅 모은 배지</b><div style="margin-top:6px">${badges.map(b=>`<span class="sc-badge">${b}</span>`).join('')}</div></div>`:''}
+  `;
+  $('showcaseBg').classList.add('show');
+}
+function closeShowcase(){ $('showcaseBg').classList.remove('show'); }
+function esc(t){ return (t==null?'':String(t)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* ---------- 파일로 내보내기 (선생님께 파일로 전달용) ---------- */
+function exportFile(){
+  const name=(state.nick||'학생').trim()||'학생';
+  const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download='글쓰기거울_'+name+'.json'; document.body.appendChild(a); a.click();
+  a.remove(); URL.revokeObjectURL(url);
+  const tag=$('save3'); tag.style.color='var(--green)'; tag.textContent='파일을 저장했어요! ✓';
+  setTimeout(()=>{tag.textContent='';},2500);
 }
 
 /* ---------- 배지 ---------- */
