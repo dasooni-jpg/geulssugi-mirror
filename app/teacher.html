@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>글쓰기 거울 — 선생님 대시보드</title>
+<style>
+  :root{
+    --bg:#f5f3ff; --card:#fff; --ink:#2d2a45; --muted:#7b7894;
+    --brand:#7c6cf0; --brand-d:#5b49d6;
+    --green:#3fae72; --green-bg:#e7f7ee; --yellow:#e0a52e; --yellow-bg:#fdf4e0;
+    --blue:#3d8fe0; --blue-bg:#e7f1fc; --line:#eceaf6; --radius:20px; --shadow:0 8px 28px rgba(91,73,214,.10);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;line-height:1.6}
+  .wrap{max-width:1000px;margin:0 auto;padding:20px 16px 80px}
+  header{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+  header .logo{font-size:30px}
+  header h1{margin:0;font-size:20px;font-weight:800}
+  header p{margin:0;font-size:13px;color:var(--muted)}
+  header .actions{margin-left:auto;display:flex;gap:8px}
+  .btn{border:none;border-radius:14px;padding:10px 16px;font-weight:700;font-size:14px;
+    cursor:pointer;font-family:inherit}
+  .btn.primary{background:linear-gradient(135deg,var(--brand),var(--brand-d));color:#fff}
+  .btn.ghost{background:#f1eeff;color:var(--brand-d)}
+
+  /* 학급 현황 */
+  .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px}
+  @media(max-width:680px){.stats{grid-template-columns:repeat(2,1fr)}}
+  .stat{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;text-align:center}
+  .stat .n{font-size:26px;font-weight:800;color:var(--brand-d)}
+  .stat .l{font-size:12px;color:var(--muted)}
+
+  /* 진행 단계 분포 */
+  .progress-card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;margin-bottom:18px}
+  .progress-card h2{margin:0 0 12px;font-size:16px}
+  .stage-row{display:flex;align-items:center;gap:10px;margin:6px 0}
+  .stage-row .name{width:90px;font-size:13px;font-weight:700}
+  .bar{flex:1;background:#f1eeff;border-radius:10px;height:18px;overflow:hidden}
+  .bar > span{display:block;height:100%;background:linear-gradient(90deg,var(--brand),var(--brand-d))}
+  .stage-row .cnt{width:40px;text-align:right;font-size:13px;color:var(--muted)}
+
+  /* 학생 카드 */
+  .student{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);
+    padding:18px;margin-bottom:14px}
+  .student .head{display:flex;align-items:center;gap:10px;cursor:pointer}
+  .student .head .nick{font-size:17px;font-weight:800}
+  .student .head .badge-mini{font-size:14px}
+  .student .head .meta{margin-left:auto;font-size:12px;color:var(--muted)}
+  .student .body{display:none;margin-top:14px}
+  .student.open .body{display:block}
+  .planrow{font-size:13px;color:var(--muted);margin-bottom:10px}
+  .planrow b{color:var(--ink)}
+  .compare{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:640px){.compare{grid-template-columns:1fr}}
+  .doc{background:#faf9ff;border:2px solid var(--line);border-radius:12px;padding:12px;font-size:14px;white-space:pre-wrap;min-height:80px}
+  .doc h4{margin:0 0 6px;font-size:13px;color:var(--muted)}
+  .note{margin-top:10px;background:var(--yellow-bg);border-radius:12px;padding:10px 12px;font-size:14px}
+  .note b{color:var(--yellow)}
+  .reflect{margin-top:8px;background:var(--blue-bg);border-radius:12px;padding:10px 12px;font-size:14px}
+  .reflect b{color:var(--blue)}
+  .fbbox{margin-top:10px;border:2px solid var(--line);border-radius:12px;padding:10px 12px}
+  .fbbox h4{margin:0 0 8px;font-size:13px}
+  .fbbox .tag{font-size:11px;font-weight:700;padding:2px 8px;border-radius:8px;margin-left:6px}
+  .fbbox .tag.ai{background:var(--brand);color:#fff}
+  .fbbox .tag.rule{background:#e9e6f6;color:var(--muted)}
+  .mini{font-size:13px;border-radius:8px;padding:6px 10px;margin-top:6px}
+  .mini.g{background:var(--green-bg)} .mini.y{background:var(--yellow-bg)} .mini.b{background:var(--blue-bg)}
+  .checks{margin-top:8px;font-size:13px;color:var(--muted)}
+  .empty{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);
+    padding:40px 20px;text-align:center;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">👩‍🏫</div>
+    <div>
+      <h1>선생님 대시보드</h1>
+      <p>글쓰기 거울 · 학생들이 제출한 글쓰기 과정을 한눈에</p>
+    </div>
+    <div class="actions">
+      <button class="btn ghost" onclick="load()">새로고침</button>
+      <button class="btn ghost" onclick="exportCSV()">⬇ CSV 내보내기</button>
+      <a class="btn primary" href="index.html" style="text-decoration:none">학생 화면 열기</a>
+    </div>
+  </header>
+
+  <div class="stats" id="stats"></div>
+  <div class="progress-card">
+    <h2>📊 단계별 진행 현황</h2>
+    <div id="stages"></div>
+  </div>
+
+  <h2 style="font-size:16px;margin:0 0 10px">🧑‍🎓 학생별 제출물</h2>
+  <div id="students"></div>
+</div>
+
+<script>
+const STAGES=[
+  {key:'plan', name:'계획하기'},
+  {key:'draft', name:'초고'},
+  {key:'feedback', name:'AI 피드백'},
+  {key:'revise', name:'고쳐쓰기'},
+  {key:'reflect', name:'돌아보기'}
+];
+const CHECKS=[
+  "읽는 사람·목적 생각","처음·가운데·끝","스스로 고칠 곳 찾기","왜 고쳤는지 설명"
+];
+
+function stageOf(s){
+  if(s.reflect && s.reflect.trim()) return 4;
+  if(s.changeNote && s.changeNote.trim() || (s.revised && s.revised!==s.draft)) return 3;
+  if(s.feedbackDone) return 2;
+  if(s.draft && s.draft.trim().length>10) return 1;
+  return 0;
+}
+function esc(t){ return (t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+let allStudents=[];
+async function load(){
+  let students=[];
+  try{
+    const r=await fetch('/api/submissions');
+    const d=await r.json();
+    if(d.ok) students=d.students||[];
+  }catch(e){}
+  allStudents=students;
+
+  const stEl=document.getElementById('students');
+  if(students.length===0){
+    document.getElementById('stats').innerHTML='';
+    document.getElementById('stages').innerHTML='';
+    stEl.innerHTML='<div class="empty">아직 제출한 학생이 없어요. 학생이 ‘돌아보기 → 선생님께 제출하기’를 누르면 여기에 나타나요.</div>';
+    return;
+  }
+
+  // 통계
+  const total=students.length;
+  const badgeCount=students.reduce((a,s)=>a+Object.keys(s.badges||{}).length,0);
+  const revisedCount=students.filter(s=>s.revised && s.revised!==s.draft).length;
+  const notedCount=students.filter(s=>s.changeNote && s.changeNote.trim()).length;
+  const doneCount=students.filter(s=>stageOf(s)===4).length;
+  document.getElementById('stats').innerHTML=[
+    {n:total,l:'제출한 학생'},
+    {n:doneCount,l:'끝까지 완료'},
+    {n:revisedCount,l:'고쳐쓴 학생'},
+    {n:notedCount,l:'수정 메모 작성'},
+    {n:badgeCount,l:'모은 배지 합계'}
+  ].map(x=>`<div class="stat"><div class="n">${x.n}</div><div class="l">${x.l}</div></div>`).join('');
+
+  // 단계 분포
+  const dist=[0,0,0,0,0];
+  students.forEach(s=>{ dist[stageOf(s)]++; });
+  document.getElementById('stages').innerHTML=STAGES.map((st,i)=>{
+    const c=dist[i]; const pct=total?Math.round(c/total*100):0;
+    return `<div class="stage-row"><div class="name">${st.name}</div>
+      <div class="bar"><span style="width:${pct}%"></span></div>
+      <div class="cnt">${c}명</div></div>`;
+  }).join('');
+
+  // 학생 카드
+  stEl.innerHTML=students.map((s,idx)=>{
+    const stage=stageOf(s);
+    const badges=Object.keys(s.badges||{}).length;
+    const checks=(s.checks)?Object.values(s.checks).filter(Boolean).length:0;
+    return `<div class="student" id="st${idx}">
+      <div class="head" onclick="document.getElementById('st${idx}').classList.toggle('open')">
+        <span class="nick">${esc(s.nick)||'이름없음'}</span>
+        <span class="badge-mini">${'🏅'.repeat(badges)||'—'}</span>
+        <span class="meta">${STAGES[stage].name} 단계 · 제출 ${esc(s.submittedAt||'')}</span>
+      </div>
+      <div class="body">
+        <div class="planrow">
+          <b>종류</b> ${esc(s.genre)||'-'} &nbsp;·&nbsp;
+          <b>읽는 사람</b> ${esc(s.reader)||'-'} &nbsp;·&nbsp;
+          <b>목적</b> ${esc(s.purpose)||'-'}
+        </div>
+        <div class="compare">
+          <div class="doc"><h4>📄 초고</h4>${esc(s.draft)||'(없음)'}</div>
+          <div class="doc"><h4>✨ 고쳐 쓴 글</h4>${esc(s.revised)||'(없음)'}</div>
+        </div>
+        ${s.changeNote?`<div class="note"><b>🔧 무엇을·왜 고쳤나:</b> ${esc(s.changeNote)}</div>`:''}
+        ${s.reflect?`<div class="reflect"><b>🌱 배운 점:</b> ${esc(s.reflect)}</div>`:''}
+        ${s.feedback?`<div class="fbbox">
+          <h4>🪞 받은 AI 피드백<span class="tag ${s.feedback.source==='ai'?'ai':'rule'}">${s.feedback.source==='ai'?'Claude AI':'규칙 기반'}</span></h4>
+          <div class="mini g">🟢 ${esc(s.feedback.green)}</div>
+          <div class="mini y">🟡 ${esc(s.feedback.yellow)}</div>
+          <div class="mini b">🔵 ${esc(s.feedback.blue)}</div>
+        </div>`:''}
+        <div class="checks">✅ 자기평가 ${checks}/${CHECKS.length} 항목 체크</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ---------- CSV 내보내기 (엑셀에서 한글 정상) ---------- */
+function csvCell(v){ return '"'+String(v==null?'':v).replace(/"/g,'""')+'"'; }
+function exportCSV(){
+  if(!allStudents.length){ alert('내보낼 제출물이 없어요.'); return; }
+  const headers=['별명','단계','제출시각','글종류','읽는사람','목적','초고','고쳐쓴글',
+    '수정메모','배운점','자기평가(체크수)','배지수','피드백출처','AI_잘한점','AI_다시볼곳','AI_생각해볼질문'];
+  const rows=allStudents.map(s=>{
+    const fb=s.feedback||{};
+    const checks=s.checks?Object.values(s.checks).filter(Boolean).length:0;
+    const badges=Object.keys(s.badges||{}).length;
+    const src=fb.source==='ai'?'Claude AI':(fb.green?'규칙 기반':'');
+    return [s.nick, STAGES[stageOf(s)].name, s.submittedAt, s.genre, s.reader, s.purpose,
+      s.draft, s.revised, s.changeNote, s.reflect, checks+'/'+CHECKS.length, badges,
+      src, fb.green, fb.yellow, fb.blue].map(csvCell).join(',');
+  });
+  const csv=String.fromCharCode(0xFEFF)+headers.map(csvCell).join(',')+'\r\n'+rows.join('\r\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download='글쓰기거울_제출물.csv'; document.body.appendChild(a); a.click();
+  a.remove(); URL.revokeObjectURL(url);
+}
+load();
+</script>
+</body>
+</html>
