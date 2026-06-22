@@ -2,17 +2,15 @@
  * 글쓰기 거울 — Cloudflare Worker (AI 피드백 중간 심부름꾼)
  * ──────────────────────────────────────────────────────────
  * 이 코드를 Cloudflare Workers에 붙여넣고 배포하면,
- * 웹(GitHub Pages)에서도 진짜 Claude AI 피드백이 작동합니다.
+ * 웹(GitHub Pages)에서도 진짜 AI 피드백이 작동합니다.
  *
- * 설정에서 넣어야 할 값(둘 다 Cloudflare 대시보드에서):
- *   - ANTHROPIC_API_KEY : (필수, Secret) Anthropic API 키
- *   - MODEL             : (선택) 모델 이름. 안 넣으면 claude-haiku-4-5 사용(저렴)
+ * 설정에서 넣어야 할 값(Cloudflare 대시보드 → Settings → Variables and Secrets):
+ *   - GEMINI_API_KEY : (필수, Secret) Google AI Studio에서 받은 API 키
+ *   - MODEL          : (선택) 모델 이름. 안 넣으면 gemini-2.0-flash 사용(무료)
  *
- * ⚠️ 비용 보호: Anthropic 콘솔에서 '월 사용 한도(spend limit)'를 꼭 설정하세요.
- *    공개 웹에서 호출되므로, 한도를 걸어두면 안심입니다.
+ * ✅ Google Gemini 무료 티어: 분당 15회, 하루 1,500회 — 교실 수업에 충분!
  */
 
-// 이 주소들에서 온 요청만 허용 (회원님 GitHub Pages 주소 + 로컬 테스트)
 const ALLOWED_ORIGINS = [
   "https://dasooni-jpg.github.io",
   "http://localhost:4173",
@@ -41,7 +39,7 @@ export default {
       }
       const readerTxt = reader && reader.trim() ? reader : "이 글을 읽을 사람";
 
-      const system =
+      const systemInstruction =
         "너는 초등학교 6학년의 글쓰기를 돕는 다정한 글쓰기 친구야.\n" +
         "규칙: (1) 절대 학생의 문장을 대신 고쳐 주거나 완성해 주지 마.\n" +
         "(2) green 에는 잘한 점 1가지를 구체적으로 칭찬해.\n" +
@@ -51,37 +49,34 @@ export default {
 
       const userMsg =
         '학생이 쓴 글:\n"""' + text + '"""\n읽는 사람: ' + readerTxt +
-        "\n위 글에 대해 green/yellow/blue 피드백을 만들어 줘.";
+        "\n위 글에 대해 green/yellow/blue 피드백을 JSON으로 만들어 줘.";
 
+      const model = env.MODEL || "gemini-2.0-flash";
       const body = {
-        model: env.MODEL || "claude-haiku-4-5",
-        max_tokens: 1024,
-        system: system,
-        messages: [{ role: "user", content: userMsg }],
-        output_config: {
-          format: {
-            type: "json_schema",
-            schema: {
-              type: "object",
-              properties: {
-                green: { type: "string" },
-                yellow: { type: "string" },
-                blue: { type: "string" },
-              },
-              required: ["green", "yellow", "blue"],
-              additionalProperties: false,
+        system_instruction: {
+          parts: [{ text: systemInstruction }],
+        },
+        contents: [{
+          parts: [{ text: userMsg }],
+        }],
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "OBJECT",
+            properties: {
+              green:  { type: "STRING" },
+              yellow: { type: "STRING" },
+              blue:   { type: "STRING" },
             },
+            required: ["green", "yellow", "blue"],
           },
         },
       };
 
-      const r = await fetch("https://api.anthropic.com/v1/messages", {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${env.GEMINI_API_KEY}`;
+      const r = await fetch(url, {
         method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-api-key": env.ANTHROPIC_API_KEY,
-          "anthropic-version": "2023-06-01",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
 
@@ -89,7 +84,7 @@ export default {
         return Response.json({ ok: false, reason: "api_" + r.status }, { headers: cors });
       }
       const data = await r.json();
-      const cardText = data.content[0].text;
+      const cardText = data.candidates[0].content.parts[0].text;
       const cards = JSON.parse(cardText);
       return Response.json(
         { ok: true, green: cards.green, yellow: cards.yellow, blue: cards.blue },

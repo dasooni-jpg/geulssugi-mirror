@@ -25,7 +25,7 @@
 
   /* 헤더 */
   header.top{display:flex;align-items:center;gap:12px;padding:6px 4px 16px;}
-  .logo{font-size:30px}
+  .mascot{width:52px;height:52px;object-fit:contain;border-radius:12px}
   .title h1{margin:0;font-size:20px;font-weight:800;letter-spacing:-.5px}
   .title p{margin:0;font-size:13px;color:var(--muted)}
   .who{margin-left:auto;display:flex;align-items:center;gap:8px}
@@ -145,9 +145,9 @@
 <div class="app">
 
   <header class="top">
-    <div class="logo">🪞</div>
+    <img src="mascot.png" alt="다람쌤" class="mascot" />
     <div class="title">
-      <h1>글쓰기 거울</h1>
+      <h1>다람쌤의 글쓰기 거울</h1>
       <p>나의 글쓰기 과정을 비춰봐요 · 6학년 1학기 5단원</p>
     </div>
     <div class="who">
@@ -308,7 +308,7 @@
    예: const AI_PROXY = "https://geulssugi-ai.이름.workers.dev";
    비워두면(""), 선생님 PC에서 server.ps1을 켰을 때만 진짜 AI가 작동하고,
    그 외에는 규칙 기반 자동 피드백으로 동작합니다. */
-const AI_PROXY = "";
+const AI_PROXY = "https://daramssam-ai.dasooni.workers.dev";
 
 /* ---------- 상태 저장 (localStorage) ---------- */
 const KEY = "geulssugi-mirror-v1";
@@ -426,7 +426,7 @@ function makeCards(text){
 
 function renderCards(c, source){
   const note = source==='ai'
-    ? '<div class="ai-note">🤖 Claude AI 글쓰기 친구의 피드백 · AI도 틀릴 수 있어요, 선생님·친구와 확인해요</div>'
+    ? '<div class="ai-note">🤖 AI 글쓰기 친구의 피드백 · AI도 틀릴 수 있어요, 선생님·친구와 확인해요</div>'
     : '<div class="ai-note">⚠️ 지금은 오프라인이라 자동 피드백을 보여줘요. 선생님·친구와 함께 확인해요.</div>';
   $('fbResult').innerHTML=`
     <div class="fbcard fb-green"><h4>🟢 잘한 점</h4><p>${c.green}</p></div>
