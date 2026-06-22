@@ -9,6 +9,7 @@
 !/README.md
 !/server.ps1
 !/apikey.txt.example
+!/cloudflare-worker.js
 !/app/
 
 # ───────────────────────────────────────────────
