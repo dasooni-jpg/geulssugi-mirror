@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#7c6cf0" />
+<title>타닥타닥 타자 — 낱말 비</title>
+<style>
+  :root{
+    --bg:#f5f3ff; --card:#ffffff; --ink:#2d2a45; --muted:#7b7894;
+    --brand:#7c6cf0; --brand-d:#5b49d6;
+    --green:#3fae72; --green-bg:#e7f7ee;
+    --yellow:#e0a52e;
+    --red:#e05a5a; --red-bg:#fdeaea;
+    --line:#eceaf6; --radius:22px; --shadow:0 8px 28px rgba(91,73,214,.10);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%}
+  body{
+    font-family:"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;
+    background:var(--bg); color:var(--ink); line-height:1.5;
+    -webkit-font-smoothing:antialiased; overflow:hidden;
+  }
+  .app{max-width:920px;margin:0 auto;padding:14px 16px;height:100%;display:flex;flex-direction:column}
+
+  /* 헤더 */
+  header.top{display:flex;align-items:center;gap:10px;padding:2px 2px 10px;flex-wrap:wrap}
+  .mascot{width:44px;height:44px;object-fit:contain;border-radius:12px}
+  .title h1{margin:0;font-size:19px;font-weight:800;letter-spacing:-.5px}
+  .title p{margin:0;font-size:12px;color:var(--muted)}
+
+  /* 상태 바 (점수/콤보/생명/타수) */
+  .hud{margin-left:auto;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .stat{text-align:center;min-width:52px}
+  .stat .v{font-size:20px;font-weight:800;line-height:1.1}
+  .stat .k{font-size:11px;color:var(--muted)}
+  .combo .v{color:var(--yellow)}
+  .combo.hot .v{color:var(--red);animation:pop .3s}
+  @keyframes pop{0%{transform:scale(1)}50%{transform:scale(1.35)}100%{transform:scale(1)}}
+  .lives{font-size:20px;letter-spacing:2px}
+
+  /* 게임장 */
+  .field{position:relative;flex:1;background:linear-gradient(180deg,#ffffff, #f0edff);
+    border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;min-height:320px}
+  .word{position:absolute;top:-40px;transform:translateX(-50%);
+    background:#fff;border:2px solid var(--brand);color:var(--brand-d);
+    font-weight:800;font-size:22px;padding:6px 14px;border-radius:14px;
+    box-shadow:0 4px 12px rgba(124,108,240,.20);white-space:nowrap;user-select:none}
+  .word .typed{color:var(--green);text-decoration:underline}
+  .word.aim{border-color:var(--green);box-shadow:0 6px 16px rgba(63,174,114,.35)}
+  .word.hard{border-color:var(--red);color:#b23b3b}
+  .word.hard.aim{border-color:var(--green)}
+  .floor{position:absolute;left:0;right:0;bottom:0;height:6px;
+    background:repeating-linear-gradient(90deg,var(--brand),var(--brand) 12px,#c9c0f7 12px,#c9c0f7 24px)}
+  .boom{position:absolute;transform:translate(-50%,-50%);font-size:26px;font-weight:800;
+    color:var(--green);pointer-events:none;animation:boom .6s ease-out forwards}
+  @keyframes boom{0%{opacity:1;transform:translate(-50%,-50%) scale(.6)}
+    100%{opacity:0;transform:translate(-50%,-140%) scale(1.3)}}
+
+  /* 입력 */
+  .inputbar{display:flex;gap:10px;align-items:center;margin-top:12px}
+  #answer{flex:1;border:2px solid var(--line);border-radius:16px;padding:14px 16px;
+    font-size:20px;font-family:inherit;color:var(--ink);background:#fff;font-weight:700}
+  #answer:focus{outline:none;border-color:var(--brand)}
+  .cpm{font-size:13px;color:var(--muted);min-width:96px;text-align:right}
+
+  /* 버튼 */
+  .btn{border:none;border-radius:16px;padding:14px 22px;font-size:16px;font-weight:800;
+    cursor:pointer;font-family:inherit;transition:.15s}
+  .btn:active{transform:scale(.97)}
+  .btn.primary{background:linear-gradient(135deg,var(--brand),var(--brand-d));color:#fff;
+    box-shadow:0 6px 16px rgba(124,108,240,.35)}
+  .btn.ghost{background:#f1eeff;color:var(--brand-d)}
+  .btn.sm{padding:9px 14px;font-size:14px}
+
+  /* 오버레이 (시작/일시정지/결과) */
+  .overlay{position:absolute;inset:0;background:rgba(245,243,255,.94);backdrop-filter:blur(4px);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+    gap:14px;padding:24px;z-index:5}
+  .overlay.hidden{display:none}
+  .overlay h2{margin:0;font-size:26px}
+  .overlay p{margin:0;color:var(--muted);font-size:15px}
+  .diffrow{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+  .chip{border:2px solid var(--line);background:#fff;border-radius:20px;padding:10px 18px;
+    font-size:15px;cursor:pointer;font-family:inherit;color:var(--muted);font-weight:700}
+  .chip.on{border-color:var(--brand);background:#f1eeff;color:var(--brand-d)}
+  .who{display:flex;gap:8px;align-items:center}
+  .who input{border:2px solid var(--line);border-radius:14px;padding:10px 14px;font-size:15px;
+    width:140px;font-family:inherit;text-align:center}
+  .who input:focus{outline:none;border-color:var(--brand)}
+
+  /* 결과 카드 */
+  .result{display:flex;gap:22px;justify-content:center;margin:4px 0}
+  .result .r{min-width:78px}
+  .result .r .rv{font-size:30px;font-weight:800;color:var(--brand-d)}
+  .result .r .rk{font-size:12px;color:var(--muted)}
+  .newrec{color:var(--yellow);font-weight:800;font-size:17px}
+
+  /* 명예의 전당 */
+  .hall{width:100%;max-width:360px;text-align:left;background:#fff;border-radius:16px;
+    padding:14px 16px;box-shadow:var(--shadow)}
+  .hall h3{margin:0 0 8px;font-size:15px}
+  .hall table{width:100%;border-collapse:collapse;font-size:14px}
+  .hall td{padding:6px 4px;border-bottom:1px solid var(--line)}
+  .hall td:last-child{text-align:right;font-weight:800;color:var(--brand-d)}
+  .hall tr.me td{color:var(--brand-d);font-weight:800}
+  .hall .rank{width:34px;color:var(--muted)}
+  .empty{color:var(--muted);font-size:13px;text-align:center;padding:10px}
+
+  .toprow{display:flex;gap:8px;align-items:center;margin-left:auto}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <img class="mascot" src="mascot.png" alt="다람쌤" onerror="this.style.display='none'"/>
+    <div class="title">
+      <h1>타닥타닥 타자 — 낱말 비 ☔</h1>
+      <p>떨어지는 낱말을 바닥에 닿기 전에 쳐서 없애요!</p>
+    </div>
+    <div class="hud">
+      <div class="stat"><div class="v" id="score">0</div><div class="k">점수</div></div>
+      <div class="stat combo" id="comboBox"><div class="v" id="combo">0</div><div class="k">콤보</div></div>
+      <div class="stat"><div class="v lives" id="lives">❤️❤️❤️</div><div class="k">생명</div></div>
+      <button class="btn ghost sm" id="pauseBtn" style="display:none">⏸ 멈춤</button>
+    </div>
+  </header>
+
+  <div class="field" id="field">
+    <div class="floor"></div>
+
+    <!-- 시작 화면 -->
+    <div class="overlay" id="startScreen">
+      <h2>낱말 비 ☔</h2>
+      <p>낱말을 입력하고 <b>엔터(↵)</b>를 누르면 펑! 하고 사라져요.<br/>바닥에 닿으면 생명이 줄어들어요. (생명 3개)</p>
+      <div class="who">별명 <input id="nick" maxlength="6" placeholder="예: 다람이"/></div>
+      <div>
+        <p style="margin-bottom:8px">난이도를 골라요</p>
+        <div class="diffrow" id="diffRow">
+          <button class="chip on" data-diff="easy">🐣 쉬움</button>
+          <button class="chip" data-diff="normal">🐿️ 보통</button>
+          <button class="chip" data-diff="hard">🦅 어려움</button>
+        </div>
+      </div>
+      <button class="btn primary" id="startBtn">시작하기 ▶</button>
+      <div class="hall" id="hallStart"></div>
+    </div>
+
+    <!-- 일시정지 -->
+    <div class="overlay hidden" id="pauseScreen">
+      <h2>잠깐 멈춤 ⏸</h2>
+      <p>계속하려면 아래 버튼을 누르거나 ESC를 눌러요.</p>
+      <button class="btn primary" id="resumeBtn">계속하기 ▶</button>
+      <button class="btn ghost" id="quitBtn">그만하기</button>
+    </div>
+
+    <!-- 결과 화면 -->
+    <div class="overlay hidden" id="endScreen">
+      <h2>게임 오버! 🎉</h2>
+      <div id="newRec" class="newrec" style="display:none">🏆 최고기록 갱신!</div>
+      <div class="result">
+        <div class="r"><div class="rv" id="rScore">0</div><div class="rk">점수</div></div>
+        <div class="r"><div class="rv" id="rCpm">0</div><div class="rk">타수(CPM)</div></div>
+        <div class="r"><div class="rv" id="rAcc">0%</div><div class="rk">정확도</div></div>
+      </div>
+      <div class="diffrow">
+        <button class="btn primary" id="retryBtn">다시하기 ▶</button>
+        <button class="btn ghost" id="homeBtn">처음으로</button>
+      </div>
+      <div class="hall" id="hallEnd"></div>
+    </div>
+  </div>
+
+  <div class="inputbar">
+    <input id="answer" autocomplete="off" autocapitalize="off" spellcheck="false"
+           placeholder="낱말을 입력하고 엔터(↵)!" disabled/>
+    <div class="cpm">타수 <b id="cpm">0</b> CPM</div>
+  </div>
+</div>
+
+<script>
+/* ================= 단어 은행 (한글 위주) ================= */
+const WORDS = {
+  easy: ["사과","학교","친구","연필","나무","바다","구름","토끼","가방","우유",
+         "김밥","축구","노래","시계","자전거","우산","달력","의자","창문","딸기",
+         "고양이","강아지","무지개","코끼리","호랑이","선생님","운동장","도서관"],
+  normal: ["광합성","분수","백분율","현미경","태양계","무중력","생태계","화산활동",
+           "민주주의","독립운동","세종대왕","훈민정음","다각형","최소공배수","소화기관",
+           "지구온난화","재활용","도전정신","협동심","집중력","호기심","창의력"],
+  hard: ["티끌모아태산","가는말이고와야오는말이곱다","백지장도맞들면낫다",
+         "천리길도한걸음부터","등잔밑이어둡다","고생끝에낙이온다","우물안개구리",
+         "지렁이도밟으면꿈틀한다","발없는말이천리간다","호랑이도제말하면온다",
+         "낮말은새가듣고밤말은쥐가듣는다","작은고추가더맵다"]
+};
+
+/* 난이도별 파라미터 */
+const CFG = {
+  easy:   { fall: 42, spawn: 1700, ramp: 0.010, mult: 1 },
+  normal: { fall: 54, spawn: 1500, ramp: 0.014, mult: 2 },
+  hard:   { fall: 46, spawn: 2200, ramp: 0.012, mult: 3 }
+};
+const HALL_KEY = "typingRain.hall.v1";
+
+/* ================= 상태 ================= */
+let diff = "easy";
+let nick = "";
+let words = [];          // {el,text,typedLen,x,y,speed,hard}
+let score=0, combo=0, maxCombo=0, lives=3;
+let correctKeys=0, totalKeys=0;   // 정확도용
+let typedChars=0;                 // 완성 낱말 글자수(타수용)
+let startTime=0, elapsedPause=0;
+let running=false, paused=false;
+let lastFrame=0, lastSpawn=0, gameTime=0;
+let rafId=null;
+
+/* ================= DOM ================= */
+const $ = s => document.querySelector(s);
+const field=$("#field"), answer=$("#answer");
+const scoreEl=$("#score"), comboEl=$("#combo"), comboBox=$("#comboBox"),
+      livesEl=$("#lives"), cpmEl=$("#cpm");
+
+/* ================= 명예의 전당 ================= */
+function loadHall(){ try{return JSON.parse(localStorage.getItem(HALL_KEY))||[]}catch(e){return[]} }
+function saveHall(list){ localStorage.setItem(HALL_KEY, JSON.stringify(list.slice(0,5))); }
+function renderHall(el, highlightIdx=-1){
+  const list = loadHall();
+  if(!list.length){ el.innerHTML = "<h3>🏆 명예의 전당</h3><div class='empty'>아직 기록이 없어요. 1등이 되어보세요!</div>"; return; }
+  const medal=["🥇","🥈","🥉","4","5"];
+  let rows = list.map((r,i)=>
+    `<tr class="${i===highlightIdx?'me':''}"><td class="rank">${medal[i]}</td><td>${esc(r.nick||'익명')}</td><td>${r.score.toLocaleString()}점 · ${r.cpm}타</td></tr>`
+  ).join("");
+  el.innerHTML = `<h3>🏆 명예의 전당</h3><table>${rows}</table>`;
+}
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* ================= 게임 로직 ================= */
+function resetState(){
+  words.forEach(w=>w.el.remove()); words=[];
+  score=0; combo=0; maxCombo=0; lives=3;
+  correctKeys=0; totalKeys=0; typedChars=0;
+  gameTime=0; lastSpawn=0; elapsedPause=0;
+  updateHUD();
+}
+function updateHUD(){
+  scoreEl.textContent = score.toLocaleString();
+  comboEl.textContent = combo;
+  comboBox.classList.toggle("hot", combo>=5);
+  livesEl.textContent = "❤️".repeat(lives) + "🤍".repeat(3-lives);
+  cpmEl.textContent = currentCPM();
+}
+function currentCPM(){
+  const mins = (performance.now()-startTime-elapsedPause)/60000;
+  if(mins<=0) return 0;
+  return Math.round(typedChars/mins);
+}
+
+function spawnWord(){
+  const pool = WORDS[diff];
+  const text = pool[Math.floor(Math.random()*pool.length)];
+  // 같은 낱말이 이미 떠 있으면 건너뜀(조준 혼동 방지)
+  if(words.some(w=>w.text===text)) return;
+  const el=document.createElement("div");
+  const isHard = text.length>=6;
+  el.className="word"+(isHard?" hard":"");
+  el.textContent=text;
+  field.appendChild(el);
+  const w=el.offsetWidth;
+  const fw=field.clientWidth;
+  const x = Math.min(Math.max(w/2+8, Math.random()*fw), fw-w/2-8);
+  el.style.left = x+"px";
+  const base = CFG[diff].fall;
+  const speed = base*(1+gameTime*CFG[diff].ramp) + Math.random()*10;
+  words.push({el,text,typedLen:0,x,y:-30,speed,hard:isHard});
+}
+
+function render(){
+  words.forEach(w=>{ w.el.style.top = w.y+"px"; });
+}
+
+function loop(ts){
+  if(!running||paused){ return; }
+  if(!lastFrame) lastFrame=ts;
+  const dt=(ts-lastFrame)/1000; lastFrame=ts; gameTime+=dt;
+
+  // 스폰
+  if(ts-lastSpawn > CFG[diff].spawn){ spawnWord(); lastSpawn=ts; }
+
+  const floorY = field.clientHeight-14;
+  for(let i=words.length-1;i>=0;i--){
+    const w=words[i];
+    w.y += w.speed*dt;
+    if(w.y>=floorY){
+      // 바닥 도달 → 생명 감소
+      w.el.remove(); words.splice(i,1);
+      loseLife();
+    }
+  }
+  render();
+  updateHUD();
+  rafId=requestAnimationFrame(loop);
+}
+
+function loseLife(){
+  lives--; combo=0;
+  answer.value="";
+  words.forEach(w=>{w.typedLen=0; repaint(w);});
+  flashField();
+  if(lives<=0){ endGame(); }
+  updateHUD();
+}
+function flashField(){
+  field.style.transition="none";
+  field.style.boxShadow="0 0 0 4px var(--red) inset, "+getComputedStyle(field).boxShadow;
+  setTimeout(()=>{ field.style.transition="box-shadow .3s"; field.style.boxShadow=""; },120);
+}
+
+/* 입력 처리: 앞부분이 일치하는 낱말을 조준 */
+function handleInput(){
+  const val = answer.value;
+  // 조준 대상: 입력값으로 시작하는 낱말 중 가장 아래(위험한) 것
+  let aim=null;
+  words.forEach(w=>{
+    if(val.length>0 && w.text.startsWith(val)){
+      if(!aim || w.y>aim.y) aim=w;
+    }
+  });
+  words.forEach(w=>{
+    w.el.classList.remove("aim");
+    const matched = aim && w===aim;
+    w.typedLen = matched ? val.length : 0;
+    if(matched){ w.el.classList.add("aim"); }
+    repaint(w);
+  });
+}
+function repaint(w){
+  if(w.typedLen>0){
+    w.el.innerHTML = "<span class='typed'>"+esc(w.text.slice(0,w.typedLen))+"</span>"+esc(w.text.slice(w.typedLen));
+  }else{
+    w.el.textContent = w.text;
+  }
+}
+function completeWord(w){
+  const idx=words.indexOf(w); if(idx>=0) words.splice(idx,1);
+  // 점수: 글자수 × 난이도배수 × (1 + 콤보/10)
+  combo++; maxCombo=Math.max(maxCombo,combo);
+  const gain = Math.round(w.text.length * CFG[diff].mult * (1+combo/10) * 10);
+  score += gain;
+  typedChars += w.text.length;
+  // 펑! 연출
+  const b=document.createElement("div");
+  b.className="boom"; b.textContent="+"+gain;
+  b.style.left=w.el.style.left; b.style.top=w.el.offsetTop+"px";
+  field.appendChild(b); setTimeout(()=>b.remove(),600);
+  w.el.remove();
+  updateHUD();
+}
+
+/* 입력 처리 (한글 IME 대응) — 조준/하이라이트만 담당 */
+let composing=false;
+answer.addEventListener("compositionstart",()=>{ composing=true; });
+answer.addEventListener("compositionend",()=>{ composing=false; handleInput(); });
+answer.addEventListener("input", ()=>{
+  // 정확도 근사: 현재 입력이 어떤 낱말의 접두사면 정타로 간주
+  totalKeys++;
+  const val=answer.value;
+  if(val.length>0 && words.some(w=>w.text.startsWith(val))) correctKeys++;
+  handleInput();
+});
+
+/* 엔터로 낱말 확정 — 조합 중이든 아니든 항상 입력창을 비운다 */
+answer.addEventListener("keyup",(e)=>{
+  if(e.key==="Enter"){ submitWord(); }
+});
+
+function submitWord(){
+  const val=answer.value.trim();
+  clearInput();                     // 입력 중인 글자는 무조건 모두 삭제
+  if(!val) return;
+  // 입력값과 정확히 같은 낱말 중 가장 아래(위험한) 것을 제거
+  let target=null;
+  words.forEach(w=>{ if(w.text===val){ if(!target||w.y>target.y) target=w; } });
+  if(target){ completeWord(target); }   // 맞으면 점수·콤보 / 틀리거나 미완성이면 그냥 지움(벌점 없음)
+  words.forEach(w=>{ w.typedLen=0; repaint(w); });
+  updateHUD();
+}
+
+/* IME 조합 잔상 없이 입력창 비우기 */
+function clearInput(){
+  answer.value="";
+  if(running && !paused){ answer.blur(); answer.focus(); }  // IME 버퍼 리셋
+}
+
+/* ================= 화면 전환 ================= */
+function show(id){ ["startScreen","pauseScreen","endScreen"].forEach(s=>$("#"+s).classList.toggle("hidden", s!==id)); }
+function hideOverlays(){ ["startScreen","pauseScreen","endScreen"].forEach(s=>$("#"+s).classList.add("hidden")); }
+
+function startGame(){
+  nick = ($("#nick").value||"").trim().slice(0,6);
+  resetState();
+  hideOverlays();
+  answer.disabled=false; answer.value=""; answer.focus();
+  $("#pauseBtn").style.display="inline-block";
+  running=true; paused=false;
+  startTime=performance.now(); lastFrame=0; lastSpawn=performance.now();
+  rafId=requestAnimationFrame(loop);
+}
+function pauseGame(){
+  if(!running||paused) return;
+  paused=true; pauseStart=performance.now();
+  cancelAnimationFrame(rafId);
+  show("pauseScreen");
+}
+let pauseStart=0;
+function resumeGame(){
+  if(!running||!paused) return;
+  elapsedPause += performance.now()-pauseStart;
+  paused=false; hideOverlays();
+  answer.focus(); lastFrame=0;
+  rafId=requestAnimationFrame(loop);
+}
+function endGame(){
+  running=false; cancelAnimationFrame(rafId);
+  answer.disabled=true;
+  $("#pauseBtn").style.display="none";
+  const cpm=currentCPM();
+  const acc = totalKeys? Math.round(correctKeys/totalKeys*100):100;
+  $("#rScore").textContent=score.toLocaleString();
+  $("#rCpm").textContent=cpm;
+  $("#rAcc").textContent=acc+"%";
+  // 명예의 전당 갱신
+  const list=loadHall();
+  const entry={nick:nick||"익명", score, cpm, acc, diff, t:Date.now()};
+  list.push(entry);
+  list.sort((a,b)=>b.score-a.score);
+  const myIdx=list.indexOf(entry);
+  const isRecord = myIdx===0 && list.length>0;
+  saveHall(list);
+  $("#newRec").style.display = (myIdx<5 && (isRecord||list.length===1))?"block":"none";
+  if(myIdx===0) $("#newRec").textContent="🏆 최고기록 갱신!";
+  else if(myIdx<5) { $("#newRec").style.display="block"; $("#newRec").textContent="🎉 "+(myIdx+1)+"위 등극!"; }
+  renderHall($("#hallEnd"), myIdx<5?myIdx:-1);
+  show("endScreen");
+}
+
+/* ================= 이벤트 ================= */
+$("#diffRow").addEventListener("click",e=>{
+  const b=e.target.closest(".chip"); if(!b) return;
+  diff=b.dataset.diff;
+  $("#diffRow").querySelectorAll(".chip").forEach(c=>c.classList.toggle("on",c===b));
+});
+$("#startBtn").onclick=startGame;
+$("#retryBtn").onclick=startGame;
+$("#homeBtn").onclick=()=>{ renderHall($("#hallStart")); show("startScreen"); };
+$("#pauseBtn").onclick=pauseGame;
+$("#resumeBtn").onclick=resumeGame;
+$("#quitBtn").onclick=()=>{ running=false; renderHall($("#hallStart")); show("startScreen"); $("#pauseBtn").style.display="none"; answer.disabled=true; words.forEach(w=>w.el.remove()); words=[]; };
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"){ paused?resumeGame():pauseGame(); }
+});
+// 입력창 밖 클릭해도 다시 포커스(게임 중)
+field.addEventListener("click",()=>{ if(running&&!paused) answer.focus(); });
+
+/* 초기 */
+renderHall($("#hallStart"));
+</script>
+</body>
+</html>
