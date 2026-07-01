@@ -104,8 +104,13 @@
   .hall td{padding:6px 4px;border-bottom:1px solid var(--line)}
   .hall td:last-child{text-align:right;font-weight:800;color:var(--brand-d)}
   .hall tr.me td{color:var(--brand-d);font-weight:800}
+  .hall tr.me td:first-child::after{content:" 나";font-size:11px;color:var(--brand)}
   .hall .rank{width:34px;color:var(--muted)}
+  .hall.big{max-width:440px}
+  .hall .scroll{max-height:240px;overflow-y:auto;margin:0 -4px;padding:0 4px}
   .empty{color:var(--muted);font-size:13px;text-align:center;padding:10px}
+  .privacy{font-size:12px;color:var(--muted);margin:0}
+  .privacy b{color:var(--green)}
 
   .toprow{display:flex;gap:8px;align-items:center;margin-left:auto}
 </style>
@@ -143,6 +148,7 @@
         </div>
       </div>
       <button class="btn primary" id="startBtn">시작하기 ▶</button>
+      <button class="btn ghost" id="rankBtn">🏆 우리 반 순위표 보기</button>
       <div class="hall" id="hallStart"></div>
     </div>
 
@@ -166,8 +172,20 @@
       <div class="diffrow">
         <button class="btn primary" id="retryBtn">다시하기 ▶</button>
         <button class="btn ghost" id="homeBtn">처음으로</button>
+        <button class="btn ghost" id="rankBtn2">🏆 전체 순위</button>
       </div>
       <div class="hall" id="hallEnd"></div>
+    </div>
+
+    <!-- 우리 반 순위표 -->
+    <div class="overlay hidden" id="rankScreen">
+      <h2>🏆 우리 반 순위표</h2>
+      <p class="privacy">이 순위표는 <b>이 기기(태블릿/PC)에만</b> 저장돼요 · 서버 전송 없음</p>
+      <div class="hall big" id="hallFull"></div>
+      <div class="diffrow">
+        <button class="btn primary" id="rankBackBtn">돌아가기</button>
+        <button class="btn ghost" id="rankResetBtn">🗑 순위표 지우기</button>
+      </div>
     </div>
   </div>
 
@@ -199,7 +217,7 @@ const CFG = {
   normal: { fall: 54, spawn: 1500, ramp: 0.014, mult: 2 },
   hard:   { fall: 46, spawn: 2200, ramp: 0.012, mult: 3 }
 };
-const HALL_KEY = "typingRain.hall.v1";
+const HALL_KEY = "typingRain.hall.v2";   // v2: 닉네임별 최고기록 1줄
 
 /* ================= 상태 ================= */
 let diff = "easy";
@@ -219,17 +237,43 @@ const field=$("#field"), answer=$("#answer");
 const scoreEl=$("#score"), comboEl=$("#combo"), comboBox=$("#comboBox"),
       livesEl=$("#lives"), cpmEl=$("#cpm");
 
-/* ================= 명예의 전당 ================= */
+/* ================= 우리 반 순위표 (이 기기에만 저장) ================= */
 function loadHall(){ try{return JSON.parse(localStorage.getItem(HALL_KEY))||[]}catch(e){return[]} }
-function saveHall(list){ localStorage.setItem(HALL_KEY, JSON.stringify(list.slice(0,5))); }
-function renderHall(el, highlightIdx=-1){
+function saveHall(list){ localStorage.setItem(HALL_KEY, JSON.stringify(list.slice(0,100))); }
+
+/* 점수 기록: 같은 별명은 '최고 점수' 한 줄만 유지 */
+function recordScore(entry){
   const list = loadHall();
-  if(!list.length){ el.innerHTML = "<h3>🏆 명예의 전당</h3><div class='empty'>아직 기록이 없어요. 1등이 되어보세요!</div>"; return; }
-  const medal=["🥇","🥈","🥉","4","5"];
-  let rows = list.map((r,i)=>
-    `<tr class="${i===highlightIdx?'me':''}"><td class="rank">${medal[i]}</td><td>${esc(r.nick||'익명')}</td><td>${r.score.toLocaleString()}점 · ${r.cpm}타</td></tr>`
-  ).join("");
-  el.innerHTML = `<h3>🏆 명예의 전당</h3><table>${rows}</table>`;
+  const named = entry.nick && entry.nick!=="익명";
+  let isBest = true;
+  const i = named ? list.findIndex(r=>r.nick===entry.nick) : -1;
+  if(i>=0){
+    if(entry.score > list[i].score){ list[i]=entry; }   // 자기 기록 갱신
+    else { isBest=false; }
+  } else {
+    list.push(entry);
+  }
+  list.sort((a,b)=>b.score-a.score);
+  saveHall(list);
+  const rank = named ? list.findIndex(r=>r.nick===entry.nick) : list.indexOf(entry);
+  return { rank, isBest };
+}
+
+function renderHall(el, highlightIdx=-1, opts={}){
+  const list = loadHall();
+  const title = opts.title || "🏆 우리 반 순위표";
+  if(!list.length){
+    el.innerHTML = `<h3>${title}</h3><div class='empty'>아직 기록이 없어요. 첫 주자가 되어보세요!</div>`;
+    return;
+  }
+  const shown = opts.limit ? list.slice(0,opts.limit) : list;
+  const medal=["🥇","🥈","🥉"];
+  const rows = shown.map((r,i)=>{
+    const rk = i<3 ? medal[i] : (i+1);
+    return `<tr class="${i===highlightIdx?'me':''}"><td class="rank">${rk}</td><td>${esc(r.nick||'익명')}</td><td>${r.score.toLocaleString()}점 · ${r.cpm}타</td></tr>`;
+  }).join("");
+  const body = opts.scroll ? `<div class="scroll"><table>${rows}</table></div>` : `<table>${rows}</table>`;
+  el.innerHTML = `<h3>${title}</h3>${body}`;
 }
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
@@ -391,8 +435,9 @@ function clearInput(){
 }
 
 /* ================= 화면 전환 ================= */
-function show(id){ ["startScreen","pauseScreen","endScreen"].forEach(s=>$("#"+s).classList.toggle("hidden", s!==id)); }
-function hideOverlays(){ ["startScreen","pauseScreen","endScreen"].forEach(s=>$("#"+s).classList.add("hidden")); }
+const SCREENS=["startScreen","pauseScreen","endScreen","rankScreen"];
+function show(id){ SCREENS.forEach(s=>$("#"+s).classList.toggle("hidden", s!==id)); }
+function hideOverlays(){ SCREENS.forEach(s=>$("#"+s).classList.add("hidden")); }
 
 function startGame(){
   nick = ($("#nick").value||"").trim().slice(0,6);
@@ -427,18 +472,15 @@ function endGame(){
   $("#rScore").textContent=score.toLocaleString();
   $("#rCpm").textContent=cpm;
   $("#rAcc").textContent=acc+"%";
-  // 명예의 전당 갱신
-  const list=loadHall();
+  // 우리 반 순위표 갱신 (닉네임별 최고기록)
   const entry={nick:nick||"익명", score, cpm, acc, diff, t:Date.now()};
-  list.push(entry);
-  list.sort((a,b)=>b.score-a.score);
-  const myIdx=list.indexOf(entry);
-  const isRecord = myIdx===0 && list.length>0;
-  saveHall(list);
-  $("#newRec").style.display = (myIdx<5 && (isRecord||list.length===1))?"block":"none";
-  if(myIdx===0) $("#newRec").textContent="🏆 최고기록 갱신!";
-  else if(myIdx<5) { $("#newRec").style.display="block"; $("#newRec").textContent="🎉 "+(myIdx+1)+"위 등극!"; }
-  renderHall($("#hallEnd"), myIdx<5?myIdx:-1);
+  const {rank, isBest} = recordScore(entry);
+  const banner=$("#newRec");
+  if(rank===0){ banner.style.display="block"; banner.textContent="🏆 반 1등 달성!"; }
+  else if(isBest && rank<5){ banner.style.display="block"; banner.textContent="🎉 우리 반 "+(rank+1)+"위!"; }
+  else if(isBest){ banner.style.display="block"; banner.textContent="✨ 내 최고기록 갱신!"; }
+  else { banner.style.display="none"; }
+  renderHall($("#hallEnd"), rank, {limit:8, scroll:true});
   show("endScreen");
 }
 
@@ -450,10 +492,22 @@ $("#diffRow").addEventListener("click",e=>{
 });
 $("#startBtn").onclick=startGame;
 $("#retryBtn").onclick=startGame;
-$("#homeBtn").onclick=()=>{ renderHall($("#hallStart")); show("startScreen"); };
+$("#homeBtn").onclick=()=>{ renderHall($("#hallStart"), -1, {limit:5}); show("startScreen"); };
 $("#pauseBtn").onclick=pauseGame;
 $("#resumeBtn").onclick=resumeGame;
-$("#quitBtn").onclick=()=>{ running=false; renderHall($("#hallStart")); show("startScreen"); $("#pauseBtn").style.display="none"; answer.disabled=true; words.forEach(w=>w.el.remove()); words=[]; };
+$("#quitBtn").onclick=()=>{ running=false; renderHall($("#hallStart"), -1, {limit:5}); show("startScreen"); $("#pauseBtn").style.display="none"; answer.disabled=true; words.forEach(w=>w.el.remove()); words=[]; };
+
+/* 우리 반 순위표 화면 */
+function openRank(){ renderHall($("#hallFull"), -1, {scroll:true}); show("rankScreen"); }
+$("#rankBtn").onclick=openRank;
+$("#rankBtn2").onclick=openRank;
+$("#rankBackBtn").onclick=()=>{ renderHall($("#hallStart"), -1, {limit:5}); show("startScreen"); };
+$("#rankResetBtn").onclick=()=>{
+  if(confirm("순위표를 모두 지울까요?\n(이 기기의 기록이 삭제되며 되돌릴 수 없어요)")){
+    localStorage.removeItem(HALL_KEY);
+    renderHall($("#hallFull"), -1, {scroll:true});
+  }
+};
 document.addEventListener("keydown",e=>{
   if(e.key==="Escape"){ paused?resumeGame():pauseGame(); }
 });
@@ -461,7 +515,7 @@ document.addEventListener("keydown",e=>{
 field.addEventListener("click",()=>{ if(running&&!paused) answer.focus(); });
 
 /* 초기 */
-renderHall($("#hallStart"));
+renderHall($("#hallStart"), -1, {limit:5});
 </script>
 </body>
 </html>
