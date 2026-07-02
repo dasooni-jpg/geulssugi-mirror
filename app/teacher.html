@@ -137,6 +137,8 @@ function stageOf(s){
   return 0;
 }
 function esc(t){ return (t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function yellowArr(y){ return Array.isArray(y) ? y : (y? [y] : []); }
+function yellowText(y){ return Array.isArray(y) ? y.join(' / ') : (y||''); }
 
 let allStudents=[];
 
@@ -221,7 +223,7 @@ function render(){
         ${s.feedback?`<div class="fbbox">
           <h4>🪞 받은 AI 피드백<span class="tag ${s.feedback.source==='ai'?'ai':'rule'}">${s.feedback.source==='ai'?'Claude AI':'규칙 기반'}</span></h4>
           <div class="mini g">🟢 ${esc(s.feedback.green)}</div>
-          <div class="mini y">🟡 ${esc(s.feedback.yellow)}</div>
+          ${yellowArr(s.feedback.yellow).map(y=>`<div class="mini y">🟡 ${esc(y)}</div>`).join('')}
           <div class="mini b">🔵 ${esc(s.feedback.blue)}</div>
         </div>`:''}
         <div class="checks">✅ 자기평가 ${checks}/${CHECKS.length} 항목 체크</div>
@@ -249,7 +251,7 @@ function exportCSV(){
     const src=fb.source==='ai'?'Claude AI':(fb.green?'규칙 기반':'');
     return [s.nick, STAGES[stageOf(s)].name, s.submittedAt, s.genre, s.reader, s.purpose, s.title,
       s.draft, s.revised, s.changeNote, s.reflect, checks+'/'+CHECKS.length, badges,
-      src, fb.green, fb.yellow, fb.blue].map(csvCell).join(',');
+      src, fb.green, yellowText(fb.yellow), fb.blue].map(csvCell).join(',');
   });
   const csv=String.fromCharCode(0xFEFF)+headers.map(csvCell).join(',')+'\r\n'+rows.join('\r\n');
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});

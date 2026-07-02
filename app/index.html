@@ -98,6 +98,7 @@
   .fbcard{border-radius:18px;padding:16px 18px;margin-bottom:12px;border-left:8px solid}
   .fbcard h4{margin:0 0 6px;font-size:15px}
   .fbcard p{margin:0;font-size:15px}
+  .fbcard p+p{margin-top:8px;padding-top:8px;border-top:1px dashed rgba(0,0,0,.08)}
   .fb-green{background:var(--green-bg);border-color:var(--green)}
   .fb-green h4{color:var(--green)}
   .fb-yellow{background:var(--yellow-bg);border-color:var(--yellow)}
@@ -547,20 +548,25 @@ function makeCards(text){
   else if(a.hasEnd) green="문장을 끝맺음까지 잘 마무리했어요.";
   else green="글을 시작한 용기가 멋져요. 첫걸음이 가장 중요해요!";
 
-  // 🟡 다시 볼 곳 (질문형, 가장 중요한 것부터 순서대로 검사)
-  let yellow;
-  if(a.vague) yellow="'그것', '이것' 같은 말이 무엇을 가리키는지 읽는 사람이 알 수 있을까요?";
-  else if(isArgument && a.hasClaim && !a.hasReason) yellow="왜 그렇게 생각하는지 '왜냐하면' 같은 말로 까닭(근거)을 설명해 보면 어떨까요?";
-  else if(a.endingMixed) yellow="문장 끝이 '~다'체와 '~요'체가 섞여 있어요. 하나로 통일하면 더 안정적이지 않을까요?";
-  else if(a.longSent) yellow="한 문장이 꽤 길어요. 두 문장으로 나누면 더 또렷해지지 않을까요?";
-  else if(a.repeat || a.connectiveLowDiversity) yellow="같은 이음말이 자주 나와요. '그런데·하지만·또한'처럼 다른 이음말로 바꿀 곳은 없을까요?";
-  else if(a.repeatedStart) yellow="여러 문장이 같은 낱말로 시작하고 있어요. 문장을 다르게 시작해 보면 어떨까요?";
-  else if(a.exclamOveruse) yellow="느낌표를 여러 번 썼어요. 정말 강조하고 싶은 곳에만 남겨보면 어떨까요?";
-  else if(a.emotionWords>=2 && a.len<150) yellow="'재미있었다', '좋았다' 같은 말 대신, 왜 그런 마음이 들었는지 더 자세히 써 볼까요?";
-  else if(a.shortRun) yellow="짧은 문장이 계속 이어져요. 몇 문장을 연결해서 더 자연스럽게 써 보면 어떨까요?";
-  else if(a.paraCount<2 && a.len>150) yellow="내용을 처음·가운데·끝으로 문단을 나눠보면 어떨까요?";
-  else if(!a.hasEnd) yellow="마지막 문장이 잘 끝맺어졌는지 다시 읽어볼까요?";
-  else yellow="읽는 사람이 가장 궁금해할 부분을 조금 더 자세히 쓸 수 있을까요?";
+  // 🟡 다시 볼 곳 (질문형, 가장 중요한 것부터 순서대로 최대 3개까지)
+  const yellowAll=[];
+  if(a.vague) yellowAll.push("'그것', '이것' 같은 말이 무엇을 가리키는지 읽는 사람이 알 수 있을까요?");
+  if(isArgument && a.hasClaim && !a.hasReason) yellowAll.push("왜 그렇게 생각하는지 '왜냐하면' 같은 말로 까닭(근거)을 설명해 보면 어떨까요?");
+  if(a.endingMixed) yellowAll.push("문장 끝이 '~다'체와 '~요'체가 섞여 있어요. 하나로 통일하면 더 안정적이지 않을까요?");
+  if(a.longSent){
+    const preview=a.longSent.trim().replace(/\s+/g,' ');
+    const shown=esc(preview.length>36? preview.slice(0,36)+'…' : preview);
+    yellowAll.push(`"${shown}" 이 문장이 꽤 길어요(공백 제외 ${preview.replace(/\s/g,'').length}자). 두 문장으로 나누면 더 또렷해지지 않을까요?`);
+  }
+  if(a.repeat || a.connectiveLowDiversity) yellowAll.push("같은 이음말이 자주 나와요. '그런데·하지만·또한'처럼 다른 이음말로 바꿀 곳은 없을까요?");
+  if(a.repeatedStart) yellowAll.push("여러 문장이 같은 낱말로 시작하고 있어요. 문장을 다르게 시작해 보면 어떨까요?");
+  if(a.exclamOveruse) yellowAll.push("느낌표를 여러 번 썼어요. 정말 강조하고 싶은 곳에만 남겨보면 어떨까요?");
+  if(a.emotionWords>=2 && a.len<150) yellowAll.push("'재미있었다', '좋았다' 같은 말 대신, 왜 그런 마음이 들었는지 더 자세히 써 볼까요?");
+  if(a.shortRun) yellowAll.push("짧은 문장이 계속 이어져요. 몇 문장을 연결해서 더 자연스럽게 써 보면 어떨까요?");
+  if(a.paraCount<2 && a.len>150) yellowAll.push("내용을 처음·가운데·끝으로 문단을 나눠보면 어떨까요?");
+  if(!a.hasEnd) yellowAll.push("마지막 문장이 잘 끝맺어졌는지 다시 읽어볼까요?");
+  if(yellowAll.length===0) yellowAll.push("읽는 사람이 가장 궁금해할 부분을 조금 더 자세히 쓸 수 있을까요?");
+  const yellow=yellowAll.slice(0,3);
 
   // 🔵 생각해 볼 질문 (메타인지)
   const reader = state.reader? `'${state.reader}'` : "이 글을 읽을 사람";
@@ -575,9 +581,10 @@ function renderCards(c, source, which){
     : '<div class="ai-note">🪞 이 피드백은 <b>네 기기 안에서</b> 만들어졌어요 (인터넷으로 전송하지 않아요) · 선생님·친구와 함께 확인해요</div>';
   const label = which==='revised'
     ? '<p class="hint" style="margin:0 0 10px">✨ 방금 <b>고친 글</b>을 다시 비춰본 결과예요.</p>' : '';
+  const yellowItems=(Array.isArray(c.yellow)? c.yellow : [c.yellow]).map(y=>`<p>${y}</p>`).join('');
   $('fbResult').innerHTML=`${label}
     <div class="fbcard fb-green"><h4>🟢 잘한 점</h4><p>${c.green}</p></div>
-    <div class="fbcard fb-yellow"><h4>🟡 다시 볼 곳</h4><p>${c.yellow}</p></div>
+    <div class="fbcard fb-yellow"><h4>🟡 다시 볼 곳</h4>${yellowItems}</div>
     <div class="fbcard fb-blue"><h4>🔵 생각해 볼 질문</h4><p>${c.blue}</p></div>
     ${note}`;
 }
@@ -693,7 +700,7 @@ function showcase(){
     ${s.changeNote?`<div class="selfq" style="margin-top:14px"><b>🔧 무엇을·왜 고쳤나</b>${esc(s.changeNote)}</div>`:''}
     ${fb?`<div style="margin-top:14px">
       <div class="fbcard fb-green"><h4>🟢 잘한 점</h4><p>${esc(fb.green)}</p></div>
-      <div class="fbcard fb-yellow"><h4>🟡 다시 볼 곳</h4><p>${esc(fb.yellow)}</p></div>
+      <div class="fbcard fb-yellow"><h4>🟡 다시 볼 곳</h4>${(Array.isArray(fb.yellow)?fb.yellow:[fb.yellow]).map(y=>`<p>${esc(y)}</p>`).join('')}</div>
       <div class="fbcard fb-blue"><h4>🔵 생각해 볼 질문</h4><p>${esc(fb.blue)}</p></div>
     </div>`:''}
     ${s.reflect?`<div class="selfq" style="margin-top:14px"><b>🌱 가장 크게 배운 점</b>${esc(s.reflect)}</div>`:''}
