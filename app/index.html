@@ -265,7 +265,8 @@
       <div class="counter" id="revCount">0자 · 0문장</div>
 
       <div class="row">
-        <button class="btn primary" onclick="saveStep(2)">고친 글 저장하기</button>
+        <button class="btn primary" onclick="runFeedback('revised')">🪞 고친 글 다시 비춰보기</button>
+        <button class="btn ghost" onclick="saveStep(2)">고친 글 저장하기</button>
         <button class="btn ghost" onclick="goStep(3)">돌아보기로 →</button>
         <button class="btn ghost" onclick="refillFromDraft()">↺ 초고 내용으로 다시 채우기</button>
         <span class="savetag" id="save2"></span>
@@ -568,22 +569,28 @@ function makeCards(text){
   return {green,yellow,blue};
 }
 
-function renderCards(c, source){
+function renderCards(c, source, which){
   const note = source==='ai'
     ? '<div class="ai-note">🤖 AI 글쓰기 친구의 피드백 · AI도 틀릴 수 있어요, 선생님·친구와 확인해요</div>'
     : '<div class="ai-note">🪞 이 피드백은 <b>네 기기 안에서</b> 만들어졌어요 (인터넷으로 전송하지 않아요) · 선생님·친구와 함께 확인해요</div>';
-  $('fbResult').innerHTML=`
+  const label = which==='revised'
+    ? '<p class="hint" style="margin:0 0 10px">✨ 방금 <b>고친 글</b>을 다시 비춰본 결과예요.</p>' : '';
+  $('fbResult').innerHTML=`${label}
     <div class="fbcard fb-green"><h4>🟢 잘한 점</h4><p>${c.green}</p></div>
     <div class="fbcard fb-yellow"><h4>🟡 다시 볼 곳</h4><p>${c.yellow}</p></div>
     <div class="fbcard fb-blue"><h4>🔵 생각해 볼 질문</h4><p>${c.blue}</p></div>
     ${note}`;
 }
 
-async function runFeedback(){
-  const text=(state.draft||"").trim();
+/* which: 'draft'(기본, 초고 분석) 또는 'revised'(고친 글 분석) */
+async function runFeedback(which){
+  which = which==='revised' ? 'revised' : 'draft';
+  const text=((which==='revised'? state.revised : state.draft)||"").trim();
   const box=$('fbResult');
   if(text.length<10){
-    box.innerHTML='<div class="empty">먼저 1단계로 돌아가 초고를 조금 더 써주세요. ✏️</div>';
+    box.innerHTML = which==='revised'
+      ? '<div class="empty">고쳐 쓴 글을 조금 더 써주세요. ✏️</div>'
+      : '<div class="empty">먼저 1단계로 돌아가 초고를 조금 더 써주세요. ✏️</div>';
     return;
   }
   box.innerHTML='<div class="empty">🪞 거울이 네 글을 비춰보는 중이에요…</div>';
@@ -605,16 +612,19 @@ async function runFeedback(){
   }
   if(!c){ c=makeCards(text); source='rule'; }
 
-  renderCards(c, source);
+  renderCards(c, source, which);
   // 받은 피드백을 기록(제출 시 선생님께 함께 전달)
-  state.feedback={green:c.green, yellow:c.yellow, blue:c.blue, source};
-  // 고쳐쓰기 카드 열기, 초고를 출발점으로 복사
-  // (학생이 아직 고쳐쓰기 칸을 직접 수정하지 않았다면, 매번 최신 초고로 다시 채워줌)
+  state.feedback={green:c.green, yellow:c.yellow, blue:c.blue, source, which};
   $('reviseCard').style.display='block';
-  if(!state.revisedTouched){ state.revised=state.draft; $('revised').value=state.revised; updateCount('revised','revCount'); }
+  if(which==='draft'){
+    // 고쳐쓰기 카드를 열고, 초고를 출발점으로 복사
+    // (학생이 아직 고쳐쓰기 칸을 직접 수정하지 않았다면, 매번 최신 초고로 다시 채워줌)
+    if(!state.revisedTouched){ state.revised=state.draft; $('revised').value=state.revised; updateCount('revised','revCount'); }
+  }
   state.feedbackDone=true; persist();
   earn('mirror','🪞','거울 탐험가','거울 피드백을 처음 받았어요!');
-  $('reviseCard').scrollIntoView({behavior:'smooth'});
+  if(which==='draft') $('reviseCard').scrollIntoView({behavior:'smooth'});
+  else $('fbResult').scrollIntoView({behavior:'smooth'});
 }
 
 /* 고쳐쓰기 칸을 최신 초고 내용으로 강제로 다시 채움(직접 고친 내용은 사라짐, 확인 후 실행) */
