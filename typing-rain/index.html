@@ -50,6 +50,8 @@
   .word.aim{border-color:var(--green);box-shadow:0 6px 16px rgba(63,174,114,.35)}
   .word.hard{border-color:var(--red);color:#b23b3b}
   .word.hard.aim{border-color:var(--green)}
+  .word.long{font-size:18px}
+  .word.vlong{font-size:15px;padding:5px 10px}
   .floor{position:absolute;left:0;right:0;bottom:0;height:6px;
     background:repeating-linear-gradient(90deg,var(--brand),var(--brand) 12px,#c9c0f7 12px,#c9c0f7 24px)}
   .boom{position:absolute;transform:translate(-50%,-50%);font-size:26px;font-weight:800;
@@ -142,9 +144,11 @@
       <div>
         <p style="margin-bottom:8px">난이도를 골라요</p>
         <div class="diffrow" id="diffRow">
+          <button class="chip" data-diff="veryeasy">🥚 매우 쉬움</button>
           <button class="chip on" data-diff="easy">🐣 쉬움</button>
           <button class="chip" data-diff="normal">🐿️ 보통</button>
           <button class="chip" data-diff="hard">🦅 어려움</button>
+          <button class="chip" data-diff="veryhard">🐉 매우 어려움</button>
         </div>
       </div>
       <button class="btn primary" id="startBtn">시작하기 ▶</button>
@@ -199,6 +203,9 @@
 <script>
 /* ================= 단어 은행 (한글 위주) ================= */
 const WORDS = {
+  veryeasy: ["눈","물","별","산","강","해","달","꽃","새","코",
+             "손","발","입","귀","문","공","곰","개","소","말",
+             "배","콩","밤","비","집","밥","떡","파","무","김"],
   easy: ["사과","학교","친구","연필","나무","바다","구름","토끼","가방","우유",
          "김밥","축구","노래","시계","자전거","우산","달력","의자","창문","딸기",
          "고양이","강아지","무지개","코끼리","호랑이","선생님","운동장","도서관"],
@@ -208,14 +215,28 @@ const WORDS = {
   hard: ["티끌모아태산","가는말이고와야오는말이곱다","백지장도맞들면낫다",
          "천리길도한걸음부터","등잔밑이어둡다","고생끝에낙이온다","우물안개구리",
          "지렁이도밟으면꿈틀한다","발없는말이천리간다","호랑이도제말하면온다",
-         "낮말은새가듣고밤말은쥐가듣는다","작은고추가더맵다"]
+         "낮말은새가듣고밤말은쥐가듣는다","작은고추가더맵다"],
+  veryhard: ["낮말은 새가 듣고 밤말은 쥐가 듣는다",
+             "가는 말이 고와야 오는 말이 곱다",
+             "세 살 버릇 여든까지 간다",
+             "천 리 길도 한 걸음부터 시작된다",
+             "원숭이도 나무에서 떨어질 때가 있다",
+             "하늘이 무너져도 솟아날 구멍이 있다",
+             "말 한마디에 천 냥 빚을 갚는다",
+             "믿는 도끼에 발등 찍힌다",
+             "공든 탑이 무너지랴",
+             "우물을 파도 한 우물을 파라",
+             "바늘 도둑이 소도둑 된다",
+             "열 번 찍어 안 넘어가는 나무 없다"]
 };
 
 /* 난이도별 파라미터 */
 const CFG = {
-  easy:   { fall: 42, spawn: 1700, ramp: 0.010, mult: 1 },
-  normal: { fall: 54, spawn: 1500, ramp: 0.014, mult: 2 },
-  hard:   { fall: 46, spawn: 2200, ramp: 0.012, mult: 3 }
+  veryeasy: { fall: 30, spawn: 2600, ramp: 0.005, mult: 1 },
+  easy:     { fall: 42, spawn: 1700, ramp: 0.010, mult: 1 },
+  normal:   { fall: 54, spawn: 1500, ramp: 0.014, mult: 2 },
+  hard:     { fall: 46, spawn: 2200, ramp: 0.012, mult: 3 },
+  veryhard: { fall: 52, spawn: 1600, ramp: 0.018, mult: 4 }
 };
 const HALL_KEY = "typingRain.hall.v2";   // v2: 닉네임별 최고기록 1줄
 
@@ -305,12 +326,15 @@ function spawnWord(){
   if(words.some(w=>w.text===text)) return;
   const el=document.createElement("div");
   const isHard = text.length>=6;
-  el.className="word"+(isHard?" hard":"");
+  const sizeCls = text.length>=12 ? " vlong" : (text.length>=8 ? " long" : "");
+  el.className="word"+(isHard?" hard":"")+sizeCls;
   el.textContent=text;
   field.appendChild(el);
   const w=el.offsetWidth;
   const fw=field.clientWidth;
-  const x = Math.min(Math.max(w/2+8, Math.random()*fw), fw-w/2-8);
+  const half=w/2+8;
+  // 낱말이 화면보다 넓으면 가운데 정렬, 아니면 무작위 위치
+  const x = (w>=fw-16) ? fw/2 : Math.min(Math.max(half, Math.random()*fw), fw-half);
   el.style.left = x+"px";
   const base = CFG[diff].fall;
   const speed = base*(1+gameTime*CFG[diff].ramp) + Math.random()*10;
