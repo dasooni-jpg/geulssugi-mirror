@@ -159,7 +159,7 @@
   <nav class="journey" id="journey">
     <button class="step active" data-step="0"><span class="ico">🗺️</span><span class="nm">계획하기</span><span class="sub">무엇을 쓸까?</span></button>
     <button class="step" data-step="1"><span class="ico">✏️</span><span class="nm">초고 쓰기</span><span class="sub">일단 써보자</span></button>
-    <button class="step" data-step="2"><span class="ico">🪞</span><span class="nm">AI 피드백</span><span class="sub">거울에 비춰보기</span></button>
+    <button class="step" data-step="2"><span class="ico">🪞</span><span class="nm">거울 피드백</span><span class="sub">거울에 비춰보기</span></button>
     <button class="step" data-step="3"><span class="ico">🌱</span><span class="nm">돌아보기</span><span class="sub">얼마나 자랐나</span></button>
   </nav>
 
@@ -219,8 +219,8 @@
   <!-- 2. AI 피드백 -->
   <section class="panel" data-panel="2">
     <div class="card">
-      <h2>🪞 AI 피드백 받기</h2>
-      <p class="hint">AI는 글을 대신 고쳐 주지 않아요. <b>잘한 점</b>과 <b>스스로 생각할 질문</b>을 알려줄 뿐이에요.</p>
+      <h2>🪞 거울 피드백 받기</h2>
+      <p class="hint">거울은 글을 대신 고쳐 주지 않아요. <b>잘한 점</b>과 <b>스스로 생각할 질문</b>을 비춰줄 뿐이에요.</p>
       <button class="btn primary wide" onclick="runFeedback()">내 글을 거울에 비춰보기</button>
       <div id="fbResult" style="margin-top:16px"></div>
     </div>
@@ -309,6 +309,13 @@
    비워두면(""), 선생님 PC에서 server.ps1을 켰을 때만 진짜 AI가 작동하고,
    그 외에는 규칙 기반 자동 피드백으로 동작합니다. */
 const AI_PROXY = "https://daramssam-ai.dasooni.workers.dev";
+
+/* ---------- 외부 AI 사용 여부 ----------
+   만 14세 미만 학생 보호를 위해 기본값은 false 입니다.
+   false: 글을 인터넷으로 전송하지 않고, 기기 안에서만 규칙 기반 피드백을 만듭니다. (외부 전송 0건)
+   true : AI_PROXY(Cloudflare)로 글을 보내 실제 생성형 AI 피드백을 받습니다.
+          ※ 만 14세 미만이라면 법정대리인(부모) 동의 후에만 켜는 것을 권장합니다. */
+const USE_AI = false;
 
 /* ---------- 상태 저장 (localStorage) ---------- */
 const KEY = "geulssugi-mirror-v1";
@@ -427,7 +434,7 @@ function makeCards(text){
 function renderCards(c, source){
   const note = source==='ai'
     ? '<div class="ai-note">🤖 AI 글쓰기 친구의 피드백 · AI도 틀릴 수 있어요, 선생님·친구와 확인해요</div>'
-    : '<div class="ai-note">⚠️ 지금은 오프라인이라 자동 피드백을 보여줘요. 선생님·친구와 함께 확인해요.</div>';
+    : '<div class="ai-note">🪞 이 피드백은 <b>네 기기 안에서</b> 만들어졌어요 (인터넷으로 전송하지 않아요) · 선생님·친구와 함께 확인해요</div>';
   $('fbResult').innerHTML=`
     <div class="fbcard fb-green"><h4>🟢 잘한 점</h4><p>${c.green}</p></div>
     <div class="fbcard fb-yellow"><h4>🟡 다시 볼 곳</h4><p>${c.yellow}</p></div>
@@ -444,19 +451,21 @@ async function runFeedback(){
   }
   box.innerHTML='<div class="empty">🪞 거울이 네 글을 비춰보는 중이에요…</div>';
 
-  // 먼저 실제 AI(서버 프록시)에 요청 → 실패하면 규칙 기반으로 자동 전환
+  // USE_AI가 true일 때만 외부(Cloudflare)로 글을 보냄. 기본값(false)은 전송 없이 기기 안에서 처리.
   let c=null, source='rule';
-  try{
-    const endpoint = AI_PROXY || '/api/feedback';
-    const r=await fetch(endpoint,{
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({text, reader: state.reader||''})
-    });
-    if(r.ok){
-      const data=await r.json();
-      if(data && data.ok && data.green){ c={green:data.green,yellow:data.yellow,blue:data.blue}; source='ai'; }
-    }
-  }catch(e){ /* 오프라인/오류 → 규칙 기반 */ }
+  if(USE_AI){
+    try{
+      const endpoint = AI_PROXY || '/api/feedback';
+      const r=await fetch(endpoint,{
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({text, reader: state.reader||''})
+      });
+      if(r.ok){
+        const data=await r.json();
+        if(data && data.ok && data.green){ c={green:data.green,yellow:data.yellow,blue:data.blue}; source='ai'; }
+      }
+    }catch(e){ /* 오프라인/오류 → 규칙 기반 */ }
+  }
   if(!c){ c=makeCards(text); source='rule'; }
 
   renderCards(c, source);
@@ -466,7 +475,7 @@ async function runFeedback(){
   $('reviseCard').style.display='block';
   if(!state.revised){ state.revised=state.draft; $('revised').value=state.revised; updateCount('revised','revCount'); }
   state.feedbackDone=true; persist();
-  earn('mirror','🪞','거울 탐험가','AI 피드백을 처음 받았어요!');
+  earn('mirror','🪞','거울 탐험가','거울 피드백을 처음 받았어요!');
   $('reviseCard').scrollIntoView({behavior:'smooth'});
 }
 
