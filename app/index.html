@@ -226,6 +226,12 @@
       <h2>✏️ 초고 쓰기</h2>
       <p class="hint">완벽하지 않아도 괜찮아요. 떠오르는 대로 끝까지 한 번 써보는 게 중요해요.</p>
 
+      <div class="ideabank" id="ideasRecap" style="display:none">
+        <b style="display:block;font-size:13px;color:var(--brand-d);margin-bottom:6px">📋 계획하기에서 적은 생각들</b>
+        <div id="ideasRecapBody" style="font-size:14px;white-space:pre-wrap"></div>
+        <p class="hint" style="margin:8px 0 0">이 중에서 하나를 골라 제목과 글을 써 보세요.</p>
+      </div>
+
       <label class="fld">📝 제목</label>
       <input class="line" id="title" placeholder="예) 학교 급식을 채식 위주로 바꾸자" />
 
@@ -377,8 +383,16 @@ function goStep(n){
   document.querySelectorAll('.panel').forEach(p=>{
     p.classList.toggle('show', +p.dataset.panel===n);
   });
+  if(n===1) renderIdeasRecap();
   if(n===3) renderReflect();
   window.scrollTo({top:0,behavior:'smooth'});
+}
+function renderIdeasRecap(){
+  const box=$('ideasRecap');
+  const ideas=(state.ideas||"").trim();
+  if(!ideas){ box.style.display='none'; return; }
+  box.style.display='block';
+  $('ideasRecapBody').textContent=ideas;
 }
 function nextStep(){ if(cur<3) goStep(cur+1); }
 function prevStep(){ if(cur>0) goStep(cur-1); }
