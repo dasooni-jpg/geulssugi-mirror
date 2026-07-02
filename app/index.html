@@ -336,6 +336,9 @@
   <div class="showcase" onclick="event.stopPropagation()">
     <button class="sc-close" onclick="closeShowcase()">✕ 닫기</button>
     <div id="scBody"></div>
+    <div style="text-align:center;margin-top:16px">
+      <button class="btn primary" id="scSaveImgBtn" onclick="saveShowcaseAsImage()">🖼 이미지로 저장하기</button>
+    </div>
   </div>
 </div>
 
@@ -761,6 +764,176 @@ function showcase(){
 }
 function closeShowcase(){ $('showcaseBg').classList.remove('show'); }
 function esc(t){ return (t==null?'':String(t)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* ---------- 선생님께 보여주기 내용을 이미지(PNG)로 저장 ----------
+   외부 라이브러리·이미지 로딩 없이 Canvas 2D에 직접 글자를 그려서 만듦.
+   (SVG+foreignObject 방식은 캔버스가 "오염"되어 저장이 막히므로 사용하지 않음) */
+async function saveShowcaseAsImage(){
+  const btn=$('scSaveImgBtn');
+  const oldLabel=btn.textContent;
+  btn.disabled=true; btn.textContent='이미지 만드는 중…';
+  try{
+    const s=state;
+    const W=760, PAD=28, LH=26, BOX_PAD=14, BOX_GAP=10;
+    const contentW=W-PAD*2;
+    const FONT_BODY='15px "Malgun Gothic","Apple SD Gothic Neo",sans-serif';
+    const FONT_BOLD='bold 15px "Malgun Gothic","Apple SD Gothic Neo",sans-serif';
+    const FONT_H1='bold 22px "Malgun Gothic","Apple SD Gothic Neo",sans-serif';
+    const FONT_H2='bold 15px "Malgun Gothic","Apple SD Gothic Neo",sans-serif';
+    const FONT_SMALL='13px "Malgun Gothic","Apple SD Gothic Neo",sans-serif';
+    const C={ink:'#2d2a45',muted:'#7b7894',brand:'#5b49d6',
+      green:'#3fae72',greenBg:'#e7f7ee',yellow:'#e0a52e',yellowBg:'#fdf4e0',
+      blue:'#3d8fe0',blueBg:'#e7f1fc'};
+
+    const meas=document.createElement('canvas').getContext('2d');
+    function wrapPlain(text,font,maxWidth){
+      meas.font=font;
+      const out=[]; let line='';
+      String(text==null?'':text).split('\n').forEach(para=>{
+        line='';
+        for(const ch of para){
+          const test=line+ch;
+          if(meas.measureText(test).width>maxWidth && line){ out.push(line); line=ch; }
+          else line=test;
+        }
+        out.push(line);
+      });
+      return out;
+    }
+    // diff 토큰(낱말 단위)을 줄바꿈하며, 색이 있는 조각(segment) 배열의 배열(줄 목록)로 반환
+    function wrapColored(ops, font, maxWidth, side){
+      meas.font=font;
+      const filtered=ops.filter(op=> op.type==='equal' || (side==='old'&&op.type==='del') || (side==='new'&&op.type==='ins'));
+      const lines=[[]]; let lineW=0;
+      filtered.forEach(op=>{
+        const parts=op.text.split(/(\n)/); // 문단 구분 유지
+        parts.forEach(part=>{
+          if(part==='') return;
+          if(part==='\n'){ lines.push([]); lineW=0; return; }
+          const w=meas.measureText(part).width;
+          if(lineW+w>maxWidth && lineW>0){ lines.push([]); lineW=0; }
+          const color = op.type==='del' ? C.muted : (op.type==='ins' ? C.blue : C.ink);
+          lines[lines.length-1].push({text:part,color});
+          lineW+=w;
+        });
+      });
+      return lines;
+    }
+
+    const blocks=[]; // {kind:'text'|'rich'|'gap'|'box', ...}
+    function addPlain(text,font,color,gapAfter){
+      wrapPlain(text,font,contentW).forEach(l=>blocks.push({kind:'text',text:l,font,color}));
+      if(gapAfter) blocks.push({kind:'gap',h:gapAfter});
+    }
+    function addRichLines(lines,font){
+      lines.forEach(segs=>blocks.push({kind:'rich',segs,font}));
+    }
+
+    addPlain('🪞 '+(s.nick||'학생')+'의 글쓰기 과정', FONT_H1, C.ink, 8);
+    addPlain('종류 '+(s.genre||'-')+' · 읽는 사람 '+(s.reader||'-')+' · 목적 '+(s.purpose||'-'), FONT_SMALL, C.muted, 12);
+    if(s.title) addPlain('📝 '+s.title, FONT_BOLD, C.ink, 16);
+
+    const draft=s.draft||'', revised=s.revised||'';
+    const hasDiff = draft && revised && draft!==revised;
+    const diffOps = hasDiff ? diffTokens(draft, revised) : null;
+
+    addPlain('📄 처음 쓴 글', FONT_H2, C.muted, 4);
+    if(hasDiff) addRichLines(wrapColored(diffOps, FONT_BODY, contentW, 'old'), FONT_BODY);
+    else addPlain(draft||'(없음)', FONT_BODY, C.ink, 0);
+    blocks.push({kind:'gap',h:16});
+
+    addPlain('✨ 고쳐 쓴 글', FONT_H2, C.muted, 4);
+    if(hasDiff) addRichLines(wrapColored(diffOps, FONT_BODY, contentW, 'new'), FONT_BODY);
+    else addPlain(revised||'(없음)', FONT_BODY, C.ink, 0);
+    blocks.push({kind:'gap',h:20});
+
+    const fb=s.feedback;
+    function feedbackBox(bg, border, titleText, titleColor, bodyTexts){
+      const lines=wrapPlain(titleText, FONT_BOLD, contentW-32).map(t=>({text:t,font:FONT_BOLD,color:titleColor}));
+      bodyTexts.forEach(bt=>{
+        wrapPlain(bt, FONT_BODY, contentW-32).forEach(t=>lines.push({text:t,font:FONT_BODY,color:C.ink}));
+      });
+      blocks.push({kind:'box',bg,border,lines});
+      blocks.push({kind:'gap',h:BOX_GAP});
+    }
+    if(fb){
+      feedbackBox(C.greenBg, C.green, '🟢 잘한 점', C.green, [fb.green||'']);
+      feedbackBox(C.yellowBg, C.yellow, '🟡 다시 볼 곳', C.yellow, Array.isArray(fb.yellow)?fb.yellow:[fb.yellow]);
+      feedbackBox(C.blueBg, C.blue, '🔵 생각해 볼 질문', C.blue, [fb.blue||'']);
+      blocks.push({kind:'gap',h:8});
+    }
+
+    if(s.reflect){
+      addPlain('🌱 가장 크게 배운 점', FONT_BOLD, C.brand, 6);
+      addPlain(s.reflect, FONT_BODY, C.ink, 16);
+    }
+
+    addPlain('✅ 스스로 평가', FONT_BOLD, C.ink, 6);
+    SC_CHECKS.forEach((q,i)=>{
+      const mark=(s.checks&&s.checks[i])?'✅':'⬜';
+      addPlain(mark+' '+q, FONT_BODY, C.ink, 0);
+    });
+
+    const badgeNames={mirror:'🪞 거울 탐험가',reviser:'✍️ 고쳐쓰기 작가',reviewer:'🌱 성장하는 작가',thinker:'💡 생각하는 작가'};
+    const badges=Object.keys(s.badges||{}).map(k=>badgeNames[k]).filter(Boolean);
+    if(badges.length) addPlain('🏅 모은 배지: '+badges.join(', '), FONT_BODY, C.brand, 0);
+
+    // ----- 전체 높이 계산 -----
+    let totalH=PAD;
+    blocks.forEach(b=>{
+      if(b.kind==='text'||b.kind==='rich') totalH+=LH;
+      else if(b.kind==='gap') totalH+=b.h;
+      else if(b.kind==='box') totalH+=BOX_PAD*2+b.lines.length*LH;
+    });
+    totalH+=PAD;
+
+    // ----- 실제 그리기 -----
+    const scale=2;
+    const canvas=document.createElement('canvas');
+    canvas.width=W*scale; canvas.height=totalH*scale;
+    const ctx=canvas.getContext('2d');
+    ctx.scale(scale,scale);
+    ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,W,totalH);
+    ctx.textBaseline='top';
+
+    let cy=PAD;
+    blocks.forEach(b=>{
+      if(b.kind==='text'){
+        ctx.font=b.font; ctx.fillStyle=b.color; ctx.fillText(b.text, PAD, cy); cy+=LH;
+      } else if(b.kind==='rich'){
+        let x=PAD;
+        b.segs.forEach(seg=>{
+          ctx.font=b.font; ctx.fillStyle=seg.color; ctx.fillText(seg.text, x, cy);
+          x+=ctx.measureText(seg.text).width;
+        });
+        cy+=LH;
+      } else if(b.kind==='gap'){
+        cy+=b.h;
+      } else if(b.kind==='box'){
+        const boxH=BOX_PAD*2+b.lines.length*LH;
+        ctx.fillStyle=b.bg; ctx.fillRect(PAD, cy, contentW, boxH);
+        ctx.fillStyle=b.border; ctx.fillRect(PAD, cy, 6, boxH);
+        let ty=cy+BOX_PAD;
+        b.lines.forEach(l=>{ ctx.font=l.font; ctx.fillStyle=l.color; ctx.fillText(l.text, PAD+18, ty); ty+=LH; });
+        cy+=boxH;
+      }
+    });
+
+    const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
+    if(!blob) throw new Error('canvas_empty');
+
+    const name=(state.nick||'학생').trim()||'학생';
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='글쓰기거울_'+name+'.png';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 3000);
+  }catch(e){
+    alert('이미지로 저장하는 데 실패했어요. 대신 화면을 캡처(스크린샷)해서 선생님께 전달해 주세요.');
+  }finally{
+    btn.disabled=false; btn.textContent=oldLabel;
+  }
+}
 
 /* ---------- 파일로 내보내기 (선생님께 파일로 전달용) ---------- */
 function exportFile(){
