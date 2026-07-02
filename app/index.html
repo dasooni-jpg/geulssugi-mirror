@@ -225,6 +225,10 @@
     <div class="card">
       <h2>✏️ 초고 쓰기</h2>
       <p class="hint">완벽하지 않아도 괜찮아요. 떠오르는 대로 끝까지 한 번 써보는 게 중요해요.</p>
+
+      <label class="fld">📝 제목</label>
+      <input class="line" id="title" placeholder="예) 학교 급식을 채식 위주로 바꾸자" />
+
       <textarea class="big" id="draft" placeholder="여기에 첫 번째 글을 써보세요. 자동으로 저장돼요."></textarea>
       <div class="counter" id="draftCount">0자 · 0문장</div>
 
@@ -270,6 +274,7 @@
     <div class="card">
       <h2>🌱 나의 글쓰기 과정 돌아보기</h2>
       <p class="hint">초고와 고친 글이 어떻게 달라졌는지 비교해 봐요.</p>
+      <div id="titleShow" style="font-weight:800;font-size:16px;margin-bottom:10px"></div>
       <div class="compare">
         <div class="col"><h3>📄 처음 쓴 글(초고)</h3><div class="doc" id="docDraft"></div></div>
         <div class="col"><h3>✨ 고쳐 쓴 글</h3><div class="doc" id="docRevised"></div></div>
@@ -351,7 +356,7 @@ const FIXED_PURPOSE = "읽는 사람을 설득하기 위해서";
 /* ---------- 상태 저장 (localStorage) ---------- */
 const KEY = "geulssugi-mirror-v1";
 let state = load() || {
-  nick:"", genre:"", reader:"", purpose:"", ideas:"",
+  nick:"", genre:"", reader:"", purpose:"", ideas:"", title:"",
   draft:"", revised:"", changeNote:"", reflect:"",
   feedbackDone:false, checks:{}, badges:{}
 };
@@ -388,7 +393,7 @@ function bind(id, field, after){
   el.value = state[field]||"";
   el.addEventListener('input',()=>{ state[field]=el.value; persist(); if(after) after(); });
 }
-bind('nick','nick');
+bind('nick','nick'); bind('title','title');
 bind('ideas','ideas'); bind('changeNote','changeNote'); bind('reflect','reflect');
 bind('draft','draft', ()=>updateCount('draft','draftCount'));
 bind('revised','revised', ()=>updateCount('revised','revCount'));
@@ -604,6 +609,7 @@ const CHECKS=[
   "내가 무엇을 왜 고쳤는지 설명할 수 있다"
 ];
 function renderReflect(){
+  $('titleShow').textContent = state.title? "📝 "+state.title : "";
   $('docDraft').textContent = state.draft||"(아직 초고가 없어요)";
   $('docRevised').textContent = state.revised||"(아직 고친 글이 없어요)";
   // 체크리스트
@@ -646,6 +652,7 @@ function showcase(){
   $('scBody').innerHTML=`
     <h2 style="margin:0 0 4px">🪞 ${esc(s.nick)||'학생'}의 글쓰기 과정</h2>
     <p class="hint" style="margin:0 0 16px">종류 ${esc(s.genre)||'-'} · 읽는 사람 ${esc(s.reader)||'-'} · 목적 ${esc(s.purpose)||'-'}</p>
+    ${s.title?`<p style="font-weight:800;font-size:16px;margin:0 0 12px">📝 ${esc(s.title)}</p>`:''}
     <div class="compare">
       <div class="col"><h3>📄 처음 쓴 글</h3><div class="doc">${esc(s.draft)||'(없음)'}</div></div>
       <div class="col"><h3>✨ 고쳐 쓴 글</h3><div class="doc">${esc(s.revised)||'(없음)'}</div></div>

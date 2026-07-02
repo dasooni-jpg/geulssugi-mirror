@@ -206,6 +206,7 @@ function render(){
       <div class="body">
         <div class="print-title">🪞 ${esc(s.nick)||'학생'}의 글쓰기 평가 결과</div>
         <div class="print-date">출력일 ${new Date().toLocaleDateString('ko-KR')} · 글쓰기 거울</div>
+        ${s.title?`<div style="font-weight:800;font-size:15px;margin-bottom:6px">📝 ${esc(s.title)}</div>`:''}
         <div class="planrow">
           <b>종류</b> ${esc(s.genre)||'-'} &nbsp;·&nbsp;
           <b>읽는 사람</b> ${esc(s.reader)||'-'} &nbsp;·&nbsp;
@@ -239,14 +240,14 @@ function printAll(){
 function csvCell(v){ return '"'+String(v==null?'':v).replace(/"/g,'""')+'"'; }
 function exportCSV(){
   if(!allStudents.length){ alert('내보낼 제출물이 없어요.'); return; }
-  const headers=['별명','단계','제출시각','글종류','읽는사람','목적','초고','고쳐쓴글',
+  const headers=['별명','단계','제출시각','글종류','읽는사람','목적','제목','초고','고쳐쓴글',
     '수정메모','배운점','자기평가(체크수)','배지수','피드백출처','AI_잘한점','AI_다시볼곳','AI_생각해볼질문'];
   const rows=allStudents.map(s=>{
     const fb=s.feedback||{};
     const checks=s.checks?Object.values(s.checks).filter(Boolean).length:0;
     const badges=Object.keys(s.badges||{}).length;
     const src=fb.source==='ai'?'Claude AI':(fb.green?'규칙 기반':'');
-    return [s.nick, STAGES[stageOf(s)].name, s.submittedAt, s.genre, s.reader, s.purpose,
+    return [s.nick, STAGES[stageOf(s)].name, s.submittedAt, s.genre, s.reader, s.purpose, s.title,
       s.draft, s.revised, s.changeNote, s.reflect, checks+'/'+CHECKS.length, badges,
       src, fb.green, fb.yellow, fb.blue].map(csvCell).join(',');
   });
