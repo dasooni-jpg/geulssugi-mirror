@@ -267,6 +267,7 @@
       <div class="row">
         <button class="btn primary" onclick="saveStep(2)">고친 글 저장하기</button>
         <button class="btn ghost" onclick="goStep(3)">돌아보기로 →</button>
+        <button class="btn ghost" onclick="refillFromDraft()">↺ 초고 내용으로 다시 채우기</button>
         <span class="savetag" id="save2"></span>
       </div>
     </div>
@@ -366,10 +367,9 @@ let state = load() || {
 if(FIXED_GENRE) state.genre=FIXED_GENRE;
 if(FIXED_READER) state.reader=FIXED_READER;
 if(FIXED_PURPOSE) state.purpose=FIXED_PURPOSE;
-// 이전 버전 데이터 호환: 이미 초고와 다르게 고쳐 쓴 내용이 있으면 '직접 수정함'으로 간주
-if(state.revisedTouched===undefined){
-  state.revisedTouched = !!(state.revised && state.revised!==state.draft);
-}
+// 이전 버전 데이터 호환: revisedTouched 값이 없으면 false로 시작
+// (revised가 draft와 다른 것만으로는 '직접 수정함'인지 '예전 버그로 남은 값'인지 구분할 수 없음)
+if(state.revisedTouched===undefined) state.revisedTouched=false;
 let cur = 0;
 
 function load(){ try{ return JSON.parse(localStorage.getItem(KEY)); }catch(e){ return null; } }
@@ -615,6 +615,13 @@ async function runFeedback(){
   state.feedbackDone=true; persist();
   earn('mirror','🪞','거울 탐험가','거울 피드백을 처음 받았어요!');
   $('reviseCard').scrollIntoView({behavior:'smooth'});
+}
+
+/* 고쳐쓰기 칸을 최신 초고 내용으로 강제로 다시 채움(직접 고친 내용은 사라짐, 확인 후 실행) */
+function refillFromDraft(){
+  if(state.revised && state.revised.trim() && !confirm('고쳐쓰기 칸의 지금 내용이 사라지고, 최신 초고 내용으로 바뀌어요. 계속할까요?')) return;
+  state.revised=state.draft; state.revisedTouched=false;
+  $('revised').value=state.revised; updateCount('revised','revCount'); persist();
 }
 
 /* ---------- 돌아보기 ---------- */
