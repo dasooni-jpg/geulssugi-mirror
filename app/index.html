@@ -264,9 +264,6 @@
       <textarea class="big" id="revised" placeholder="여기서 글을 고쳐 써요."></textarea>
       <div class="counter" id="revCount">0자 · 0문장</div>
 
-      <label class="fld">🔧 무엇을, 왜 고쳤나요? (한 줄 메모)</label>
-      <input class="line" id="changeNote" placeholder="예) '그것'이 무엇인지 알 수 있게 '내 강아지'로 바꿨다." />
-
       <div class="row">
         <button class="btn primary" onclick="saveStep(2)">고친 글 저장하기</button>
         <button class="btn ghost" onclick="goStep(3)">돌아보기로 →</button>
@@ -408,7 +405,7 @@ function bind(id, field, after){
   el.addEventListener('input',()=>{ state[field]=el.value; persist(); if(after) after(); });
 }
 bind('nick','nick'); bind('title','title');
-bind('ideas','ideas'); bind('changeNote','changeNote'); bind('reflect','reflect');
+bind('ideas','ideas'); bind('reflect','reflect');
 bind('draft','draft', ()=>updateCount('draft','draftCount'));
 bind('revised','revised', ()=>updateCount('revised','revCount'));
 
@@ -643,7 +640,7 @@ function renderReflect(){
 
 function finishReflect(){
   saveStep(3);
-  if(state.changeNote && state.changeNote.trim()) earn('reviser','✍️','꼼꼼한 고쳐쓰기 작가','왜 고쳤는지 메모를 남겼어요!');
+  if(state.revised && state.revised.trim() && state.revised!==state.draft) earn('reviser','✍️','꼼꼼한 고쳐쓰기 작가','초고를 실제로 고쳐 썼어요!');
   const allChecked = CHECKS.every((_,i)=>state.checks[i]);
   if(allChecked) earn('reviewer','🌱','성장하는 작가','스스로 점검을 모두 마쳤어요!');
   if(state.reflect && state.reflect.trim()) earn('thinker','💡','생각하는 작가','배운 점을 스스로 정리했어요!');
