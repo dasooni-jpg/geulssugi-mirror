@@ -397,29 +397,84 @@ function analyze(text){
   const t=text.trim();
   const sents=t.split(/[.!?。…\n]+/).filter(s=>s.trim().length>0);
   const paras=t.split(/\n\s*\n/).filter(p=>p.trim().length>0);
+
+  // 문장 종결 스타일: 해라체(~다) vs 해요체(~요/~에요/~예요) 혼용 여부
+  let haeraCount=0, haeyoCount=0;
+  sents.forEach(s=>{
+    const s2=s.trim();
+    if(/(요|에요|예요)[.!?]?$/.test(s2)) haeyoCount++;
+    else if(/다[.!?]?$/.test(s2)) haeraCount++;
+  });
+
+  // 접속어 다양성: 여러 번 쓰면서 한 종류만 반복하는지
+  const CONNECTIVES=['그리고','그래서','그러나','하지만','그런데','또한','그러므로','그렇지만'];
+  const usedConnectives = CONNECTIVES.filter(c=>t.includes(c));
+  const connectiveTotal = usedConnectives.reduce((sum,c)=>sum+(t.split(c).length-1),0);
+
+  // 주장-근거 구조: 주장 표현과 '왜냐하면' 류 근거 연결어가 함께 있는지
+  const hasClaim=/(생각한다|생각합니다|해야 한다|해야 합니다|주장한다|바랍니다|필요하다|필요합니다)/.test(t);
+  const hasReason=/(왜냐하면|때문|이유는|까닭은|그 이유)/.test(t);
+
+  // 문장 시작 반복: 연속 3문장 이상이 같은 낱말로 시작하는지
+  const starts=sents.map(s=>(s.trim().split(/\s+/)[0]||''));
+  let repeatedStart=false;
+  for(let i=0;i+2<starts.length;i++){
+    if(starts[i] && starts[i]===starts[i+1] && starts[i]===starts[i+2]){ repeatedStart=true; break; }
+  }
+
+  // 상투적 감정 표현: '재미있었다·좋았다' 류가 짧은 글에서 반복되는지
+  const emotionWords=(t.match(/(재미있|재밌|좋았|즐거웠|행복했|슬펐|화났|힘들었|신났)/g)||[]).length;
+
+  // 느낌표 과다 사용
+  const exclamCount=(t.match(/!/g)||[]).length;
+
+  // 매우 짧은 문장(공백 제외 12자 이하)이 3개 이상 연속되는 단문 나열
+  let shortRun=false, run=0;
+  sents.forEach(s=>{
+    if(s.trim().replace(/\s/g,'').length<=12){ run++; if(run>=3) shortRun=true; }
+    else run=0;
+  });
+
   return {
     len:t.length, sentCount:sents.length, paraCount:paras.length,
     longSent:sents.find(s=>s.replace(/\s/g,'').length>60),
     vague:/(그것|이것|저것|그거|이거|그런 것)/.test(t),
     hasEnd:/([다요죠]\.?|[!?])\s*$/.test(t),
-    repeat:/(그리고|그래서|그러나)\s/g.test(t) && (t.match(/그리고/g)||[]).length>=3
+    repeat:/(그리고|그래서|그러나)\s/g.test(t) && (t.match(/그리고/g)||[]).length>=3,
+    endingMixed: haeraCount>=2 && haeyoCount>=2,
+    usedConnectives, connectiveTotal,
+    connectiveLowDiversity: connectiveTotal>=3 && usedConnectives.length===1,
+    hasClaim, hasReason,
+    repeatedStart,
+    emotionWords, exclamOveruse: exclamCount>=3,
+    shortRun
   };
 }
 
 function makeCards(text){
   const a=analyze(text);
-  // 🟢 잘한 점 (항상 칭찬 먼저)
+  const isArgument = state.genre==='주장하는 글';
+
+  // 🟢 잘한 점 (항상 칭찬 먼저, 특별한 강점부터 우선)
   let green;
-  if(a.paraCount>=2) green="문단을 나누어 써서 읽는 사람이 내용을 따라가기 쉬워요.";
+  if(isArgument && a.hasClaim && a.hasReason) green="생각(주장)과 그렇게 생각한 까닭(근거)을 함께 밝혀서 훨씬 설득력 있는 글이 됐어요!";
+  else if(a.usedConnectives.length>=3) green="'그리고·그래서·하지만' 같은 여러 이음말을 골고루 써서 글의 흐름이 자연스러워요.";
+  else if(a.paraCount>=2) green="문단을 나누어 써서 읽는 사람이 내용을 따라가기 쉬워요.";
   else if(a.len>200) green="끝까지 포기하지 않고 충분한 분량을 써냈어요. 정말 멋져요!";
   else if(a.hasEnd) green="문장을 끝맺음까지 잘 마무리했어요.";
   else green="글을 시작한 용기가 멋져요. 첫걸음이 가장 중요해요!";
 
-  // 🟡 다시 볼 곳 (질문형)
+  // 🟡 다시 볼 곳 (질문형, 가장 중요한 것부터 순서대로 검사)
   let yellow;
   if(a.vague) yellow="'그것', '이것' 같은 말이 무엇을 가리키는지 읽는 사람이 알 수 있을까요?";
+  else if(isArgument && a.hasClaim && !a.hasReason) yellow="왜 그렇게 생각하는지 '왜냐하면' 같은 말로 까닭(근거)을 설명해 보면 어떨까요?";
+  else if(a.endingMixed) yellow="문장 끝이 '~다'체와 '~요'체가 섞여 있어요. 하나로 통일하면 더 안정적이지 않을까요?";
   else if(a.longSent) yellow="한 문장이 꽤 길어요. 두 문장으로 나누면 더 또렷해지지 않을까요?";
-  else if(a.repeat) yellow="'그리고·그래서'가 자주 나와요. 다른 이음말로 바꿀 곳은 없을까요?";
+  else if(a.repeat || a.connectiveLowDiversity) yellow="같은 이음말이 자주 나와요. '그런데·하지만·또한'처럼 다른 이음말로 바꿀 곳은 없을까요?";
+  else if(a.repeatedStart) yellow="여러 문장이 같은 낱말로 시작하고 있어요. 문장을 다르게 시작해 보면 어떨까요?";
+  else if(a.exclamOveruse) yellow="느낌표를 여러 번 썼어요. 정말 강조하고 싶은 곳에만 남겨보면 어떨까요?";
+  else if(a.emotionWords>=2 && a.len<150) yellow="'재미있었다', '좋았다' 같은 말 대신, 왜 그런 마음이 들었는지 더 자세히 써 볼까요?";
+  else if(a.shortRun) yellow="짧은 문장이 계속 이어져요. 몇 문장을 연결해서 더 자연스럽게 써 보면 어떨까요?";
   else if(a.paraCount<2 && a.len>150) yellow="내용을 처음·가운데·끝으로 문단을 나눠보면 어떨까요?";
   else if(!a.hasEnd) yellow="마지막 문장이 잘 끝맺어졌는지 다시 읽어볼까요?";
   else yellow="읽는 사람이 가장 궁금해할 부분을 조금 더 자세히 쓸 수 있을까요?";
