@@ -279,7 +279,10 @@
   <section class="panel" data-panel="3">
     <div class="card">
       <h2>🌱 나의 글쓰기 과정 돌아보기</h2>
-      <p class="hint">초고와 고친 글이 어떻게 달라졌는지 비교해 봐요.</p>
+      <p class="hint">초고와 고친 글이 어떻게 달라졌는지 비교해 봐요.
+        <span style="color:var(--muted);text-decoration:line-through">지운 낱말</span> ·
+        <span style="color:var(--blue);font-weight:700">새로 쓴 낱말</span>
+      </p>
       <div id="titleShow" style="font-weight:800;font-size:16px;margin-bottom:10px"></div>
       <div class="compare">
         <div class="col"><h3>📄 처음 쓴 글(초고)</h3><div class="doc" id="docDraft"></div></div>
@@ -641,6 +644,38 @@ function refillFromDraft(){
   $('revised').value=state.revised; updateCount('revised','revCount'); persist();
 }
 
+/* ---------- 초고 ↔ 고친 글 단어 단위 비교(diff) ----------
+   같은 낱말은 그대로, 사라진 낱말은 취소선(회색), 새로 생긴 낱말은 파란 글씨로 표시. */
+function diffTokens(a,b){
+  const ta=a.split(/(\s+)/), tb=b.split(/(\s+)/);
+  const n=ta.length, m=tb.length;
+  const dp=Array.from({length:n+1},()=>new Array(m+1).fill(0));
+  for(let i=n-1;i>=0;i--){
+    for(let j=m-1;j>=0;j--){
+      dp[i][j] = ta[i]===tb[j] ? dp[i+1][j+1]+1 : Math.max(dp[i+1][j], dp[i][j+1]);
+    }
+  }
+  let i=0,j=0; const ops=[];
+  while(i<n && j<m){
+    if(ta[i]===tb[j]){ ops.push({type:'equal', text:ta[i]}); i++; j++; }
+    else if(dp[i+1][j]>=dp[i][j+1]){ ops.push({type:'del', text:ta[i]}); i++; }
+    else{ ops.push({type:'ins', text:tb[j]}); j++; }
+  }
+  while(i<n){ ops.push({type:'del', text:ta[i]}); i++; }
+  while(j<m){ ops.push({type:'ins', text:tb[j]}); j++; }
+  return ops;
+}
+function renderDiffHtml(ops, side){
+  // side: 'old' → equal+del 표시(취소선), 'new' → equal+ins 표시(파란 글씨)
+  return ops
+    .filter(op=> op.type==='equal' || (side==='old' && op.type==='del') || (side==='new' && op.type==='ins'))
+    .map(op=>{
+      if(op.type==='equal') return esc(op.text);
+      if(op.type==='del') return `<span style="color:var(--muted);text-decoration:line-through">${esc(op.text)}</span>`;
+      return `<span style="color:var(--blue);font-weight:700">${esc(op.text)}</span>`;
+    }).join('');
+}
+
 /* ---------- 돌아보기 ---------- */
 const CHECKS=[
   "읽는 사람과 목적을 생각하며 썼다",
@@ -650,8 +685,15 @@ const CHECKS=[
 ];
 function renderReflect(){
   $('titleShow').textContent = state.title? "📝 "+state.title : "";
-  $('docDraft').textContent = state.draft||"(아직 초고가 없어요)";
-  $('docRevised').textContent = state.revised||"(아직 고친 글이 없어요)";
+  const draft=state.draft||"", revised=state.revised||"";
+  if(draft && revised && draft!==revised){
+    const ops=diffTokens(draft, revised);
+    $('docDraft').innerHTML = renderDiffHtml(ops,'old');
+    $('docRevised').innerHTML = renderDiffHtml(ops,'new');
+  } else {
+    $('docDraft').textContent = draft||"(아직 초고가 없어요)";
+    $('docRevised').textContent = revised||"(아직 고친 글이 없어요)";
+  }
   // 체크리스트
   const wrap=$('selfChecks'); wrap.innerHTML="";
   CHECKS.forEach((q,i)=>{
@@ -689,13 +731,21 @@ function showcase(){
   const badgeNames={mirror:'🪞 거울 탐험가',reviser:'✍️ 고쳐쓰기 작가',reviewer:'🌱 성장하는 작가',thinker:'💡 생각하는 작가'};
   const badges=Object.keys(s.badges||{}).map(k=>badgeNames[k]).filter(Boolean);
   const checksHtml=SC_CHECKS.map((q,i)=>`<div class="sc-check">${s.checks&&s.checks[i]?'✅':'⬜'} ${q}</div>`).join('');
+  const sDraft=s.draft||"", sRevised=s.revised||"";
+  let scDocOld, scDocNew;
+  if(sDraft && sRevised && sDraft!==sRevised){
+    const scOps=diffTokens(sDraft, sRevised);
+    scDocOld=renderDiffHtml(scOps,'old'); scDocNew=renderDiffHtml(scOps,'new');
+  } else {
+    scDocOld=esc(sDraft)||'(없음)'; scDocNew=esc(sRevised)||'(없음)';
+  }
   $('scBody').innerHTML=`
     <h2 style="margin:0 0 4px">🪞 ${esc(s.nick)||'학생'}의 글쓰기 과정</h2>
     <p class="hint" style="margin:0 0 16px">종류 ${esc(s.genre)||'-'} · 읽는 사람 ${esc(s.reader)||'-'} · 목적 ${esc(s.purpose)||'-'}</p>
     ${s.title?`<p style="font-weight:800;font-size:16px;margin:0 0 12px">📝 ${esc(s.title)}</p>`:''}
     <div class="compare">
-      <div class="col"><h3>📄 처음 쓴 글</h3><div class="doc">${esc(s.draft)||'(없음)'}</div></div>
-      <div class="col"><h3>✨ 고쳐 쓴 글</h3><div class="doc">${esc(s.revised)||'(없음)'}</div></div>
+      <div class="col"><h3>📄 처음 쓴 글</h3><div class="doc">${scDocOld}</div></div>
+      <div class="col"><h3>✨ 고쳐 쓴 글</h3><div class="doc">${scDocNew}</div></div>
     </div>
     ${s.changeNote?`<div class="selfq" style="margin-top:14px"><b>🔧 무엇을·왜 고쳤나</b>${esc(s.changeNote)}</div>`:''}
     ${fb?`<div style="margin-top:14px">

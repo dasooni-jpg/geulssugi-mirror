@@ -140,6 +140,44 @@ function esc(t){ return (t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').repla
 function yellowArr(y){ return Array.isArray(y) ? y : (y? [y] : []); }
 function yellowText(y){ return Array.isArray(y) ? y.join(' / ') : (y||''); }
 
+/* 초고 ↔ 고친 글 단어 단위 비교(diff): 지운 낱말은 취소선, 새 낱말은 파란 글씨 */
+function diffTokens(a,b){
+  const ta=a.split(/(\s+)/), tb=b.split(/(\s+)/);
+  const n=ta.length, m=tb.length;
+  const dp=Array.from({length:n+1},()=>new Array(m+1).fill(0));
+  for(let i=n-1;i>=0;i--){
+    for(let j=m-1;j>=0;j--){
+      dp[i][j] = ta[i]===tb[j] ? dp[i+1][j+1]+1 : Math.max(dp[i+1][j], dp[i][j+1]);
+    }
+  }
+  let i=0,j=0; const ops=[];
+  while(i<n && j<m){
+    if(ta[i]===tb[j]){ ops.push({type:'equal', text:ta[i]}); i++; j++; }
+    else if(dp[i+1][j]>=dp[i][j+1]){ ops.push({type:'del', text:ta[i]}); i++; }
+    else{ ops.push({type:'ins', text:tb[j]}); j++; }
+  }
+  while(i<n){ ops.push({type:'del', text:ta[i]}); i++; }
+  while(j<m){ ops.push({type:'ins', text:tb[j]}); j++; }
+  return ops;
+}
+function renderDiffHtml(ops, side){
+  return ops
+    .filter(op=> op.type==='equal' || (side==='old' && op.type==='del') || (side==='new' && op.type==='ins'))
+    .map(op=>{
+      if(op.type==='equal') return esc(op.text);
+      if(op.type==='del') return `<span style="color:var(--muted);text-decoration:line-through">${esc(op.text)}</span>`;
+      return `<span style="color:var(--blue);font-weight:700">${esc(op.text)}</span>`;
+    }).join('');
+}
+function docPairHtml(draft, revised){
+  const d=draft||"", r=revised||"";
+  if(d && r && d!==r){
+    const ops=diffTokens(d, r);
+    return { old:renderDiffHtml(ops,'old'), new:renderDiffHtml(ops,'new') };
+  }
+  return { old: esc(d)||'(없음)', new: esc(r)||'(없음)' };
+}
+
 let allStudents=[];
 
 /* 학생이 내보낸 .json 파일을 불러와 화면에만 표시 (서버·저장 없음) */
@@ -199,6 +237,7 @@ function render(){
     const stage=stageOf(s);
     const badges=Object.keys(s.badges||{}).length;
     const checks=(s.checks)?Object.values(s.checks).filter(Boolean).length:0;
+    const docPair=docPairHtml(s.draft, s.revised);
     return `<div class="student" id="st${idx}">
       <div class="head" onclick="document.getElementById('st${idx}').classList.toggle('open')">
         <span class="nick">${esc(s.nick)||'이름없음'}</span>
@@ -215,8 +254,8 @@ function render(){
           <b>목적</b> ${esc(s.purpose)||'-'}
         </div>
         <div class="compare">
-          <div class="doc"><h4>📄 초고</h4>${esc(s.draft)||'(없음)'}</div>
-          <div class="doc"><h4>✨ 고쳐 쓴 글</h4>${esc(s.revised)||'(없음)'}</div>
+          <div class="doc"><h4>📄 초고</h4>${docPair.old}</div>
+          <div class="doc"><h4>✨ 고쳐 쓴 글</h4>${docPair.new}</div>
         </div>
         ${s.changeNote?`<div class="note"><b>🔧 무엇을·왜 고쳤나:</b> ${esc(s.changeNote)}</div>`:''}
         ${s.reflect?`<div class="reflect"><b>🌱 배운 점:</b> ${esc(s.reflect)}</div>`:''}
