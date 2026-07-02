@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <meta name="theme-color" content="#7c6cf0" />
-<title>타닥타닥 타자 — 낱말 비</title>
+<title>타닥타닥 타자 — 낱말 비 · 문장 쓰기</title>
 <style>
   :root{
     --bg:#f5f3ff; --card:#ffffff; --ink:#2d2a45; --muted:#7b7894;
@@ -115,6 +115,24 @@
   .privacy b{color:var(--green)}
 
   .toprow{display:flex;gap:8px;align-items:center;margin-left:auto}
+
+  /* 문장 쓰기 모드 */
+  .sentence-wrap{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    width:90%;max-width:640px;background:#fff;border-radius:18px;box-shadow:var(--shadow);
+    padding:22px 24px;text-align:center}
+  .sentence-wrap.hidden{display:none}
+  .sentence-progress{font-size:13px;color:var(--muted);margin-bottom:10px;font-weight:700}
+  .sentence-text{font-size:26px;font-weight:800;line-height:1.8;letter-spacing:.3px;word-break:keep-all}
+  .sentence-text.long{font-size:20px}
+  .sentence-text.vlong{font-size:16px}
+  .sentence-text .ch.ok{color:var(--green)}
+  .sentence-text .ch.bad{color:#fff;background:var(--red);border-radius:4px}
+  .sentence-text .ch.cur{background:#f1eeff;border-radius:4px;box-shadow:0 0 0 2px var(--brand) inset;animation:blink 1s step-start infinite}
+  @keyframes blink{50%{box-shadow:0 0 0 2px transparent inset}}
+  .sentence-text .ch.todo{color:#c9c5e0}
+  .sentence-hint{margin-top:16px;font-size:12px;color:var(--muted)}
+  .lives.timer{letter-spacing:0}
+  .field.mode-sentence .floor{display:none}
 </style>
 </head>
 <body>
@@ -122,13 +140,13 @@
   <header class="top">
     <img class="mascot" src="mascot.png" alt="다람쌤" onerror="this.style.display='none'"/>
     <div class="title">
-      <h1>타닥타닥 타자 — 낱말 비 ☔</h1>
-      <p>떨어지는 낱말을 바닥에 닿기 전에 쳐서 없애요!</p>
+      <h1>타닥타닥 타자 ⌨️</h1>
+      <p>낱말 비 또는 문장 쓰기를 골라 타자를 연습해요!</p>
     </div>
     <div class="hud">
       <div class="stat"><div class="v" id="score">0</div><div class="k">점수</div></div>
       <div class="stat combo" id="comboBox"><div class="v" id="combo">0</div><div class="k">콤보</div></div>
-      <div class="stat"><div class="v lives" id="lives">❤️❤️❤️</div><div class="k">생명</div></div>
+      <div class="stat"><div class="v lives" id="lives">❤️❤️❤️</div><div class="k" id="livesLabel">생명</div></div>
       <button class="btn ghost sm" id="pauseBtn" style="display:none">⏸ 멈춤</button>
     </div>
   </header>
@@ -136,11 +154,25 @@
   <div class="field" id="field">
     <div class="floor"></div>
 
+    <!-- 문장 쓰기 화면 -->
+    <div class="sentence-wrap hidden" id="sentenceWrap">
+      <div class="sentence-progress" id="sentenceProgress">0문장 완료</div>
+      <div class="sentence-text" id="sentenceText"></div>
+      <div class="sentence-hint">다 치면 자동으로 다음 문장 · 막히면 엔터로 건너뛰기</div>
+    </div>
+
     <!-- 시작 화면 -->
     <div class="overlay" id="startScreen">
-      <h2>낱말 비 ☔</h2>
-      <p>낱말을 입력하고 <b>엔터(↵)</b>를 누르면 펑! 하고 사라져요.<br/>바닥에 닿으면 생명이 줄어들어요. (생명 3개)</p>
+      <h2 id="startTitle">낱말 비 ☔</h2>
+      <p id="modeDesc">낱말을 입력하고 <b>엔터(↵)</b>를 누르면 펑! 하고 사라져요.<br/>바닥에 닿으면 생명이 줄어들어요. (생명 3개)</p>
       <div class="who">별명 <input id="nick" maxlength="6" placeholder="예: 다람이"/></div>
+      <div>
+        <p style="margin-bottom:8px">게임을 골라요</p>
+        <div class="diffrow" id="modeRow">
+          <button class="chip on" data-mode="rain">☔ 낱말 비</button>
+          <button class="chip" data-mode="sentence">✍️ 문장 쓰기</button>
+        </div>
+      </div>
       <div>
         <p style="margin-bottom:8px">난이도를 골라요</p>
         <div class="diffrow" id="diffRow">
@@ -184,6 +216,10 @@
     <!-- 우리 반 순위표 -->
     <div class="overlay hidden" id="rankScreen">
       <h2>🏆 우리 반 순위표</h2>
+      <div class="diffrow" id="rankTabs">
+        <button class="chip on" data-mode="rain">☔ 낱말 비</button>
+        <button class="chip" data-mode="sentence">✍️ 문장 쓰기</button>
+      </div>
       <p class="privacy">이 순위표는 <b>이 기기(태블릿/PC)에만</b> 저장돼요 · 서버 전송 없음</p>
       <div class="hall big" id="hallFull"></div>
       <div class="diffrow">
@@ -230,6 +266,27 @@ const WORDS = {
              "열 번 찍어 안 넘어가는 나무 없다"]
 };
 
+/* ================= 문장 은행 (문장 쓰기 모드) ================= */
+const SENTENCES = {
+  veryeasy: ["나는 물을 마신다.","오늘 하늘이 맑다.","친구와 함께 걷는다.","책을 읽고 있다.",
+             "밥을 맛있게 먹는다.","창문을 활짝 연다.","공을 힘껏 찬다.","그림을 예쁘게 그린다.",
+             "노래를 크게 부른다.","웃으며 인사를 한다."],
+  easy: ["나는 매일 아침 운동을 한다.","친구들과 함께 축구를 했다.","오늘은 도서관에서 책을 읽었다.",
+         "우리 반은 함께 청소를 한다.","선생님께서 문제를 설명해 주셨다.","쉬는 시간에 재미있게 놀았다.",
+         "저녁에는 가족과 산책을 한다.","새로운 낱말을 공책에 적었다.","친구에게 고맙다고 말했다.",
+         "운동장에서 신나게 뛰어놀았다."],
+  normal: ["지구는 태양 주위를 돌고 있다.","식물은 광합성으로 양분을 만든다.","우리는 서로 다름을 존중해야 한다.",
+           "분수는 전체 중 일부를 나타낸다.","세종대왕은 훈민정음을 만드셨다.","물은 온도에 따라 상태가 변한다.",
+           "역사를 배우면 오늘을 이해할 수 있다.","협동하면 더 큰 힘을 낼 수 있다.",
+           "환경을 지키는 것은 우리의 책임이다.","꾸준한 노력이 좋은 결과를 만든다."],
+  hard: ["비록 실수를 하더라도 다시 도전하는 용기가 중요하다.","친구의 마음을 헤아리는 것이 진정한 우정의 시작이다.",
+         "작은 습관이 쌓이면 큰 변화를 만들어 낼 수 있다.","다른 사람의 의견을 끝까지 듣는 태도가 필요하다.",
+         "어려운 문제일수록 차근차근 순서를 세워 풀어야 한다.","포기하지 않고 끝까지 해내는 사람이 결국 성장한다.",
+         "함께 나누는 기쁨은 혼자 누리는 기쁨보다 크다.","생각을 정리해서 말하면 상대방이 더 잘 이해한다.",
+         "새로운 것을 배우는 즐거움을 잊지 않았으면 좋겠다.","지구를 지키려면 오늘부터 작은 실천을 시작해야 한다."],
+  veryhard: WORDS.veryhard   // 속담 문장 재사용
+};
+
 /* 난이도별 파라미터 */
 const CFG = {
   veryeasy: { fall: 30, spawn: 2600, ramp: 0.005, mult: 1 },
@@ -238,33 +295,37 @@ const CFG = {
   hard:     { fall: 46, spawn: 2200, ramp: 0.012, mult: 3 },
   veryhard: { fall: 52, spawn: 1600, ramp: 0.018, mult: 4 }
 };
-const HALL_KEY = "typingRain.hall.v2";   // v2: 닉네임별 최고기록 1줄
+const HALL_KEYS = { rain: "typingRain.hall.v2", sentence: "typingRain.hallSentence.v1" };
+const SENTENCE_TIME = 60;   // 문장 쓰기 제한시간(초)
 
 /* ================= 상태 ================= */
+let mode = "rain";       // "rain" | "sentence"
 let diff = "easy";
 let nick = "";
 let words = [];          // {el,text,typedLen,x,y,speed,hard}
 let score=0, combo=0, maxCombo=0, lives=3;
 let correctKeys=0, totalKeys=0;   // 정확도용
-let typedChars=0;                 // 완성 낱말 글자수(타수용)
+let typedChars=0;                 // 완성 낱말/문장 글자수(타수용)
 let startTime=0, elapsedPause=0;
 let running=false, paused=false;
 let lastFrame=0, lastSpawn=0, gameTime=0;
 let rafId=null;
+let curSentence="", sentencesDone=0, timeLeft=SENTENCE_TIME, sentenceTimer=null;
 
 /* ================= DOM ================= */
 const $ = s => document.querySelector(s);
 const field=$("#field"), answer=$("#answer");
 const scoreEl=$("#score"), comboEl=$("#combo"), comboBox=$("#comboBox"),
-      livesEl=$("#lives"), cpmEl=$("#cpm");
+      livesEl=$("#lives"), livesLabel=$("#livesLabel"), cpmEl=$("#cpm");
 
-/* ================= 우리 반 순위표 (이 기기에만 저장) ================= */
-function loadHall(){ try{return JSON.parse(localStorage.getItem(HALL_KEY))||[]}catch(e){return[]} }
-function saveHall(list){ localStorage.setItem(HALL_KEY, JSON.stringify(list.slice(0,100))); }
+/* ================= 우리 반 순위표 (이 기기에만 저장, 모드별 분리) ================= */
+function loadHall(hkey){ try{return JSON.parse(localStorage.getItem(hkey))||[]}catch(e){return[]} }
+function saveHall(hkey,list){ localStorage.setItem(hkey, JSON.stringify(list.slice(0,100))); }
+function rankTitle(m){ return m==="sentence" ? "🏆 문장 쓰기 순위표" : "🏆 낱말 비 순위표"; }
 
 /* 점수 기록: 같은 별명은 '최고 점수' 한 줄만 유지 */
-function recordScore(entry){
-  const list = loadHall();
+function recordScore(hkey,entry){
+  const list = loadHall(hkey);
   const named = entry.nick && entry.nick!=="익명";
   let isBest = true;
   const i = named ? list.findIndex(r=>r.nick===entry.nick) : -1;
@@ -275,13 +336,13 @@ function recordScore(entry){
     list.push(entry);
   }
   list.sort((a,b)=>b.score-a.score);
-  saveHall(list);
+  saveHall(hkey,list);
   const rank = named ? list.findIndex(r=>r.nick===entry.nick) : list.indexOf(entry);
   return { rank, isBest };
 }
 
-function renderHall(el, highlightIdx=-1, opts={}){
-  const list = loadHall();
+function renderHall(hkey, el, highlightIdx=-1, opts={}){
+  const list = loadHall(hkey);
   const title = opts.title || "🏆 우리 반 순위표";
   if(!list.length){
     el.innerHTML = `<h3>${title}</h3><div class='empty'>아직 기록이 없어요. 첫 주자가 되어보세요!</div>`;
@@ -298,19 +359,34 @@ function renderHall(el, highlightIdx=-1, opts={}){
 }
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
+function currentSelectedStartMode(){ const b=$("#modeRow .chip.on"); return b?b.dataset.mode:"rain"; }
+function updateStartHallPreview(){
+  const m=currentSelectedStartMode();
+  renderHall(HALL_KEYS[m], $("#hallStart"), -1, {limit:5, title:rankTitle(m)});
+}
+
 /* ================= 게임 로직 ================= */
 function resetState(){
   words.forEach(w=>w.el.remove()); words=[];
   score=0; combo=0; maxCombo=0; lives=3;
   correctKeys=0; totalKeys=0; typedChars=0;
   gameTime=0; lastSpawn=0; elapsedPause=0;
+  curSentence=""; sentencesDone=0; timeLeft=SENTENCE_TIME;
   updateHUD();
 }
 function updateHUD(){
   scoreEl.textContent = score.toLocaleString();
   comboEl.textContent = combo;
   comboBox.classList.toggle("hot", combo>=5);
-  livesEl.textContent = "❤️".repeat(lives) + "🤍".repeat(3-lives);
+  if(mode==="sentence"){
+    livesLabel.textContent="남은시간";
+    livesEl.textContent=timeLeft+"초";
+    livesEl.classList.add("timer");
+  } else {
+    livesLabel.textContent="생명";
+    livesEl.textContent = "❤️".repeat(lives) + "🤍".repeat(3-lives);
+    livesEl.classList.remove("timer");
+  }
   cpmEl.textContent = currentCPM();
 }
 function currentCPM(){
@@ -423,21 +499,88 @@ function completeWord(w){
   updateHUD();
 }
 
-/* 입력 처리 (한글 IME 대응) — 조준/하이라이트만 담당 */
+/* ================= 문장 쓰기 로직 ================= */
+function pickSentence(){
+  const pool = SENTENCES[diff];
+  let t;
+  do{ t = pool[Math.floor(Math.random()*pool.length)]; } while(pool.length>1 && t===curSentence);
+  curSentence = t;
+  renderSentence();
+}
+function renderSentence(){
+  const val = answer.value;
+  const chars = [...curSentence];
+  const len = chars.length;
+  const sizeCls = len>=24 ? " vlong" : (len>=14 ? " long" : "");
+  let html="";
+  for(let i=0;i<len;i++){
+    let cls="todo";
+    if(i<val.length){ cls = val[i]===chars[i] ? "ok" : "bad"; }
+    else if(i===val.length){ cls="cur"; }
+    html += `<span class="ch ${cls}">${esc(chars[i])}</span>`;
+  }
+  const box=$("#sentenceText");
+  box.className="sentence-text"+sizeCls;
+  box.innerHTML = html;
+  $("#sentenceProgress").textContent = sentencesDone+"문장 완료";
+}
+function completeSentence(){
+  sentencesDone++;
+  combo++; maxCombo=Math.max(maxCombo,combo);
+  const gain = Math.round(curSentence.length * CFG[diff].mult * (1+combo/10) * 10);
+  score += gain;
+  typedChars += curSentence.length;
+  // 펑! 연출
+  const b=document.createElement("div");
+  b.className="boom"; b.textContent="+"+gain;
+  const box=$("#sentenceText").getBoundingClientRect(), fr=field.getBoundingClientRect();
+  b.style.left=(box.left-fr.left+box.width/2)+"px"; b.style.top=(box.top-fr.top)+"px";
+  field.appendChild(b); setTimeout(()=>b.remove(),600);
+  clearInput();
+  pickSentence();
+  updateHUD();
+}
+function skipSentence(){
+  combo=0;
+  clearInput();
+  pickSentence();
+  updateHUD();
+}
+function startSentenceTimer(){
+  sentenceTimer=setInterval(()=>{
+    timeLeft--;
+    updateHUD();
+    if(timeLeft<=0){ stopSentenceTimer(); endGame(); }
+  },1000);
+}
+function stopSentenceTimer(){ if(sentenceTimer){ clearInterval(sentenceTimer); sentenceTimer=null; } }
+
+/* 입력 처리 (한글 IME 대응) */
 let composing=false;
 answer.addEventListener("compositionstart",()=>{ composing=true; });
-answer.addEventListener("compositionend",()=>{ composing=false; handleInput(); });
+answer.addEventListener("compositionend",()=>{
+  composing=false;
+  if(mode==="rain"){ handleInput(); }
+  else { renderSentence(); if(answer.value===curSentence){ completeSentence(); } }
+});
 answer.addEventListener("input", ()=>{
-  // 정확도 근사: 현재 입력이 어떤 낱말의 접두사면 정타로 간주
   totalKeys++;
   const val=answer.value;
-  if(val.length>0 && words.some(w=>w.text.startsWith(val))) correctKeys++;
-  handleInput();
+  if(mode==="rain"){
+    // 정확도 근사: 현재 입력이 어떤 낱말의 접두사면 정타로 간주
+    if(val.length>0 && words.some(w=>w.text.startsWith(val))) correctKeys++;
+    handleInput();
+  } else {
+    if(curSentence.startsWith(val)) correctKeys++;
+    renderSentence();
+    if(!composing && val===curSentence){ completeSentence(); }
+  }
 });
 
-/* 엔터로 낱말 확정 — 조합 중이든 아니든 항상 입력창을 비운다 */
+/* 엔터: 낱말 비는 확정 제출, 문장 쓰기는 건너뛰기 */
 answer.addEventListener("keyup",(e)=>{
-  if(e.key==="Enter"){ submitWord(); }
+  if(e.key!=="Enter") return;
+  if(mode==="rain"){ submitWord(); } else { skipSentence(); }
 });
 
 function submitWord(){
@@ -464,19 +607,29 @@ function show(id){ SCREENS.forEach(s=>$("#"+s).classList.toggle("hidden", s!==id
 function hideOverlays(){ SCREENS.forEach(s=>$("#"+s).classList.add("hidden")); }
 
 function startGame(){
+  mode = currentSelectedStartMode();
   nick = ($("#nick").value||"").trim().slice(0,6);
   resetState();
   hideOverlays();
   answer.disabled=false; answer.value=""; answer.focus();
+  answer.placeholder = mode==="rain" ? "낱말을 입력하고 엔터(↵)!" : "문장을 그대로 입력해요!";
   $("#pauseBtn").style.display="inline-block";
+  field.classList.toggle("mode-sentence", mode==="sentence");
+  $("#sentenceWrap").classList.toggle("hidden", mode!=="sentence");
   running=true; paused=false;
-  startTime=performance.now(); lastFrame=0; lastSpawn=performance.now();
-  rafId=requestAnimationFrame(loop);
+  startTime=performance.now();
+  if(mode==="rain"){
+    lastFrame=0; lastSpawn=performance.now();
+    rafId=requestAnimationFrame(loop);
+  } else {
+    pickSentence();
+    startSentenceTimer();
+  }
 }
 function pauseGame(){
   if(!running||paused) return;
   paused=true; pauseStart=performance.now();
-  cancelAnimationFrame(rafId);
+  if(mode==="rain"){ cancelAnimationFrame(rafId); } else { stopSentenceTimer(); }
   show("pauseScreen");
 }
 let pauseStart=0;
@@ -484,11 +637,11 @@ function resumeGame(){
   if(!running||!paused) return;
   elapsedPause += performance.now()-pauseStart;
   paused=false; hideOverlays();
-  answer.focus(); lastFrame=0;
-  rafId=requestAnimationFrame(loop);
+  answer.focus();
+  if(mode==="rain"){ lastFrame=0; rafId=requestAnimationFrame(loop); } else { startSentenceTimer(); }
 }
 function endGame(){
-  running=false; cancelAnimationFrame(rafId);
+  running=false; cancelAnimationFrame(rafId); stopSentenceTimer();
   answer.disabled=true;
   $("#pauseBtn").style.display="none";
   const cpm=currentCPM();
@@ -496,15 +649,15 @@ function endGame(){
   $("#rScore").textContent=score.toLocaleString();
   $("#rCpm").textContent=cpm;
   $("#rAcc").textContent=acc+"%";
-  // 우리 반 순위표 갱신 (닉네임별 최고기록)
-  const entry={nick:nick||"익명", score, cpm, acc, diff, t:Date.now()};
-  const {rank, isBest} = recordScore(entry);
+  // 우리 반 순위표 갱신 (닉네임별 최고기록, 모드별 분리)
+  const entry={nick:nick||"익명", score, cpm, acc, diff, mode, t:Date.now()};
+  const {rank, isBest} = recordScore(HALL_KEYS[mode], entry);
   const banner=$("#newRec");
   if(rank===0){ banner.style.display="block"; banner.textContent="🏆 반 1등 달성!"; }
   else if(isBest && rank<5){ banner.style.display="block"; banner.textContent="🎉 우리 반 "+(rank+1)+"위!"; }
   else if(isBest){ banner.style.display="block"; banner.textContent="✨ 내 최고기록 갱신!"; }
   else { banner.style.display="none"; }
-  renderHall($("#hallEnd"), rank, {limit:8, scroll:true});
+  renderHall(HALL_KEYS[mode], $("#hallEnd"), rank, {limit:8, scroll:true, title:rankTitle(mode)});
   show("endScreen");
 }
 
@@ -514,22 +667,62 @@ $("#diffRow").addEventListener("click",e=>{
   diff=b.dataset.diff;
   $("#diffRow").querySelectorAll(".chip").forEach(c=>c.classList.toggle("on",c===b));
 });
+
+/* 게임 모드 선택 (시작 화면) */
+function updateModeUI(m){
+  if(m==="rain"){
+    $("#startTitle").textContent="낱말 비 ☔";
+    $("#modeDesc").innerHTML="낱말을 입력하고 <b>엔터(↵)</b>를 누르면 펑! 하고 사라져요.<br/>바닥에 닿으면 생명이 줄어들어요. (생명 3개)";
+  } else {
+    $("#startTitle").textContent="문장 쓰기 ✍️";
+    $("#modeDesc").innerHTML="화면의 문장을 <b>그대로</b> 입력해요.<br/>다 치면 자동으로 다음 문장! "+SENTENCE_TIME+"초 동안 몇 문장이나 완성할까요?";
+  }
+  updateStartHallPreview();
+}
+$("#modeRow").addEventListener("click",e=>{
+  const b=e.target.closest(".chip"); if(!b) return;
+  $("#modeRow").querySelectorAll(".chip").forEach(c=>c.classList.toggle("on",c===b));
+  updateModeUI(b.dataset.mode);
+});
+
 $("#startBtn").onclick=startGame;
 $("#retryBtn").onclick=startGame;
-$("#homeBtn").onclick=()=>{ renderHall($("#hallStart"), -1, {limit:5}); show("startScreen"); };
+$("#homeBtn").onclick=()=>{ updateStartHallPreview(); show("startScreen"); };
 $("#pauseBtn").onclick=pauseGame;
 $("#resumeBtn").onclick=resumeGame;
-$("#quitBtn").onclick=()=>{ running=false; renderHall($("#hallStart"), -1, {limit:5}); show("startScreen"); $("#pauseBtn").style.display="none"; answer.disabled=true; words.forEach(w=>w.el.remove()); words=[]; };
+$("#quitBtn").onclick=()=>{
+  running=false;
+  if(mode==="sentence") stopSentenceTimer();
+  updateStartHallPreview();
+  show("startScreen");
+  $("#pauseBtn").style.display="none";
+  answer.disabled=true;
+  words.forEach(w=>w.el.remove()); words=[];
+};
 
-/* 우리 반 순위표 화면 */
-function openRank(){ renderHall($("#hallFull"), -1, {scroll:true}); show("rankScreen"); }
-$("#rankBtn").onclick=openRank;
-$("#rankBtn2").onclick=openRank;
-$("#rankBackBtn").onclick=()=>{ renderHall($("#hallStart"), -1, {limit:5}); show("startScreen"); };
+/* 우리 반 순위표 화면 (모드별 탭) */
+let rankViewMode="rain";
+function renderRankTab(){
+  $("#rankTabs").querySelectorAll(".chip").forEach(c=>c.classList.toggle("on",c.dataset.mode===rankViewMode));
+  renderHall(HALL_KEYS[rankViewMode], $("#hallFull"), -1, {scroll:true, title:rankTitle(rankViewMode)});
+}
+function openRank(initialMode){
+  rankViewMode = initialMode || "rain";
+  renderRankTab();
+  show("rankScreen");
+}
+$("#rankTabs").addEventListener("click",e=>{
+  const b=e.target.closest(".chip"); if(!b) return;
+  rankViewMode=b.dataset.mode;
+  renderRankTab();
+});
+$("#rankBtn").onclick=()=>openRank(currentSelectedStartMode());
+$("#rankBtn2").onclick=()=>openRank(mode);
+$("#rankBackBtn").onclick=()=>{ updateStartHallPreview(); show("startScreen"); };
 $("#rankResetBtn").onclick=()=>{
-  if(confirm("순위표를 모두 지울까요?\n(이 기기의 기록이 삭제되며 되돌릴 수 없어요)")){
-    localStorage.removeItem(HALL_KEY);
-    renderHall($("#hallFull"), -1, {scroll:true});
+  if(confirm(rankTitle(rankViewMode)+"를 모두 지울까요?\n(이 기기의 기록이 삭제되며 되돌릴 수 없어요)")){
+    localStorage.removeItem(HALL_KEYS[rankViewMode]);
+    renderRankTab();
   }
 };
 document.addEventListener("keydown",e=>{
@@ -539,7 +732,7 @@ document.addEventListener("keydown",e=>{
 field.addEventListener("click",()=>{ if(running&&!paused) answer.focus(); });
 
 /* 초기 */
-renderHall($("#hallStart"), -1, {limit:5});
+updateModeUI("rain");
 </script>
 </body>
 </html>
