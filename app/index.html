@@ -361,11 +361,15 @@ const KEY = "geulssugi-mirror-v1";
 let state = load() || {
   nick:"", genre:"", reader:"", purpose:"", ideas:"", title:"",
   draft:"", revised:"", changeNote:"", reflect:"",
-  feedbackDone:false, checks:{}, badges:{}
+  feedbackDone:false, checks:{}, badges:{}, revisedTouched:false
 };
 if(FIXED_GENRE) state.genre=FIXED_GENRE;
 if(FIXED_READER) state.reader=FIXED_READER;
 if(FIXED_PURPOSE) state.purpose=FIXED_PURPOSE;
+// 이전 버전 데이터 호환: 이미 초고와 다르게 고쳐 쓴 내용이 있으면 '직접 수정함'으로 간주
+if(state.revisedTouched===undefined){
+  state.revisedTouched = !!(state.revised && state.revised!==state.draft);
+}
 let cur = 0;
 
 function load(){ try{ return JSON.parse(localStorage.getItem(KEY)); }catch(e){ return null; } }
@@ -407,7 +411,7 @@ function bind(id, field, after){
 bind('nick','nick'); bind('title','title');
 bind('ideas','ideas'); bind('reflect','reflect');
 bind('draft','draft', ()=>updateCount('draft','draftCount'));
-bind('revised','revised', ()=>updateCount('revised','revCount'));
+bind('revised','revised', ()=>{ state.revisedTouched=true; updateCount('revised','revCount'); });
 
 /* ---------- 주제 아이디어 탐색 (주장하는 글) ---------- */
 const TOPIC_BANK = {
@@ -604,9 +608,10 @@ async function runFeedback(){
   renderCards(c, source);
   // 받은 피드백을 기록(제출 시 선생님께 함께 전달)
   state.feedback={green:c.green, yellow:c.yellow, blue:c.blue, source};
-  // 고쳐쓰기 카드 열기, 초고를 출발점으로 복사(처음 한 번만)
+  // 고쳐쓰기 카드 열기, 초고를 출발점으로 복사
+  // (학생이 아직 고쳐쓰기 칸을 직접 수정하지 않았다면, 매번 최신 초고로 다시 채워줌)
   $('reviseCard').style.display='block';
-  if(!state.revised){ state.revised=state.draft; $('revised').value=state.revised; updateCount('revised','revCount'); }
+  if(!state.revisedTouched){ state.revised=state.draft; $('revised').value=state.revised; updateCount('revised','revCount'); }
   state.feedbackDone=true; persist();
   earn('mirror','🪞','거울 탐험가','거울 피드백을 처음 받았어요!');
   $('reviseCard').scrollIntoView({behavior:'smooth'});
