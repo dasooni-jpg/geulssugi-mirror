@@ -128,6 +128,8 @@ const STAGES=[
 const CHECKS=[
   "읽는 사람·목적 생각","처음·가운데·끝","스스로 고칠 곳 찾기","왜 고쳤는지 설명"
 ];
+const MIRROR_TOTAL=19; // 꼼꼼 점검표(활동지 7번) 전체 항목 수
+function mirrorCount(s){ return s.mirrorChecks? Object.values(s.mirrorChecks).filter(Boolean).length : null; }
 
 function stageOf(s){
   if(s.reflect && s.reflect.trim()) return 4;
@@ -265,7 +267,7 @@ function render(){
           ${yellowArr(s.feedback.yellow).map(y=>`<div class="mini y">🟡 ${esc(y)}</div>`).join('')}
           <div class="mini b">🔵 ${esc(s.feedback.blue)}</div>
         </div>`:''}
-        <div class="checks">✅ 자기평가 ${checks}/${CHECKS.length} 항목 체크</div>
+        <div class="checks">✅ 자기평가 ${checks}/${CHECKS.length} 항목 체크${mirrorCount(s)!==null?` · 📋 꼼꼼 점검표 ${mirrorCount(s)}/${MIRROR_TOTAL} 완료`:''}</div>
       </div>
     </div>`;
   }).join('');
@@ -282,14 +284,16 @@ function csvCell(v){ return '"'+String(v==null?'':v).replace(/"/g,'""')+'"'; }
 function exportCSV(){
   if(!allStudents.length){ alert('내보낼 제출물이 없어요.'); return; }
   const headers=['별명','단계','제출시각','글종류','읽는사람','목적','제목','초고','고쳐쓴글',
-    '수정메모','배운점','자기평가(체크수)','배지수','피드백출처','AI_잘한점','AI_다시볼곳','AI_생각해볼질문'];
+    '수정메모','배운점','자기평가(체크수)','꼼꼼점검표(체크수)','배지수','피드백출처','AI_잘한점','AI_다시볼곳','AI_생각해볼질문'];
   const rows=allStudents.map(s=>{
     const fb=s.feedback||{};
     const checks=s.checks?Object.values(s.checks).filter(Boolean).length:0;
+    const mc=mirrorCount(s);
     const badges=Object.keys(s.badges||{}).length;
     const src=fb.source==='ai'?'Claude AI':(fb.green?'규칙 기반':'');
     return [s.nick, STAGES[stageOf(s)].name, s.submittedAt, s.genre, s.reader, s.purpose, s.title,
-      s.draft, s.revised, s.changeNote, s.reflect, checks+'/'+CHECKS.length, badges,
+      s.draft, s.revised, s.changeNote, s.reflect, checks+'/'+CHECKS.length,
+      (mc!==null? mc+'/'+MIRROR_TOTAL : ''), badges,
       src, fb.green, yellowText(fb.yellow), fb.blue].map(csvCell).join(',');
   });
   const csv=String.fromCharCode(0xFEFF)+headers.map(csvCell).join(',')+'\r\n'+rows.join('\r\n');

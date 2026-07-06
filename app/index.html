@@ -171,66 +171,19 @@
 
   <!-- 여정 지도 -->
   <nav class="journey" id="journey">
-    <button class="step active" data-step="0"><span class="ico">🗺️</span><span class="nm">계획하기</span><span class="sub">무엇을 쓸까?</span></button>
-    <button class="step" data-step="1"><span class="ico">✏️</span><span class="nm">초고 쓰기</span><span class="sub">일단 써보자</span></button>
+    <button class="step active" data-step="1"><span class="ico">✏️</span><span class="nm">초고 쓰기</span><span class="sub">일단 써보자</span></button>
     <button class="step" data-step="2"><span class="ico">🪞</span><span class="nm">거울 피드백</span><span class="sub">거울에 비춰보기</span></button>
     <button class="step" data-step="3"><span class="ico">🌱</span><span class="nm">돌아보기</span><span class="sub">얼마나 자랐나</span></button>
   </nav>
 
-  <!-- 0. 계획하기 -->
-  <section class="panel show" data-panel="0">
+  <!-- 1. 초고 -->
+  <section class="panel show" data-panel="1">
     <div class="card">
-      <h2>🗺️ 글쓰기 계획 세우기</h2>
-      <p class="hint">바로 쓰지 말고, 먼저 무엇을 주장할지 생각해 봐요.</p>
+      <h2>✏️ 초고 쓰기</h2>
+      <p class="hint">활동지 1~5번에서 정리한 주장·이유·근거를 바탕으로, 서론·본론·결론 짜임에 맞게 써 봐요.</p>
 
       <div class="fixedinfo">
         📌 이번 글은 <b>주장하는 글</b>이에요 · 읽는 사람은 <b>우리 반 친구들</b> · 읽는 사람을 <b>설득하는 것</b>이 목적이에요.
-      </div>
-
-      <label class="fld">💡 무엇을 주장할까요? 주제가 안 떠오르면 아래를 눌러보세요.</label>
-      <div class="ideahelp">
-        <button class="btn ghost" type="button" onclick="toggleIdeaBank()">🔍 주제 아이디어 보기</button>
-        <button class="btn ghost" type="button" onclick="pickRandomTopic()">🎲 하나만 골라줘요</button>
-      </div>
-
-      <div class="ideabank" id="ideaBank" style="display:none">
-        <div class="selfq">
-          <b>🤔 생각을 여는 질문들</b>
-          <ul>
-            <li>요즘 학교(우리 반)에서 불편하다고 느낀 점이 있나요?</li>
-            <li>바꾸고 싶은 규칙이나 습관이 있나요?</li>
-            <li>친구들과 의견이 갈렸던 주제가 있나요?</li>
-            <li>뉴스나 책에서 본 문제 중 내 생각을 말하고 싶은 게 있나요?</li>
-          </ul>
-        </div>
-        <div id="topicGroups" style="margin-top:12px"></div>
-      </div>
-
-      <label class="fld">✏️ 무엇에 대해 쓸까요? 떠오르는 생각을 자유롭게 적어요.</label>
-      <textarea id="ideas" placeholder="예) 학교 급식을 채식 위주로 바꾸자 - 이유: 환경, 건강"></textarea>
-
-      <div class="selfq">
-        <b>🤔 스스로 점검해요</b>
-        내가 정한 주제는, 우리 반 친구들이 들으면 "왜 그렇게 생각해?"라고 궁금해할 만한 주제인가요?
-      </div>
-
-      <div class="row">
-        <button class="btn primary" onclick="saveStep(0)">계획 저장하기</button>
-        <span class="savetag" id="save0"></span>
-      </div>
-    </div>
-  </section>
-
-  <!-- 1. 초고 -->
-  <section class="panel" data-panel="1">
-    <div class="card">
-      <h2>✏️ 초고 쓰기</h2>
-      <p class="hint">완벽하지 않아도 괜찮아요. 떠오르는 대로 끝까지 한 번 써보는 게 중요해요.</p>
-
-      <div class="ideabank" id="ideasRecap" style="display:none">
-        <b style="display:block;font-size:13px;color:var(--brand-d);margin-bottom:6px">📋 계획하기에서 적은 생각들</b>
-        <div id="ideasRecapBody" style="font-size:14px;white-space:pre-wrap"></div>
-        <p class="hint" style="margin:8px 0 0">이 중에서 하나를 골라 제목과 글을 써 보세요.</p>
       </div>
 
       <label class="fld">📝 제목</label>
@@ -257,6 +210,12 @@
       <p class="hint">거울은 글을 대신 고쳐 주지 않아요. <b>잘한 점</b>과 <b>스스로 생각할 질문</b>을 비춰줄 뿐이에요.</p>
       <button class="btn primary wide" onclick="runFeedback()">내 글을 거울에 비춰보기</button>
       <div id="fbResult" style="margin-top:16px"></div>
+    </div>
+
+    <div class="card" id="mirrorCheckCard">
+      <h2>📋 꼼꼼 점검표 <span id="mcProgress" style="font-size:14px;color:var(--muted);font-weight:400"></span></h2>
+      <p class="hint">활동지 7번과 같은 점검표예요. 거울 피드백과 함께 항목별로 점검하고, 부족한 부분은 아래 고쳐쓰기에서 스스로 보완해요.</p>
+      <div id="mirrorChecks"></div>
     </div>
 
     <div class="card" id="reviseCard" style="display:none">
@@ -378,7 +337,8 @@ if(FIXED_PURPOSE) state.purpose=FIXED_PURPOSE;
 // 이전 버전 데이터 호환: revisedTouched 값이 없으면 false로 시작
 // (revised가 draft와 다른 것만으로는 '직접 수정함'인지 '예전 버그로 남은 값'인지 구분할 수 없음)
 if(state.revisedTouched===undefined) state.revisedTouched=false;
-let cur = 0;
+if(!state.mirrorChecks) state.mirrorChecks={};
+let cur = 1;
 
 function load(){ try{ return JSON.parse(localStorage.getItem(KEY)); }catch(e){ return null; } }
 function persist(){ localStorage.setItem(KEY, JSON.stringify(state)); }
@@ -392,19 +352,11 @@ function goStep(n){
   document.querySelectorAll('.panel').forEach(p=>{
     p.classList.toggle('show', +p.dataset.panel===n);
   });
-  if(n===1) renderIdeasRecap();
   if(n===3) renderReflect();
   window.scrollTo({top:0,behavior:'smooth'});
 }
-function renderIdeasRecap(){
-  const box=$('ideasRecap');
-  const ideas=(state.ideas||"").trim();
-  if(!ideas){ box.style.display='none'; return; }
-  box.style.display='block';
-  $('ideasRecapBody').textContent=ideas;
-}
 function nextStep(){ if(cur<3) goStep(cur+1); }
-function prevStep(){ if(cur>0) goStep(cur-1); }
+function prevStep(){ if(cur>1) goStep(cur-1); }
 document.querySelectorAll('.step').forEach(s=>{
   s.addEventListener('click',()=>goStep(+s.dataset.step));
 });
@@ -417,45 +369,62 @@ function bind(id, field, after){
   el.addEventListener('input',()=>{ state[field]=el.value; persist(); if(after) after(); });
 }
 bind('nick','nick'); bind('title','title');
-bind('ideas','ideas'); bind('reflect','reflect');
+bind('reflect','reflect');
 bind('draft','draft', ()=>updateCount('draft','draftCount'));
 bind('revised','revised', ()=>{ state.revisedTouched=true; updateCount('revised','revCount'); });
 
-/* ---------- 주제 아이디어 탐색 (주장하는 글) ---------- */
-const TOPIC_BANK = {
-  "🏫 학교생활": ["학교 급식 메뉴를 바꿔야 한다","숙제의 양을 줄여야 한다","쉬는 시간을 늘려야 한다","체육 시간을 늘려야 한다","학교에 자유 복장을 허용해야 한다"],
-  "📱 우리들의 생활": ["스마트폰 사용 시간을 스스로 정해야 한다","게임 시간을 조절해야 한다","용돈 기록을 써야 한다"],
-  "🌍 사회·환경": ["일회용품 사용을 줄여야 한다","동물 실험을 금지해야 한다","학교에 분리수거함을 더 늘려야 한다","종이책을 더 많이 읽어야 한다"],
-  "👨‍👩‍👧 가족·친구": ["형제자매와 사이좋게 지내는 규칙이 필요하다","친구와 다툴 때는 먼저 사과해야 한다"]
-};
-function toggleIdeaBank(){
-  const el=$('ideaBank');
-  const showing = el.style.display!=='none';
-  el.style.display = showing? 'none':'block';
-  if(!showing) renderTopicGroups();
-}
-function renderTopicGroups(){
-  const wrap=$('topicGroups');
-  wrap.innerHTML = Object.entries(TOPIC_BANK).map(([cat,topics])=>`
-    <div class="topic-cat">
-      <b>${cat}</b>
-      <div class="chips">${topics.map(t=>`<button class="chip" type="button" data-topic="${esc(t)}">${esc(t)}</button>`).join('')}</div>
-    </div>`).join('');
-  wrap.querySelectorAll('.chip').forEach(btn=>{
-    btn.addEventListener('click',()=>addTopic(btn.dataset.topic));
+/* ---------- 꼼꼼 점검표 (활동지 7번과 동일) ---------- */
+const MIRROR_CHECKS=[
+  { cat:"① 글의 구조 점검하기", items:[
+    "[서론] 읽는 사람의 관심을 끌 만한 생생한 문제 상황이 잘 나타나 있는가?",
+    "[서론] 글을 통해 말하고자 하는 주장이 명확하게 드러나 있는가?",
+    "[본론] 주장을 뒷받침하는 이유 3가지가 서로 겹치지 않고 다양하게 제시되었는가?",
+    "[본론] 각 이유를 뒷받침하는 구체적인 근거가 들어있는가?",
+    "[결론] 본론의 내용을 요약하고, 주장을 다시 한번 강조했는가?"
+  ]},
+  { cat:"② 내용의 타당성 점검하기", items:[
+    "내 주장이 학급, 학교, 사회의 문제를 해결하는 데 꼭 필요한 내용인가?",
+    "본론의 이유들이 내 주장과 직접적으로 관련이 있는가?",
+    "내가 가져온 근거(자료)가 믿을 수 있는 출처(뉴스, 연구, 통계 등)에서 나온 것인가?",
+    "문제 상황과 이유, 그리고 근거가 서로 어색함 없이 자연스럽게 연결되는가?",
+    "내 글을 읽는 사람이 충분히 공감하고 설득당할 만한 내용인가?"
+  ]},
+  { cat:"③ 표현과 문장 점검하기", items:[
+    "내 의견을 확실하게 전하기 위해 명확한 표현(~해야 합니다, ~가 필요합니다)을 썼는가?",
+    "주관적이고 모호한 표현(~인 것 같습니다, ~라고 생각할 수도 있습니다)을 쓰지 않았는가?",
+    "읽는 사람을 무시하거나 기분 나쁘게 만드는 지나치게 감정적인 표현은 없는가?",
+    "문장이 너무 길어서 무슨 뜻인지 이해하기 어렵지 않은가? (문장을 알맞게 끊어 썼는가?)",
+    "왜냐하면 ~하기 때문입니다, 예를 들어 ~ 등 문장과 문장을 이어주는 말이 알맞게 쓰였는가?"
+  ]},
+  { cat:"④ 맞춤법과 형식 점검하기", items:[
+    "글의 전체 내용을 대표하는 명확한 제목을 붙였는가?",
+    "문단이 바뀔 때 첫 칸을 비우고 시작했는가?",
+    "헷갈리는 맞춤법이나 띄어쓰기가 없는지 점검하고 고쳐썼는가?",
+    "다른 사람이 읽기 쉽도록 문단과 줄을 깔끔하게 정리했는가?"
+  ]}
+];
+function mirrorTotal(){ return MIRROR_CHECKS.reduce((a,g)=>a+g.items.length,0); }
+function mirrorDone(){ return Object.values(state.mirrorChecks||{}).filter(Boolean).length; }
+function updateMcProgress(){ $('mcProgress').textContent='('+mirrorDone()+'/'+mirrorTotal()+' 완료)'; }
+function renderMirrorChecks(){
+  const wrap=$('mirrorChecks'); wrap.innerHTML='';
+  let idx=0;
+  MIRROR_CHECKS.forEach(g=>{
+    const h=document.createElement('div');
+    h.style.cssText='font-weight:800;font-size:14px;color:var(--brand-d);margin:14px 0 2px';
+    h.textContent=g.cat; wrap.appendChild(h);
+    g.items.forEach(q=>{
+      const i=idx++;
+      const div=document.createElement('div'); div.className='check';
+      div.innerHTML=`<input type="checkbox" id="mc${i}" ${state.mirrorChecks[i]?'checked':''}>
+        <label for="mc${i}">${esc(q)}</label>`;
+      div.querySelector('input').addEventListener('change',e=>{
+        state.mirrorChecks[i]=e.target.checked; persist(); updateMcProgress();
+      });
+      wrap.appendChild(div);
+    });
   });
-}
-function addTopic(topic){
-  const ta=$('ideas');
-  const line="- "+topic;
-  if(ta.value.includes(line)) return;
-  ta.value=(ta.value.trim()? ta.value.trim()+"\n":"")+line;
-  state.ideas=ta.value; persist();
-  ta.focus();
-}
-function pickRandomTopic(){
-  const all=Object.values(TOPIC_BANK).flat();
-  addTopic(all[Math.floor(Math.random()*all.length)]);
+  updateMcProgress();
 }
 
 function updateCount(field,target){
@@ -757,6 +726,7 @@ function showcase(){
       <div class="fbcard fb-blue"><h4>🔵 생각해 볼 질문</h4><p>${esc(fb.blue)}</p></div>
     </div>`:''}
     ${s.reflect?`<div class="selfq" style="margin-top:14px"><b>🌱 가장 크게 배운 점</b>${esc(s.reflect)}</div>`:''}
+    <div style="margin-top:14px"><b style="font-size:14px">📋 꼼꼼 점검표</b><div class="sc-check">${mirrorDone()}/${mirrorTotal()} 항목 점검 완료</div></div>
     <div style="margin-top:14px"><b style="font-size:14px">✅ 스스로 평가</b>${checksHtml}</div>
     ${badges.length?`<div style="margin-top:14px"><b style="font-size:14px">🏅 모은 배지</b><div style="margin-top:6px">${badges.map(b=>`<span class="sc-badge">${b}</span>`).join('')}</div></div>`:''}
   `;
@@ -868,6 +838,8 @@ async function saveShowcaseAsImage(){
       addPlain(s.reflect, FONT_BODY, C.ink, 16);
     }
 
+    addPlain('📋 꼼꼼 점검표: '+mirrorDone()+'/'+mirrorTotal()+' 항목 점검 완료', FONT_BOLD, C.ink, 12);
+
     addPlain('✅ 스스로 평가', FONT_BOLD, C.ink, 6);
     SC_CHECKS.forEach((q,i)=>{
       const mark=(s.checks&&s.checks[i])?'✅':'⬜';
@@ -972,6 +944,7 @@ function earn(id,emoji,title,desc){
 function closeModal(){ $('modal').classList.remove('show'); }
 
 renderBadges();
+renderMirrorChecks();
 </script>
 </body>
 </html>
