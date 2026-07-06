@@ -252,8 +252,8 @@
     <div class="card">
       <h2>✅ 스스로 평가하기</h2>
       <div id="selfChecks"></div>
-      <label class="fld">📝 이번 글쓰기에서 가장 크게 배운 점은?</label>
-      <textarea id="reflect" placeholder="예) 다시 읽으니 빠진 내용이 보였다."></textarea>
+      <label class="fld">✍️ 다음 글에도 꼭 다시 쓸 나만의 글쓰기 비법 1가지는?</label>
+      <textarea id="reflect" placeholder="예) 다 쓴 뒤 소리 내어 읽어 보면 어색한 문장이 들린다!"></textarea>
       <div class="row">
         <button class="btn primary" onclick="finishReflect()">돌아보기 완성!</button>
         <button class="btn ghost" onclick="showcase()">👩‍🏫 선생님께 보여주기</button>
@@ -686,7 +686,7 @@ function finishReflect(){
   if(state.revised && state.revised.trim() && state.revised!==state.draft) earn('reviser','✍️','꼼꼼한 고쳐쓰기 작가','초고를 실제로 고쳐 썼어요!');
   const allChecked = CHECKS.every((_,i)=>state.checks[i]);
   if(allChecked) earn('reviewer','🌱','성장하는 작가','스스로 점검을 모두 마쳤어요!');
-  if(state.reflect && state.reflect.trim()) earn('thinker','💡','생각하는 작가','배운 점을 스스로 정리했어요!');
+  if(state.reflect && state.reflect.trim()) earn('thinker','💡','생각하는 작가','나만의 글쓰기 비법을 찾았어요!');
   renderBadges();
 }
 
@@ -725,7 +725,7 @@ function showcase(){
       <div class="fbcard fb-yellow"><h4>🟡 다시 볼 곳</h4>${(Array.isArray(fb.yellow)?fb.yellow:[fb.yellow]).map(y=>`<p>${esc(y)}</p>`).join('')}</div>
       <div class="fbcard fb-blue"><h4>🔵 생각해 볼 질문</h4><p>${esc(fb.blue)}</p></div>
     </div>`:''}
-    ${s.reflect?`<div class="selfq" style="margin-top:14px"><b>🌱 가장 크게 배운 점</b>${esc(s.reflect)}</div>`:''}
+    ${s.reflect?`<div class="selfq" style="margin-top:14px"><b>✍️ 다음 글에도 꼭 다시 쓸 나만의 글쓰기 비법</b>${esc(s.reflect)}</div>`:''}
     <div style="margin-top:14px"><b style="font-size:14px">📋 꼼꼼 점검표</b><div class="sc-check">${mirrorDone()}/${mirrorTotal()} 항목 점검 완료</div></div>
     <div style="margin-top:14px"><b style="font-size:14px">✅ 스스로 평가</b>${checksHtml}</div>
     ${badges.length?`<div style="margin-top:14px"><b style="font-size:14px">🏅 모은 배지</b><div style="margin-top:6px">${badges.map(b=>`<span class="sc-badge">${b}</span>`).join('')}</div></div>`:''}
@@ -834,7 +834,7 @@ async function saveShowcaseAsImage(){
     }
 
     if(s.reflect){
-      addPlain('🌱 가장 크게 배운 점', FONT_BOLD, C.brand, 6);
+      addPlain('✍️ 다음 글에도 꼭 다시 쓸 나만의 글쓰기 비법', FONT_BOLD, C.brand, 6);
       addPlain(s.reflect, FONT_BODY, C.ink, 16);
     }
 

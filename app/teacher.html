@@ -260,7 +260,7 @@ function render(){
           <div class="doc"><h4>✨ 고쳐 쓴 글</h4>${docPair.new}</div>
         </div>
         ${s.changeNote?`<div class="note"><b>🔧 무엇을·왜 고쳤나:</b> ${esc(s.changeNote)}</div>`:''}
-        ${s.reflect?`<div class="reflect"><b>🌱 배운 점:</b> ${esc(s.reflect)}</div>`:''}
+        ${s.reflect?`<div class="reflect"><b>✍️ 나만의 글쓰기 비법:</b> ${esc(s.reflect)}</div>`:''}
         ${s.feedback?`<div class="fbbox">
           <h4>🪞 받은 AI 피드백<span class="tag ${s.feedback.source==='ai'?'ai':'rule'}">${s.feedback.source==='ai'?'Claude AI':'규칙 기반'}</span></h4>
           <div class="mini g">🟢 ${esc(s.feedback.green)}</div>
@@ -284,7 +284,7 @@ function csvCell(v){ return '"'+String(v==null?'':v).replace(/"/g,'""')+'"'; }
 function exportCSV(){
   if(!allStudents.length){ alert('내보낼 제출물이 없어요.'); return; }
   const headers=['별명','단계','제출시각','글종류','읽는사람','목적','제목','초고','고쳐쓴글',
-    '수정메모','배운점','자기평가(체크수)','꼼꼼점검표(체크수)','배지수','피드백출처','AI_잘한점','AI_다시볼곳','AI_생각해볼질문'];
+    '수정메모','나만의글쓰기비법','자기평가(체크수)','꼼꼼점검표(체크수)','배지수','피드백출처','AI_잘한점','AI_다시볼곳','AI_생각해볼질문'];
   const rows=allStudents.map(s=>{
     const fb=s.feedback||{};
     const checks=s.checks?Object.values(s.checks).filter(Boolean).length:0;
