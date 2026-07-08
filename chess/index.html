@@ -1,0 +1,1389 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🏰 어린이 체스 교실 (Magic Chess Kingdom)</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root {
+    --navy:#0d1b3e; --navy2:#16265c; --gold:#f5c542; --gold-dark:#c9971e;
+    --purple:#a970ff; --ivory:#fdf6e3; --light-sq:#f3dfae; --dark-sq:#b98b4e;
+    --danger:#ff6b6b; --ok:#5ad18a;
+  }
+  body {
+    font-family:'Segoe UI','Malgun Gothic','Apple SD Gothic Neo',sans-serif;
+    background:radial-gradient(ellipse at 50% -20%, #24408f 0%, var(--navy) 55%, #070f26 100%);
+    color:var(--ivory); min-height:100vh; overflow-x:hidden;
+  }
+  #stars { position:fixed; inset:0; pointer-events:none; z-index:0; }
+  .star { position:absolute; background:#fff; border-radius:50%; opacity:.7; animation:twinkle 3s ease-in-out infinite; }
+  @keyframes twinkle { 0%,100%{opacity:.15; transform:scale(.8);} 50%{opacity:.9; transform:scale(1.2);} }
+  #app { position:relative; z-index:1; max-width:1100px; margin:0 auto; padding:16px; }
+
+  .screen { display:none; animation:fadein .3s ease; }
+  .screen.active { display:block; }
+  @keyframes fadein { from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:none;} }
+
+  /* ===== 공통 ===== */
+  h1.title {
+    text-align:center; font-size:clamp(1.6rem,5vw,2.6rem); margin:18px 0 4px;
+    color:var(--gold); text-shadow:0 2px 12px rgba(245,197,66,.45);
+  }
+  .subtitle { text-align:center; color:#c9d4f5; font-size:.95rem; margin-bottom:20px; }
+  .btn {
+    display:inline-block; border:none; cursor:pointer; font-family:inherit;
+    background:linear-gradient(180deg,#ffd968,var(--gold) 45%,var(--gold-dark));
+    color:#3a2703; font-weight:800; font-size:1.05rem; padding:13px 22px;
+    border-radius:14px; box-shadow:0 4px 0 #8a6510, 0 6px 16px rgba(0,0,0,.35);
+    transition:transform .08s, box-shadow .08s;
+  }
+  .btn:active { transform:translateY(3px); box-shadow:0 1px 0 #8a6510; }
+  .btn.secondary { background:linear-gradient(180deg,#3b5bc2,#28418f); color:#fff; box-shadow:0 4px 0 #17285c, 0 6px 16px rgba(0,0,0,.35); }
+  .btn.ghost { background:transparent; color:#c9d4f5; box-shadow:none; border:2px solid #40529c; font-weight:600; }
+  .btn.danger { background:linear-gradient(180deg,#ff8f8f,#e05252); color:#fff; box-shadow:0 4px 0 #8f2626; }
+  .btn:disabled { filter:grayscale(.7) brightness(.7); cursor:not-allowed; }
+  input.field {
+    font-family:inherit; font-size:1.05rem; padding:12px 14px; border-radius:12px;
+    border:2px solid #40529c; background:#0f1d47; color:var(--ivory); outline:none; width:100%;
+  }
+  input.field:focus { border-color:var(--gold); }
+  .card {
+    background:linear-gradient(180deg,rgba(37,58,128,.55),rgba(20,33,80,.7));
+    border:1px solid rgba(245,197,66,.25); border-radius:18px; padding:20px;
+    box-shadow:0 8px 24px rgba(0,0,0,.35);
+  }
+  .backrow { margin-bottom:14px; }
+
+  /* ===== 메인 메뉴 ===== */
+  #mascot-box { display:flex; align-items:center; justify-content:center; gap:14px; margin:10px 0 22px; }
+  #mascot {
+    width:84px; height:84px; border-radius:50%; flex:0 0 auto; overflow:hidden;
+    background:#fff;
+    display:flex; align-items:center; justify-content:center;
+    border:3px solid var(--gold); box-shadow:0 0 22px rgba(245,197,66,.6);
+  }
+  #mascot img { width:100%; height:100%; object-fit:cover; }
+  #mascot-bubble {
+    background:#fff; color:#33406e; border-radius:14px; padding:10px 14px; font-size:.92rem;
+    position:relative; max-width:330px; font-weight:600;
+  }
+  #mascot-bubble::before {
+    content:''; position:absolute; left:-8px; top:50%; transform:translateY(-50%);
+    border:8px solid transparent; border-right-color:#fff; border-left:0;
+  }
+  #nick-row { display:flex; justify-content:center; align-items:center; gap:8px; margin-bottom:22px; flex-wrap:wrap; }
+  #nick-label { color:#c9d4f5; }
+  #nick-name { color:var(--gold); font-weight:800; font-size:1.1rem; }
+  #nick-edit-row { display:none; gap:8px; align-items:center; }
+  #nick-edit-row input { width:180px; }
+  .menu-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:14px; max-width:760px; margin:0 auto; }
+  .menu-btn {
+    border:none; cursor:pointer; font-family:inherit; text-align:left;
+    background:linear-gradient(160deg,rgba(52,78,168,.85),rgba(26,42,100,.9));
+    border:1px solid rgba(245,197,66,.3); border-radius:18px; padding:18px;
+    color:var(--ivory); transition:transform .12s, box-shadow .12s, border-color .12s;
+    box-shadow:0 6px 18px rgba(0,0,0,.35);
+  }
+  .menu-btn:hover { transform:translateY(-3px); border-color:var(--gold); box-shadow:0 10px 26px rgba(0,0,0,.45), 0 0 18px rgba(245,197,66,.25); }
+  .menu-btn .mi { font-size:1.9rem; display:block; margin-bottom:6px; }
+  .menu-btn .mt { display:block; font-weight:800; font-size:1.12rem; color:var(--gold); }
+  .menu-btn .md { display:block; font-size:.85rem; color:#c9d4f5; margin-top:4px; line-height:1.45; }
+  .footer-note { text-align:center; color:#7787bd; font-size:.78rem; margin-top:28px; line-height:1.6; }
+
+  /* ===== 난이도/색 선택 ===== */
+  .choice-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; margin:14px 0; }
+  .choice {
+    cursor:pointer; border-radius:16px; padding:16px; border:2px solid #40529c;
+    background:rgba(18,31,76,.8); transition:.12s;
+  }
+  .choice:hover { border-color:#7f95e0; }
+  .choice.sel { border-color:var(--gold); background:rgba(72,58,10,.45); box-shadow:0 0 14px rgba(245,197,66,.35); }
+  .choice .ci { font-size:1.6rem; }
+  .choice .ct { font-weight:800; margin-top:4px; }
+  .choice .cd { font-size:.82rem; color:#c9d4f5; margin-top:4px; line-height:1.45; }
+  .section-label { color:var(--gold); font-weight:800; margin:18px 0 6px; }
+
+  /* ===== 게임 화면 ===== */
+  #game-header { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+  #game-title { font-weight:800; color:var(--gold); font-size:1.1rem; }
+  #game-status {
+    text-align:center; font-weight:800; font-size:1.05rem; padding:9px 16px; border-radius:12px;
+    background:rgba(20,33,80,.85); border:1px solid rgba(245,197,66,.3); min-width:220px;
+  }
+  #game-status.check { color:var(--danger); border-color:var(--danger); animation:pulse 1s infinite; }
+  #game-status.thinking { color:#9fb4ff; }
+  @keyframes pulse { 0%,100%{box-shadow:0 0 0 rgba(255,107,107,0);} 50%{box-shadow:0 0 16px rgba(255,107,107,.6);} }
+  #game-layout { display:flex; gap:18px; justify-content:center; align-items:flex-start; flex-wrap:wrap; }
+  #board-wrap { position:relative; width:min(92vw,560px); }
+  #board {
+    display:grid; grid-template-columns:repeat(8,1fr); width:100%; aspect-ratio:1;
+    border:6px solid var(--gold-dark); outline:3px solid #6d5312; border-radius:8px;
+    box-shadow:0 0 0 4px rgba(245,197,66,.35), 0 14px 40px rgba(0,0,0,.55);
+    overflow:hidden; user-select:none;
+  }
+  .sq { position:relative; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .sq.light { background:var(--light-sq); }
+  .sq.dark { background:var(--dark-sq); }
+  .sq .pc { font-size:clamp(26px,6.2vw,44px); line-height:1; z-index:2; pointer-events:none; transition:transform .1s; }
+  .pc.w { color:#fffdf5; text-shadow:0 0 3px #6b5211, 0 2px 3px rgba(0,0,0,.55); }
+  .pc.b { color:#2b2035; text-shadow:0 0 3px rgba(255,255,255,.35), 0 2px 3px rgba(0,0,0,.4); }
+  .sq.sel { background:#ffe08a !important; box-shadow:inset 0 0 0 3px var(--gold-dark); }
+  .sq.lastmv { box-shadow:inset 0 0 0 3px rgba(245,197,66,.85); }
+  .sq.dot::after {
+    content:''; position:absolute; width:26%; height:26%; border-radius:50%;
+    background:rgba(169,112,255,.85); box-shadow:0 0 8px rgba(169,112,255,.8); z-index:1;
+  }
+  .sq.dot.cap::after { width:86%; height:86%; background:transparent; border:4px solid rgba(169,112,255,.85); }
+  .sq.incheck { animation:checkflash 1s infinite; }
+  @keyframes checkflash { 0%,100%{background:inherit;} 50%{background:#ff9d9d;} }
+  .sq .coord { position:absolute; font-size:.55rem; font-weight:700; opacity:.65; z-index:1; }
+  .coord.file { right:3px; bottom:2px; } .coord.rank { left:3px; top:2px; }
+  .sq.light .coord { color:#8a6229; } .sq.dark .coord { color:#f3dfae; }
+  #arrow-svg { position:absolute; inset:6px; width:calc(100% - 12px); height:calc(100% - 12px); pointer-events:none; z-index:3; }
+
+  #side-panel { width:250px; display:flex; flex-direction:column; gap:12px; }
+  .pl-card { background:rgba(20,33,80,.85); border:1px solid rgba(245,197,66,.25); border-radius:14px; padding:12px 14px; }
+  .pl-card.turn { border-color:var(--gold); box-shadow:0 0 14px rgba(245,197,66,.3); }
+  .pl-name { font-weight:800; }
+  .pl-color { font-size:.78rem; color:#c9d4f5; }
+  .cap-row { min-height:26px; font-size:1.15rem; letter-spacing:2px; margin-top:4px; }
+  #game-actions { display:flex; gap:8px; flex-wrap:wrap; }
+  #game-actions .btn { flex:1; font-size:.92rem; padding:11px 8px; text-align:center; }
+  #online-info { font-size:.82rem; color:#9fb4ff; line-height:1.5; }
+  @media (max-width:900px) { #side-panel { width:min(92vw,560px); } }
+
+  /* ===== 모달 ===== */
+  .modal-bg {
+    display:none; position:fixed; inset:0; background:rgba(5,9,25,.75); z-index:50;
+    align-items:center; justify-content:center; padding:16px;
+  }
+  .modal-bg.open { display:flex; }
+  .modal {
+    background:linear-gradient(180deg,#233a85,#141f4e); border:2px solid var(--gold);
+    border-radius:20px; padding:28px 26px; max-width:420px; width:100%; text-align:center;
+    box-shadow:0 0 40px rgba(245,197,66,.35); animation:pop .25s ease;
+  }
+  @keyframes pop { from{transform:scale(.85); opacity:0;} to{transform:scale(1); opacity:1;} }
+  .modal h2 { color:var(--gold); margin-bottom:10px; font-size:1.5rem; }
+  .modal p { color:#dbe3ff; margin-bottom:18px; line-height:1.6; }
+  .modal .btnrow { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+  #promo-choices { display:flex; gap:10px; justify-content:center; }
+  .promo-pc {
+    font-size:2.6rem; width:70px; height:70px; border-radius:14px; cursor:pointer;
+    background:rgba(255,255,255,.08); border:2px solid #40529c;
+    display:flex; align-items:center; justify-content:center; transition:.12s;
+  }
+  .promo-pc:hover { border-color:var(--gold); background:rgba(245,197,66,.15); transform:scale(1.08); }
+  #badge-icon { font-size:4rem; animation:bounce 1s infinite; }
+  @keyframes bounce { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-10px);} }
+
+  /* ===== 업적 ===== */
+  .badge-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:12px; margin-top:14px; }
+  .badge-card { border-radius:16px; padding:16px 14px; text-align:center; border:1px solid rgba(245,197,66,.35);
+    background:linear-gradient(160deg,rgba(72,58,10,.5),rgba(30,45,105,.7)); }
+  .badge-card.locked { filter:grayscale(1) brightness(.6); border-color:#3a4a86; }
+  .badge-card .bi { font-size:2.2rem; }
+  .badge-card .bn { font-weight:800; color:var(--gold); margin-top:6px; }
+  .badge-card.locked .bn { color:#aab4d8; }
+  .badge-card .bc { font-size:.78rem; color:#c9d4f5; margin-top:4px; line-height:1.4; }
+  #stats-summary { display:flex; gap:16px; flex-wrap:wrap; justify-content:center; margin-top:16px; color:#c9d4f5; font-size:.9rem; }
+  #stats-summary b { color:var(--gold); }
+
+  /* ===== 퍼즐 ===== */
+  .puzzle-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; margin-top:14px; }
+  .puzzle-card { cursor:pointer; border-radius:16px; padding:16px; border:2px solid #40529c; background:rgba(18,31,76,.8); transition:.12s; }
+  .puzzle-card:hover { border-color:var(--gold); transform:translateY(-2px); }
+  .puzzle-card .pt { font-weight:800; color:var(--gold); }
+  .puzzle-card .pd { font-size:.82rem; color:#c9d4f5; margin-top:4px; }
+  .puzzle-card .solved { color:var(--ok); font-weight:800; font-size:.85rem; margin-top:6px; }
+
+  /* ===== 온라인 로비 ===== */
+  #lobby-box { max-width:480px; margin:0 auto; }
+  #room-code-display {
+    font-size:2.6rem; letter-spacing:10px; font-weight:900; color:var(--gold);
+    text-align:center; text-shadow:0 0 18px rgba(245,197,66,.5); margin:10px 0;
+  }
+  #lobby-wait, #lobby-join { display:none; }
+  .spinner {
+    width:26px; height:26px; border-radius:50%; border:4px solid #40529c; border-top-color:var(--gold);
+    animation:spin 1s linear infinite; margin:10px auto;
+  }
+  @keyframes spin { to{transform:rotate(360deg);} }
+
+  #toast {
+    position:fixed; left:50%; bottom:30px; transform:translateX(-50%) translateY(80px);
+    background:#1c2c68; color:#fff; border:1px solid var(--gold); border-radius:12px;
+    padding:12px 20px; font-weight:700; z-index:99; opacity:0; transition:.25s; pointer-events:none;
+    max-width:90vw; text-align:center;
+  }
+  #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div id="stars"></div>
+<div id="app">
+
+  <!-- ===== 메인 메뉴 ===== -->
+  <section id="screen-menu" class="screen active">
+    <h1 class="title">🏰 어린이 체스 교실</h1>
+    <div class="subtitle">Magic Chess Kingdom · 친구와 함께, AI와 대결, 퍼즐 풀이</div>
+    <div id="mascot-box">
+      <div id="mascot"><img src="mascot.png" alt="다람쌤"></div>
+      <div id="mascot-bubble">안녕! 나는 <b>다람쌤</b>이야.<br>마법 왕국에서 함께 체스를 배워 보자! ♟️</div>
+    </div>
+    <div id="nick-row">
+      <span id="nick-label">내 닉네임:</span>
+      <span id="nick-name">기사님</span>
+      <button class="btn ghost" id="nick-edit-btn" style="padding:6px 14px; font-size:.85rem;">수정</button>
+      <span id="nick-edit-row">
+        <input class="field" id="nick-input" maxlength="10" placeholder="닉네임 입력">
+        <button class="btn" id="nick-save-btn" style="padding:8px 16px; font-size:.9rem;">저장</button>
+      </span>
+    </div>
+    <div class="menu-grid">
+      <button class="menu-btn" data-go="pvp"><span class="mi">👥</span><span class="mt">애들끼리 대결</span><span class="md">같은 화면에서 친구와 번갈아 플레이해요.</span></button>
+      <button class="menu-btn" data-go="ai"><span class="mi">🤖</span><span class="mt">컴퓨터 상대</span><span class="md">4단계 난이도의 AI와 대결해요.</span></button>
+      <button class="menu-btn" data-go="online"><span class="mi">🌐</span><span class="mt">친구와 온라인 대결</span><span class="md">6자리 방 번호로 친구를 초대해 원격 대결! ⭐</span></button>
+      <button class="menu-btn" data-go="puzzles"><span class="mi">🧩</span><span class="mt">체스 퍼즐</span><span class="md">실제 체스 포지션에서 최선의 수를 찾아요.</span></button>
+      <button class="menu-btn" data-go="achievements"><span class="mi">🌟</span><span class="mt">내 업적 보기</span><span class="md">15개의 배지를 모아 보세요!</span></button>
+    </div>
+    <div class="footer-note">어린이 체스 교실 © 2026 다람쌤. All rights reserved.<br>캐슬링 · 앙파상 · 폰 승진 · 체크메이트까지, 진짜 체스 규칙 그대로!</div>
+  </section>
+
+  <!-- ===== PvP 설정 ===== -->
+  <section id="screen-pvp-setup" class="screen">
+    <div class="backrow"><button class="btn ghost" data-back>← 메뉴로</button></div>
+    <h1 class="title">👥 애들끼리 대결</h1>
+    <div class="subtitle">같은 화면에서 2명이 번갈아 플레이 (흰색이 항상 아래)</div>
+    <div class="card" style="max-width:480px; margin:0 auto;">
+      <div class="section-label">♔ 흰색 플레이어 닉네임 (선택)</div>
+      <input class="field" id="pvp-name-w" maxlength="10" placeholder="흰색 기사">
+      <div class="section-label">♚ 검은색 플레이어 닉네임 (선택)</div>
+      <input class="field" id="pvp-name-b" maxlength="10" placeholder="검은색 기사">
+      <div style="text-align:center; margin-top:20px;"><button class="btn" id="pvp-start-btn">⚔️ 게임 시작</button></div>
+    </div>
+  </section>
+
+  <!-- ===== AI 난이도 선택 ===== -->
+  <section id="screen-ai-setup" class="screen">
+    <div class="backrow"><button class="btn ghost" data-back>← 메뉴로</button></div>
+    <h1 class="title">🤖 컴퓨터 상대</h1>
+    <div class="subtitle">난이도와 내 색을 고르세요</div>
+    <div class="card" style="max-width:720px; margin:0 auto;">
+      <div class="section-label">난이도</div>
+      <div class="choice-grid" id="ai-levels">
+        <div class="choice sel" data-level="easy"><span class="ci">🌱</span><div class="ct">쉬움</div><div class="cd">AI가 무작위로 수를 선택해요. 초보자 추천!</div></div>
+        <div class="choice" data-level="normal"><span class="ci">🌿</span><div class="ct">보통</div><div class="cd">AI가 기본 전략(가치 평가)을 사용해요. 중급자 추천!</div></div>
+        <div class="choice" data-level="hard"><span class="ci">🌳</span><div class="ct">어려움</div><div class="cd">미니맥스 알고리즘 (깊이 3). 상급자 추천!</div></div>
+        <div class="choice" data-level="veryhard"><span class="ci">🔥</span><div class="ct">매우어려움</div><div class="cd">미니맥스 알고리즘 (깊이 4). 최상급자 추천!</div></div>
+      </div>
+      <div class="section-label">내 색</div>
+      <div class="choice-grid" id="ai-colors" style="grid-template-columns:repeat(3,1fr);">
+        <div class="choice sel" data-color="random"><span class="ci">🎲</span><div class="ct">랜덤</div><div class="cd">50% 확률</div></div>
+        <div class="choice" data-color="w"><span class="ci">♔</span><div class="ct">흰색</div><div class="cd">먼저 시작</div></div>
+        <div class="choice" data-color="b"><span class="ci">♚</span><div class="ct">검은색</div><div class="cd">나중에 시작</div></div>
+      </div>
+      <div style="text-align:center; margin-top:20px;"><button class="btn" id="ai-start-btn">⚔️ 게임 시작</button></div>
+    </div>
+  </section>
+
+  <!-- ===== 온라인 로비 ===== -->
+  <section id="screen-lobby" class="screen">
+    <div class="backrow"><button class="btn ghost" data-back id="lobby-back-btn">← 메뉴로</button></div>
+    <h1 class="title">🌐 친구와 온라인 대결</h1>
+    <div class="subtitle">6자리 방 번호로 친구를 초대하세요 (방장=흰색, 게스트=검은색)</div>
+    <div class="card" id="lobby-box">
+      <div id="lobby-main">
+        <div class="section-label">내 닉네임</div>
+        <input class="field" id="lobby-nick" maxlength="10" placeholder="닉네임 입력">
+        <div style="display:flex; gap:10px; margin-top:18px; flex-wrap:wrap;">
+          <button class="btn" id="btn-create-room" style="flex:1;">🏠 방 만들기</button>
+          <button class="btn secondary" id="btn-show-join" style="flex:1;">🔑 방 참가하기</button>
+        </div>
+        <div id="lobby-join" style="margin-top:16px;">
+          <div class="section-label">친구가 알려준 6자리 방 번호</div>
+          <input class="field" id="join-code" inputmode="numeric" maxlength="6" placeholder="예: 572791" style="text-align:center; letter-spacing:8px; font-size:1.4rem; font-weight:800;">
+          <div style="text-align:center; margin-top:12px;"><button class="btn" id="btn-join-room">입장하기</button></div>
+        </div>
+      </div>
+      <div id="lobby-wait">
+        <p style="text-align:center; color:#c9d4f5;">방이 만들어졌어요! 친구에게 이 번호를 알려주세요.</p>
+        <div id="room-code-display">------</div>
+        <div style="text-align:center;"><button class="btn secondary" id="btn-copy-code" style="padding:9px 18px; font-size:.9rem;">📋 번호 복사</button></div>
+        <div class="spinner"></div>
+        <p style="text-align:center; color:#9fb4ff;">친구가 입장할 때까지 기다리는 중...</p>
+      </div>
+      <p class="footer-note" style="margin-top:18px;">⚠️ 온라인 대결에는 인터넷 연결이 필요해요. 같은 방 번호를 아는 친구와만 연결돼요.<br>게임 중 새로고침하면 연결이 끊겨요 · 30분 이상 활동이 없으면 방이 자동 종료돼요.</p>
+    </div>
+  </section>
+
+  <!-- ===== 게임 화면 ===== -->
+  <section id="screen-game" class="screen">
+    <div id="game-header">
+      <span id="game-title">게임</span>
+      <span id="game-status">흰색 차례</span>
+      <button class="btn ghost" id="btn-quit" style="padding:8px 14px; font-size:.85rem;">메뉴로</button>
+    </div>
+    <div id="game-layout">
+      <div id="board-wrap">
+        <div id="board"></div>
+        <svg id="arrow-svg" viewBox="0 0 800 800">
+          <defs><marker id="arrowhead" markerWidth="6" markerHeight="6" refX="4.5" refY="3" orient="auto">
+            <polygon points="0 0, 6 3, 0 6" fill="rgba(245,197,66,.9)"/>
+          </marker></defs>
+          <line id="arrow-line" x1="0" y1="0" x2="0" y2="0" stroke="rgba(245,197,66,.9)" stroke-width="10" stroke-linecap="round" marker-end="url(#arrowhead)" visibility="hidden"/>
+        </svg>
+      </div>
+      <div id="side-panel">
+        <div class="pl-card" id="pl-top">
+          <div class="pl-name">상대</div><div class="pl-color">검은색 ♚</div>
+          <div class="cap-row" id="cap-top"></div>
+        </div>
+        <div class="pl-card" id="pl-bottom">
+          <div class="pl-name">나</div><div class="pl-color">흰색 ♔</div>
+          <div class="cap-row" id="cap-bottom"></div>
+        </div>
+        <div id="game-actions">
+          <button class="btn danger" id="btn-resign">🏳️ 기권하기</button>
+          <button class="btn secondary" id="btn-restart">🔄 다시 하기</button>
+        </div>
+        <div id="online-info"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 업적 ===== -->
+  <section id="screen-achievements" class="screen">
+    <div class="backrow"><button class="btn ghost" data-back>← 메뉴로</button></div>
+    <h1 class="title">🌟 내 업적</h1>
+    <div class="subtitle">15개의 배지를 모아 보세요!</div>
+    <div id="stats-summary"></div>
+    <div class="badge-grid" id="badge-grid"></div>
+  </section>
+
+  <!-- ===== 퍼즐 목록 ===== -->
+  <section id="screen-puzzles" class="screen">
+    <div class="backrow"><button class="btn ghost" data-back>← 메뉴로</button></div>
+    <h1 class="title">🧩 체스 퍼즐</h1>
+    <div class="subtitle">주어진 포지션에서 한 수로 체크메이트를 만들어 보세요!</div>
+    <div class="puzzle-grid" id="puzzle-grid"></div>
+  </section>
+</div>
+
+<!-- ===== 모달들 ===== -->
+<div class="modal-bg" id="promo-modal">
+  <div class="modal">
+    <h2>👑 폰 승진!</h2>
+    <p>폰이 끝줄에 도착했어요. 어떤 말로 변신할까요?</p>
+    <div id="promo-choices"></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="gameover-modal">
+  <div class="modal">
+    <h2 id="go-title">게임 종료</h2>
+    <p id="go-text"></p>
+    <div class="btnrow">
+      <button class="btn" id="go-again">🔄 다시 하기</button>
+      <button class="btn secondary" id="go-badges">🌟 내 업적 보기</button>
+      <button class="btn ghost" id="go-menu">메뉴로</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="badge-modal">
+  <div class="modal">
+    <div id="badge-icon">🏅</div>
+    <h2>새 배지 획득!</h2>
+    <p><b id="badge-name" style="color:var(--gold);"></b><br><span id="badge-desc"></span></p>
+    <div class="btnrow"><button class="btn" id="badge-ok">멋져요! ✨</button></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+/* ============================================================
+   1. 체스 엔진 — 완전한 규칙 (캐슬링/앙파상/승진/체크메이트/스테일메이트)
+   보드: 8x8, row 0 = 8랭크(검은색 진영), row 7 = 1랭크(흰색 진영)
+   ============================================================ */
+const VAL = { p:100, n:320, b:330, r:500, q:900, k:20000 };
+const GLYPH = { k:'♚', q:'♛', r:'♜', b:'♝', n:'♞', p:'♟' };
+const PIECE_KO = { k:'킹', q:'퀸', r:'룩', b:'비숍', n:'나이트', p:'폰' };
+const KN = [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
+const KG = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+const ORTH = [[-1,0],[1,0],[0,-1],[0,1]];
+const DIAG = [[-1,-1],[-1,1],[1,-1],[1,1]];
+const in8 = (r,c) => r>=0 && r<8 && c>=0 && c<8;
+
+function initialPos() {
+  const back = ['r','n','b','q','k','b','n','r'];
+  const board = Array.from({length:8}, () => Array(8).fill(null));
+  for (let c=0; c<8; c++) {
+    board[0][c] = { t:back[c], c:'b' };
+    board[1][c] = { t:'p', c:'b' };
+    board[6][c] = { t:'p', c:'w' };
+    board[7][c] = { t:back[c], c:'w' };
+  }
+  return { board, turn:'w', cr:{wk:true,wq:true,bk:true,bq:true}, ep:null, kings:{w:[7,4],b:[0,4]} };
+}
+
+function fromFEN(fen) {
+  const [pieces, turn, castle, ep] = fen.trim().split(/\s+/);
+  const board = Array.from({length:8}, () => Array(8).fill(null));
+  const kings = { w:null, b:null };
+  pieces.split('/').forEach((rowStr, r) => {
+    let c = 0;
+    for (const ch of rowStr) {
+      if (/\d/.test(ch)) { c += +ch; continue; }
+      const color = ch === ch.toUpperCase() ? 'w' : 'b';
+      const t = ch.toLowerCase();
+      board[r][c] = { t, c:color };
+      if (t === 'k') kings[color] = [r,c];
+      c++;
+    }
+  });
+  return {
+    board, turn: turn === 'w' ? 'w' : 'b',
+    cr: { wk:castle.includes('K'), wq:castle.includes('Q'), bk:castle.includes('k'), bq:castle.includes('q') },
+    ep: (ep && ep !== '-') ? [8 - +ep[1], ep.charCodeAt(0) - 97] : null,
+    kings
+  };
+}
+
+function attacked(pos, r, c, by) {
+  const b = pos.board;
+  const pr = by === 'w' ? r + 1 : r - 1;
+  for (const dc of [-1,1]) {
+    if (in8(pr, c+dc)) { const p = b[pr][c+dc]; if (p && p.c === by && p.t === 'p') return true; }
+  }
+  for (const [dr,dc] of KN) {
+    if (in8(r+dr, c+dc)) { const p = b[r+dr][c+dc]; if (p && p.c === by && p.t === 'n') return true; }
+  }
+  for (const [dr,dc] of KG) {
+    if (in8(r+dr, c+dc)) { const p = b[r+dr][c+dc]; if (p && p.c === by && p.t === 'k') return true; }
+  }
+  for (const [dr,dc] of ORTH) {
+    let rr = r+dr, cc = c+dc;
+    while (in8(rr,cc)) {
+      const p = b[rr][cc];
+      if (p) { if (p.c === by && (p.t === 'r' || p.t === 'q')) return true; break; }
+      rr += dr; cc += dc;
+    }
+  }
+  for (const [dr,dc] of DIAG) {
+    let rr = r+dr, cc = c+dc;
+    while (in8(rr,cc)) {
+      const p = b[rr][cc];
+      if (p) { if (p.c === by && (p.t === 'b' || p.t === 'q')) return true; break; }
+      rr += dr; cc += dc;
+    }
+  }
+  return false;
+}
+
+const enemy = c => c === 'w' ? 'b' : 'w';
+const inCheck = (pos, color) => attacked(pos, pos.kings[color][0], pos.kings[color][1], enemy(color));
+
+// 의사 이동(자기 킹 노출 여부는 아직 검사 안 함)
+function pseudoMoves(pos, r, c, forSearch) {
+  const b = pos.board, p = b[r][c], moves = [];
+  const add = (tr, tc, extra) => moves.push(Object.assign({ fr:r, fc:c, tr, tc }, extra));
+  if (p.t === 'p') {
+    const dir = p.c === 'w' ? -1 : 1;
+    const start = p.c === 'w' ? 6 : 1;
+    const last = p.c === 'w' ? 0 : 7;
+    const pushPawn = (tr, tc, extra) => {
+      if (tr === last) {
+        if (forSearch) { add(tr, tc, Object.assign({promo:'q'}, extra)); add(tr, tc, Object.assign({promo:'n'}, extra)); }
+        else add(tr, tc, Object.assign({needPromo:true}, extra));
+      } else add(tr, tc, extra);
+    };
+    if (in8(r+dir, c) && !b[r+dir][c]) {
+      pushPawn(r+dir, c);
+      if (r === start && !b[r+2*dir][c]) add(r+2*dir, c, { dbl:true });
+    }
+    for (const dc of [-1,1]) {
+      const tr = r+dir, tc = c+dc;
+      if (!in8(tr,tc)) continue;
+      const tp = b[tr][tc];
+      if (tp && tp.c !== p.c) pushPawn(tr, tc);
+      else if (!tp && pos.ep && pos.ep[0] === tr && pos.ep[1] === tc) add(tr, tc, { ep:true });
+    }
+  } else if (p.t === 'n' || p.t === 'k') {
+    for (const [dr,dc] of (p.t === 'n' ? KN : KG)) {
+      const tr = r+dr, tc = c+dc;
+      if (!in8(tr,tc)) continue;
+      const tp = b[tr][tc];
+      if (!tp || tp.c !== p.c) add(tr, tc);
+    }
+    if (p.t === 'k') {
+      // 캐슬링: 킹이 체크가 아니고, 사이가 비어 있고, 지나가는 칸이 공격받지 않아야 함
+      const row = p.c === 'w' ? 7 : 0;
+      if (r === row && c === 4 && !attacked(pos, row, 4, enemy(p.c))) {
+        const kr = p.c === 'w' ? pos.cr.wk : pos.cr.bk;
+        const qr = p.c === 'w' ? pos.cr.wq : pos.cr.bq;
+        if (kr && !b[row][5] && !b[row][6] && b[row][7] && b[row][7].t === 'r' && b[row][7].c === p.c
+            && !attacked(pos, row, 5, enemy(p.c)) && !attacked(pos, row, 6, enemy(p.c)))
+          add(row, 6, { castle:'k' });
+        if (qr && !b[row][1] && !b[row][2] && !b[row][3] && b[row][0] && b[row][0].t === 'r' && b[row][0].c === p.c
+            && !attacked(pos, row, 3, enemy(p.c)) && !attacked(pos, row, 2, enemy(p.c)))
+          add(row, 2, { castle:'q' });
+      }
+    }
+  } else {
+    const dirs = p.t === 'r' ? ORTH : p.t === 'b' ? DIAG : ORTH.concat(DIAG);
+    for (const [dr,dc] of dirs) {
+      let tr = r+dr, tc = c+dc;
+      while (in8(tr,tc)) {
+        const tp = b[tr][tc];
+        if (!tp) add(tr, tc);
+        else { if (tp.c !== p.c) add(tr, tc); break; }
+        tr += dr; tc += dc;
+      }
+    }
+  }
+  return moves;
+}
+
+function makeMoveM(pos, m) {
+  const b = pos.board;
+  const piece = b[m.fr][m.fc];
+  const undo = { piece, captured: b[m.tr][m.tc], epCaptured: null,
+                 cr: { ...pos.cr }, ep: pos.ep, kings: { w: pos.kings.w, b: pos.kings.b } };
+  if (m.ep) {
+    const dir = piece.c === 'w' ? 1 : -1;
+    undo.epCaptured = b[m.tr + dir][m.tc];
+    b[m.tr + dir][m.tc] = null;
+  }
+  b[m.tr][m.tc] = m.promo ? { t: m.promo, c: piece.c } : piece;
+  b[m.fr][m.fc] = null;
+  if (m.castle === 'k') { b[m.fr][5] = b[m.fr][7]; b[m.fr][7] = null; }
+  if (m.castle === 'q') { b[m.fr][3] = b[m.fr][0]; b[m.fr][0] = null; }
+  if (piece.t === 'k') {
+    pos.kings = { ...pos.kings, [piece.c]: [m.tr, m.tc] };
+    if (piece.c === 'w') { pos.cr.wk = pos.cr.wq = false; } else { pos.cr.bk = pos.cr.bq = false; }
+  }
+  const rookRight = (r, c) => {
+    if (r === 7 && c === 0) pos.cr.wq = false;
+    if (r === 7 && c === 7) pos.cr.wk = false;
+    if (r === 0 && c === 0) pos.cr.bq = false;
+    if (r === 0 && c === 7) pos.cr.bk = false;
+  };
+  if (piece.t === 'r') rookRight(m.fr, m.fc);
+  if (undo.captured && undo.captured.t === 'r') rookRight(m.tr, m.tc);
+  pos.ep = m.dbl ? [(m.fr + m.tr) / 2, m.fc] : null;
+  pos.turn = enemy(pos.turn);
+  return undo;
+}
+
+function unmakeMoveM(pos, m, u) {
+  const b = pos.board;
+  pos.turn = enemy(pos.turn);
+  b[m.fr][m.fc] = u.piece;
+  b[m.tr][m.tc] = u.captured;
+  if (m.ep) {
+    const dir = u.piece.c === 'w' ? 1 : -1;
+    b[m.tr + dir][m.tc] = u.epCaptured;
+  }
+  if (m.castle === 'k') { b[m.fr][7] = b[m.fr][5]; b[m.fr][5] = null; }
+  if (m.castle === 'q') { b[m.fr][0] = b[m.fr][3]; b[m.fr][3] = null; }
+  pos.cr = u.cr; pos.ep = u.ep; pos.kings = u.kings;
+}
+
+function legalMovesFrom(pos, r, c, forSearch) {
+  const p = pos.board[r][c];
+  if (!p || p.c !== pos.turn) return [];
+  const out = [];
+  for (const m of pseudoMoves(pos, r, c, forSearch)) {
+    const test = m.needPromo ? Object.assign({}, m, { promo:'q' }) : m;
+    const u = makeMoveM(pos, test);
+    const ok = !inCheck(pos, p.c);
+    unmakeMoveM(pos, test, u);
+    if (ok) out.push(m);
+  }
+  return out;
+}
+
+function allLegalMoves(pos, forSearch) {
+  const out = [];
+  for (let r=0; r<8; r++) for (let c=0; c<8; c++) {
+    const p = pos.board[r][c];
+    if (p && p.c === pos.turn) out.push(...legalMovesFrom(pos, r, c, forSearch));
+  }
+  return out;
+}
+
+/* ============================================================
+   2. AI — 미니맥스 + 알파베타 (쉬움: 무작위 / 보통: 깊이1 / 어려움: 깊이3 / 매우어려움: 깊이4)
+   ============================================================ */
+const CENTER_BONUS = [
+  [0,1,2,3,3,2,1,0],[1,2,3,4,4,3,2,1],[2,3,4,5,5,4,3,2],[3,4,5,6,6,5,4,3],
+  [3,4,5,6,6,5,4,3],[2,3,4,5,5,4,3,2],[1,2,3,4,4,3,2,1],[0,1,2,3,3,2,1,0]
+];
+function evaluate(pos) { // 흰색 관점 점수
+  let s = 0;
+  for (let r=0; r<8; r++) for (let c=0; c<8; c++) {
+    const p = pos.board[r][c];
+    if (!p) continue;
+    let v = VAL[p.t];
+    if (p.t === 'p') v += (p.c === 'w' ? (6 - r) : (r - 1)) * 6;
+    else if (p.t === 'n' || p.t === 'b') v += CENTER_BONUS[r][c] * 3;
+    s += p.c === 'w' ? v : -v;
+  }
+  return s;
+}
+function orderMoves(pos, moves) {
+  const b = pos.board;
+  moves.sort((m1, m2) => {
+    const c1 = b[m1.tr][m1.tc] ? VAL[b[m1.tr][m1.tc].t] : 0;
+    const c2 = b[m2.tr][m2.tc] ? VAL[b[m2.tr][m2.tc].t] : 0;
+    return c2 - c1;
+  });
+}
+function minimax(pos, depth, alpha, beta) {
+  if (depth === 0) return evaluate(pos);
+  const moves = allLegalMoves(pos, true);
+  if (moves.length === 0)
+    return inCheck(pos, pos.turn) ? (pos.turn === 'w' ? -100000 - depth : 100000 + depth) : 0;
+  orderMoves(pos, moves);
+  if (pos.turn === 'w') {
+    let best = -Infinity;
+    for (const m of moves) {
+      const u = makeMoveM(pos, m);
+      best = Math.max(best, minimax(pos, depth - 1, alpha, beta));
+      unmakeMoveM(pos, m, u);
+      alpha = Math.max(alpha, best);
+      if (beta <= alpha) break;
+    }
+    return best;
+  } else {
+    let best = Infinity;
+    for (const m of moves) {
+      const u = makeMoveM(pos, m);
+      best = Math.min(best, minimax(pos, depth - 1, alpha, beta));
+      unmakeMoveM(pos, m, u);
+      beta = Math.min(beta, best);
+      if (beta <= alpha) break;
+    }
+    return best;
+  }
+}
+function pickAiMove(pos, level) {
+  const moves = allLegalMoves(pos, true);
+  if (moves.length === 0) return null;
+  if (level === 'easy') return moves[Math.floor(Math.random() * moves.length)];
+  const depth = level === 'normal' ? 1 : level === 'hard' ? 3 : 4;
+  const maximizing = pos.turn === 'w';
+  orderMoves(pos, moves);
+  let bestV = maximizing ? -Infinity : Infinity;
+  let bestList = [];
+  let alpha = -Infinity, beta = Infinity;
+  for (const m of moves) {
+    const u = makeMoveM(pos, m);
+    const v = minimax(pos, depth - 1, alpha, beta);
+    unmakeMoveM(pos, m, u);
+    if (maximizing ? v > bestV : v < bestV) { bestV = v; bestList = [m]; }
+    else if (v === bestV) bestList.push(m);
+    if (maximizing) alpha = Math.max(alpha, bestV); else beta = Math.min(beta, bestV);
+  }
+  return bestList[Math.floor(Math.random() * bestList.length)];
+}
+
+/* ============================================================
+   3. 업적 시스템 — 15개 배지 (localStorage)
+   ============================================================ */
+const defaultStats = () => ({
+  games:0, wins:0, checkmates:0, checksEscaped:0, streak:0,
+  aiWins:0, hardWins:0, onlineGames:0,
+  fastWin:false, longGame:false, perfect:false, difficulties:[]
+});
+const store = {
+  get stats() { try { return Object.assign(defaultStats(), JSON.parse(localStorage.getItem('chessStats') || '{}')); } catch { return defaultStats(); } },
+  set stats(v) { localStorage.setItem('chessStats', JSON.stringify(v)); },
+  get badges() { try { return JSON.parse(localStorage.getItem('chessBadges') || '[]'); } catch { return []; } },
+  set badges(v) { localStorage.setItem('chessBadges', JSON.stringify(v)); },
+  get solvedPuzzles() { try { return JSON.parse(localStorage.getItem('chessPuzzles') || '[]'); } catch { return []; } },
+  set solvedPuzzles(v) { localStorage.setItem('chessPuzzles', JSON.stringify(v)); },
+  get nickname() { return localStorage.getItem('chessNickname') || ''; },
+  set nickname(v) { localStorage.setItem('chessNickname', v); }
+};
+const BADGES = [
+  { id:'first_win',  icon:'🎯', name:'첫 승리',        cond:'게임 1승',            check: s => s.wins >= 1 },
+  { id:'fast_win',   icon:'⚡', name:'빠른 승리',      cond:'10수 이내 승리',       check: s => s.fastWin },
+  { id:'defense',    icon:'🛡️', name:'방어 마스터',    cond:'체크 5회 이상 피하기',  check: s => s.checksEscaped >= 5 },
+  { id:'cm_master',  icon:'👑', name:'체크메이트 마스터', cond:'체크메이트 10회',     check: s => s.checkmates >= 10 },
+  { id:'long_game',  icon:'🎪', name:'장기전 마스터',   cond:'50수 이상 진행',       check: s => s.longGame },
+  { id:'beat_ai',    icon:'🤖', name:'AI 격파',        cond:'AI 상대 1승',          check: s => s.aiWins >= 1 },
+  { id:'hard_win',   icon:'🏅', name:'어려움 정복',     cond:'어려움 난이도 1승',    check: s => s.hardWins >= 1 },
+  { id:'streak',     icon:'🔥', name:'연승',           cond:'3연승',               check: s => s.streak >= 3 },
+  { id:'friend',     icon:'👥', name:'친구 대전',       cond:'온라인 게임 1회',      check: s => s.onlineGames >= 1 },
+  { id:'puzzle',     icon:'🧩', name:'퍼즐 마스터',     cond:'퍼즐 5개 풀이',        check: (s, pz) => pz >= 5 },
+  { id:'perfect',    icon:'💎', name:'완벽한 게임',     cond:'모든 기물 살리고 승리', check: s => s.perfect },
+  { id:'student',    icon:'🎓', name:'학생',           cond:'게임 10회',            check: s => s.games >= 10 },
+  { id:'champion',   icon:'🏆', name:'챔피언',         cond:'게임 50회',            check: s => s.games >= 50 },
+  { id:'rainbow',    icon:'🌈', name:'무지개',         cond:'모든 난이도 플레이',    check: s => s.difficulties.length >= 4 },
+  { id:'superstar',  icon:'🌟', name:'슈퍼스타',       cond:'모든 배지 획득',        check: null } // 나머지 14개 달성 시
+];
+function checkAchievements() {
+  const s = store.stats, pz = store.solvedPuzzles.length;
+  const owned = store.badges;
+  const fresh = [];
+  for (const b of BADGES) {
+    if (owned.includes(b.id) || b.id === 'superstar') continue;
+    if (b.check(s, pz)) { owned.push(b.id); fresh.push(b); }
+  }
+  if (!owned.includes('superstar') && BADGES.every(b => b.id === 'superstar' || owned.includes(b.id))) {
+    owned.push('superstar');
+    fresh.push(BADGES.find(b => b.id === 'superstar'));
+  }
+  if (fresh.length) store.badges = owned;
+  return fresh;
+}
+
+/* ============================================================
+   4. UI 공통
+   ============================================================ */
+const $ = sel => document.querySelector(sel);
+const $$ = sel => [...document.querySelectorAll(sel)];
+function show(id) {
+  $$('.screen').forEach(s => s.classList.remove('active'));
+  $('#' + id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+let toastTimer = null;
+function toast(msg) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+function openModal(id) { $('#' + id).classList.add('open'); }
+function closeModal(id) { $('#' + id).classList.remove('open'); }
+
+// 별 배경
+(function makeStars() {
+  const box = $('#stars');
+  for (let i=0; i<80; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    const size = 1 + Math.random() * 2.5;
+    s.style.cssText = `width:${size}px;height:${size}px;left:${Math.random()*100}%;top:${Math.random()*100}%;animation-delay:${Math.random()*3}s;animation-duration:${2+Math.random()*3}s`;
+    box.appendChild(s);
+  }
+})();
+
+// 닉네임
+function refreshNick() { $('#nick-name').textContent = store.nickname || '기사님'; }
+$('#nick-edit-btn').addEventListener('click', () => {
+  $('#nick-edit-row').style.display = 'inline-flex';
+  $('#nick-input').value = store.nickname;
+  $('#nick-input').focus();
+});
+$('#nick-save-btn').addEventListener('click', () => {
+  const v = $('#nick-input').value.trim();
+  if (v) store.nickname = v;
+  $('#nick-edit-row').style.display = 'none';
+  refreshNick();
+  toast('닉네임이 저장되었어요! ✅');
+});
+refreshNick();
+
+// 화면 이동
+$$('.menu-btn').forEach(btn => btn.addEventListener('click', () => {
+  const go = btn.dataset.go;
+  if (go === 'pvp') show('screen-pvp-setup');
+  else if (go === 'ai') show('screen-ai-setup');
+  else if (go === 'online') { resetLobby(); $('#lobby-nick').value = store.nickname; show('screen-lobby'); }
+  else if (go === 'puzzles') { renderPuzzleList(); show('screen-puzzles'); }
+  else if (go === 'achievements') { renderAchievements(); show('screen-achievements'); }
+}));
+$$('[data-back]').forEach(btn => btn.addEventListener('click', () => { stopPolling(); show('screen-menu'); }));
+
+/* ============================================================
+   5. 게임 컨트롤러
+   ============================================================ */
+const game = {
+  mode:null, pos:null, movesHist:[], captured:{ w:[], b:[] }, // captured.w = 흰색이 잡은 (검은) 말들
+  lastMove:null, selected:null, targets:[],
+  flipped:false, playerColor:null, aiLevel:null,
+  names:{ w:'흰색 기사', b:'검은색 기사' },
+  over:false, aiThinking:false,
+  online:null, // { roomCode, myColor, pollTimer }
+  puzzleIdx:null,
+  pendingPromo:null
+};
+
+function colName(c) { return c === 'w' ? '흰색' : '검은색'; }
+function playerLabel(c) { return `${game.names[c]} (${colName(c)})`; }
+
+function startGame(opts) {
+  Object.assign(game, {
+    mode:opts.mode, pos:opts.pos || initialPos(), movesHist:[], captured:{w:[],b:[]},
+    lastMove:null, selected:null, targets:[], flipped:!!opts.flipped,
+    playerColor:opts.playerColor || null, aiLevel:opts.aiLevel || null,
+    names:opts.names || { w:'흰색 기사', b:'검은색 기사' },
+    over:false, aiThinking:false, online:opts.online || null, puzzleIdx:opts.puzzleIdx ?? null,
+    pendingPromo:null
+  });
+  $('#game-title').textContent = opts.title;
+  $('#btn-resign').style.display = opts.mode === 'puzzle' ? 'none' : '';
+  $('#btn-restart').style.display = (opts.mode === 'pvp' || opts.mode === 'ai' || opts.mode === 'puzzle') ? '' : 'none';
+  $('#btn-restart').textContent = opts.mode === 'puzzle' ? '🔄 처음부터' : '🔄 다시 하기';
+  $('#online-info').textContent = opts.mode === 'online' ? `방 번호: ${opts.online.roomCode} · 실시간 동기화(약 1.2초)` : '';
+  renderPanels();
+  renderBoard();
+  updateStatus();
+  show('screen-game');
+  if (opts.mode === 'ai' && game.pos.turn !== game.playerColor) scheduleAi();
+}
+
+/* ----- 보드 렌더링 ----- */
+function dispToBoard(dr, dc) { return game.flipped ? [7-dr, 7-dc] : [dr, dc]; }
+function boardToDisp(r, c) { return game.flipped ? [7-r, 7-c] : [r, c]; }
+
+function renderBoard() {
+  const boardEl = $('#board');
+  boardEl.innerHTML = '';
+  const checkedKing = inCheck(game.pos, game.pos.turn) ? game.pos.kings[game.pos.turn] : null;
+  for (let dr=0; dr<8; dr++) for (let dc=0; dc<8; dc++) {
+    const [r, c] = dispToBoard(dr, dc);
+    const sq = document.createElement('div');
+    sq.className = 'sq ' + ((r + c) % 2 === 0 ? 'light' : 'dark');
+    sq.dataset.r = r; sq.dataset.c = c;
+    if (dr === 7) { const f = document.createElement('span'); f.className = 'coord file'; f.textContent = 'abcdefgh'[c]; sq.appendChild(f); }
+    if (dc === 0) { const k = document.createElement('span'); k.className = 'coord rank'; k.textContent = 8 - r; sq.appendChild(k); }
+    const p = game.pos.board[r][c];
+    if (p) {
+      const el = document.createElement('span');
+      el.className = 'pc ' + p.c;
+      el.textContent = GLYPH[p.t];
+      sq.appendChild(el);
+    }
+    if (game.selected && game.selected[0] === r && game.selected[1] === c) sq.classList.add('sel');
+    if (game.targets.some(m => m.tr === r && m.tc === c)) {
+      sq.classList.add('dot');
+      if (p) sq.classList.add('cap');
+    }
+    if (game.lastMove && ((game.lastMove.fr === r && game.lastMove.fc === c) || (game.lastMove.tr === r && game.lastMove.tc === c)))
+      sq.classList.add('lastmv');
+    if (checkedKing && checkedKing[0] === r && checkedKing[1] === c) sq.classList.add('incheck');
+    sq.addEventListener('click', onSquareClick);
+    boardEl.appendChild(sq);
+  }
+  drawArrow();
+  renderCaptured();
+}
+
+function drawArrow() {
+  const line = $('#arrow-line');
+  if (!game.lastMove) { line.setAttribute('visibility', 'hidden'); return; }
+  const [fdr, fdc] = boardToDisp(game.lastMove.fr, game.lastMove.fc);
+  const [tdr, tdc] = boardToDisp(game.lastMove.tr, game.lastMove.tc);
+  line.setAttribute('x1', fdc * 100 + 50); line.setAttribute('y1', fdr * 100 + 50);
+  line.setAttribute('x2', tdc * 100 + 50); line.setAttribute('y2', tdr * 100 + 50);
+  line.setAttribute('visibility', 'visible');
+}
+
+function renderPanels() {
+  const topColor = game.flipped ? 'w' : 'b';
+  const botColor = enemy(topColor);
+  $('#pl-top .pl-name').textContent = game.names[topColor];
+  $('#pl-top .pl-color').textContent = `${colName(topColor)} ${topColor === 'w' ? '♔' : '♚'}`;
+  $('#pl-bottom .pl-name').textContent = game.names[botColor];
+  $('#pl-bottom .pl-color').textContent = `${colName(botColor)} ${botColor === 'w' ? '♔' : '♚'}`;
+  renderCaptured();
+}
+function renderCaptured() {
+  const topColor = game.flipped ? 'w' : 'b';
+  const botColor = enemy(topColor);
+  const line = arr => arr.map(t => GLYPH[t]).join(' ') || '·';
+  $('#cap-top').textContent = '잡은 말: ' + line(game.captured[topColor]);
+  $('#cap-bottom').textContent = '잡은 말: ' + line(game.captured[botColor]);
+  $('#pl-top').classList.toggle('turn', !game.over && game.pos.turn === topColor);
+  $('#pl-bottom').classList.toggle('turn', !game.over && game.pos.turn === botColor);
+}
+
+function updateStatus(text, cls) {
+  const el = $('#game-status');
+  el.className = '';
+  if (text) { el.textContent = text; if (cls) el.classList.add(cls); return; }
+  if (game.over) return;
+  if (game.aiThinking) { el.textContent = '🤖 컴퓨터가 생각 중...'; el.classList.add('thinking'); return; }
+  const check = inCheck(game.pos, game.pos.turn);
+  if (game.mode === 'puzzle') { el.textContent = `🧩 ${colName(game.pos.turn)} 차례 — 한 수로 체크메이트!`; return; }
+  el.textContent = (check ? '⚠️ 체크! ' : '') + `${playerLabel(game.pos.turn)} 차례`;
+  if (check) el.classList.add('check');
+}
+
+/* ----- 입력 처리 ----- */
+function myTurn() {
+  if (game.over || game.aiThinking) return false;
+  if (game.mode === 'pvp') return true;
+  if (game.mode === 'puzzle') return true;
+  return game.pos.turn === game.playerColor;
+}
+
+function onSquareClick(e) {
+  if (!myTurn()) return;
+  const r = +e.currentTarget.dataset.r, c = +e.currentTarget.dataset.c;
+  const p = game.pos.board[r][c];
+  const target = game.targets.find(m => m.tr === r && m.tc === c);
+  if (game.selected && target) {
+    if (target.needPromo) { askPromotion(target); return; }
+    playMove(target);
+    return;
+  }
+  if (p && p.c === game.pos.turn) {
+    game.selected = [r, c];
+    game.targets = legalMovesFrom(game.pos, r, c, false);
+    renderBoard();
+  } else if (game.selected) {
+    game.selected = null; game.targets = [];
+    renderBoard();
+  }
+}
+
+function askPromotion(move) {
+  game.pendingPromo = move;
+  const color = game.pos.turn;
+  const box = $('#promo-choices');
+  box.innerHTML = '';
+  for (const t of ['q','r','b','n']) {
+    const d = document.createElement('div');
+    d.className = 'promo-pc';
+    d.innerHTML = `<span class="pc ${color}">${GLYPH[t]}</span>`;
+    d.title = PIECE_KO[t];
+    d.addEventListener('click', () => {
+      closeModal('promo-modal');
+      playMove(Object.assign({}, game.pendingPromo, { promo:t, needPromo:false }));
+      game.pendingPromo = null;
+    });
+    box.appendChild(d);
+  }
+  openModal('promo-modal');
+}
+
+/* ----- 수 실행 ----- */
+function playMove(move, opts = {}) {
+  const wasCheck = inCheck(game.pos, game.pos.turn);
+  const mover = game.pos.turn;
+  const u = makeMoveM(game.pos, move);
+  const capturedPiece = u.epCaptured || u.captured;
+  if (capturedPiece) game.captured[mover].push(capturedPiece.t);
+  game.movesHist.push({
+    from:{ row:move.fr, col:move.fc }, to:{ row:move.tr, col:move.tc },
+    ...(move.promo ? { promotion:{ q:'queen', r:'rook', b:'bishop', n:'knight' }[move.promo] } : {})
+  });
+  if (wasCheck) { // 체크에서 탈출 성공
+    const s = store.stats; s.checksEscaped++; store.stats = s;
+  }
+  game.lastMove = move;
+  game.selected = null; game.targets = [];
+  renderBoard();
+
+  // 게임 종료 판정
+  const replies = allLegalMoves(game.pos, false);
+  let finished = null;
+  if (replies.length === 0) {
+    finished = inCheck(game.pos, game.pos.turn)
+      ? { result:'checkmate', winner:mover }
+      : { result:'stalemate', winner:null };
+  }
+
+  if (game.mode === 'online' && !opts.remote) {
+    postMove(finished);
+  }
+
+  if (finished) { endGame(finished.result, finished.winner); return; }
+  updateStatus();
+  renderCaptured();
+  if (game.mode === 'ai' && game.pos.turn !== game.playerColor) scheduleAi();
+  if (game.mode === 'puzzle') { // 메이트를 못 만들면 실패 → 리셋
+    setTimeout(() => {
+      toast('아쉬워요! 다시 생각해 보세요 🤔');
+      loadPuzzle(game.puzzleIdx);
+    }, 600);
+  }
+}
+
+function scheduleAi() {
+  game.aiThinking = true;
+  updateStatus();
+  setTimeout(() => {
+    const m = pickAiMove(game.pos, game.aiLevel);
+    game.aiThinking = false;
+    if (m) playMove(m);
+  }, 450);
+}
+
+/* ----- 게임 종료 & 통계 ----- */
+function endGame(result, winner, opts = {}) {
+  if (game.over) return;
+  game.over = true;
+  stopPolling();
+  renderCaptured();
+  const plies = game.movesHist.length;
+
+  // 통계 갱신 (퍼즐 제외)
+  let freshBadges = [];
+  if (game.mode !== 'puzzle') {
+    const s = store.stats;
+    s.games++;
+    if (plies >= 50) s.longGame = true;
+    const humanWon = winner && (game.mode === 'pvp' ? true : winner === game.playerColor);
+    if (game.mode === 'online') s.onlineGames++;
+    if (humanWon) {
+      s.wins++; s.streak++;
+      if (result === 'checkmate') s.checkmates++;
+      if (plies <= 20) s.fastWin = true;
+      if (game.captured[enemy(winner)].length === 0) s.perfect = true; // 승자 기물 하나도 안 잡힘
+      if (game.mode === 'ai') {
+        s.aiWins++;
+        if (game.aiLevel === 'hard' || game.aiLevel === 'veryhard') s.hardWins++;
+      }
+    } else if (winner) {
+      s.streak = 0;
+    }
+    store.stats = s;
+    freshBadges = checkAchievements();
+  }
+
+  // 결과 모달
+  let title, text;
+  if (result === 'checkmate') {
+    title = '👑 체크메이트!';
+    text = `${playerLabel(winner)} 승리! 정확한 마무리였어요.`;
+  } else if (result === 'stalemate') {
+    title = '🤝 스테일메이트';
+    text = '움직일 수 있는 수가 없어요. 무승부입니다!';
+  } else if (result === 'resign') {
+    title = '🏳️ 기권';
+    text = `${playerLabel(enemy(winner))} 기권 — ${playerLabel(winner)} 승리!`;
+  } else if (result === 'puzzle_solved') {
+    title = '🎉 퍼즐 성공!';
+    text = '한 수로 체크메이트! 대단해요!';
+  } else {
+    title = '게임 종료'; text = '';
+  }
+  $('#go-title').textContent = title;
+  $('#go-text').textContent = text;
+  $('#go-again').style.display = (game.mode === 'online') ? 'none' : '';
+  $('#go-again').textContent = game.mode === 'puzzle' ? '🧩 다음 퍼즐' : '🔄 다시 하기';
+  openModal('gameover-modal');
+  badgeQueue.push(...freshBadges);
+}
+
+/* 배지 모달 큐 */
+const badgeQueue = [];
+function showNextBadge() {
+  if (!badgeQueue.length) return;
+  const b = badgeQueue.shift();
+  $('#badge-icon').textContent = b.icon;
+  $('#badge-name').textContent = b.name;
+  $('#badge-desc').textContent = b.cond;
+  openModal('badge-modal');
+}
+$('#badge-ok').addEventListener('click', () => { closeModal('badge-modal'); showNextBadge(); });
+
+$('#go-menu').addEventListener('click', () => { closeModal('gameover-modal'); stopPolling(); show('screen-menu'); showNextBadge(); });
+$('#go-badges').addEventListener('click', () => { closeModal('gameover-modal'); renderAchievements(); show('screen-achievements'); showNextBadge(); });
+$('#go-again').addEventListener('click', () => {
+  closeModal('gameover-modal');
+  if (game.mode === 'puzzle') {
+    const next = PUZZLES.findIndex((p, i) => !store.solvedPuzzles.includes(i));
+    if (game.lastResult === 'puzzle_solved' && next === -1) { renderPuzzleList(); show('screen-puzzles'); }
+    else loadPuzzle(next !== -1 ? next : game.puzzleIdx);
+  } else if (game.mode === 'pvp') startPvp();
+  else if (game.mode === 'ai') startAi();
+  showNextBadge();
+});
+$('#btn-quit').addEventListener('click', () => {
+  if (game.mode === 'online' && !game.over && game.online) sendResign(true);
+  stopPolling(); show('screen-menu');
+});
+$('#btn-restart').addEventListener('click', () => {
+  if (game.mode === 'puzzle') loadPuzzle(game.puzzleIdx);
+  else if (game.mode === 'pvp') startPvp();
+  else if (game.mode === 'ai') startAi();
+});
+$('#btn-resign').addEventListener('click', () => {
+  if (game.over) return;
+  if (game.mode === 'online') { sendResign(false); return; }
+  const loser = game.mode === 'ai' ? game.playerColor : game.pos.turn;
+  endGame('resign', enemy(loser));
+});
+
+/* ============================================================
+   6. 모드별 시작
+   ============================================================ */
+// PvP
+let pvpNames = { w:'흰색 기사', b:'검은색 기사' };
+$('#pvp-start-btn').addEventListener('click', () => {
+  pvpNames = {
+    w: $('#pvp-name-w').value.trim() || '흰색 기사',
+    b: $('#pvp-name-b').value.trim() || '검은색 기사'
+  };
+  startPvp();
+});
+function startPvp() {
+  startGame({ mode:'pvp', title:'👥 애들끼리 대결', names:{ ...pvpNames }, flipped:false });
+}
+
+// AI
+let aiSetup = { level:'easy', color:'random' };
+$$('#ai-levels .choice').forEach(el => el.addEventListener('click', () => {
+  $$('#ai-levels .choice').forEach(x => x.classList.remove('sel'));
+  el.classList.add('sel');
+  aiSetup.level = el.dataset.level;
+}));
+$$('#ai-colors .choice').forEach(el => el.addEventListener('click', () => {
+  $$('#ai-colors .choice').forEach(x => x.classList.remove('sel'));
+  el.classList.add('sel');
+  aiSetup.color = el.dataset.color;
+}));
+$('#ai-start-btn').addEventListener('click', startAi);
+function startAi() {
+  const myColor = aiSetup.color === 'random' ? (Math.random() < .5 ? 'w' : 'b') : aiSetup.color;
+  const levelKo = { easy:'쉬움', normal:'보통', hard:'어려움', veryhard:'매우어려움' }[aiSetup.level];
+  const s = store.stats;
+  if (!s.difficulties.includes(aiSetup.level)) { s.difficulties.push(aiSetup.level); store.stats = s; }
+  const names = {};
+  names[myColor] = store.nickname || '기사님';
+  names[enemy(myColor)] = `🤖 컴퓨터(${levelKo})`;
+  startGame({
+    mode:'ai', title:`🤖 컴퓨터 상대 · ${levelKo}`,
+    names, playerColor:myColor, aiLevel:aiSetup.level, flipped: myColor === 'b'
+  });
+}
+
+/* ============================================================
+   7. 체스 퍼즐 (메이트 인 원)
+   ============================================================ */
+const PUZZLES = [
+  { name:'백랭크 습격', diff:'쉬움',  fen:'6k1/5ppp/8/8/8/8/8/R6K w - - 0 1', hint:'룩으로 맨 뒷줄을 노려요' },
+  { name:'사다리 메이트', diff:'쉬움', fen:'7k/1R6/8/8/8/8/8/K2R4 w - - 0 1', hint:'두 룩이 사다리처럼!' },
+  { name:'퀸과 킹의 합동 작전', diff:'쉬움', fen:'8/8/8/3Q4/8/8/5K2/7k w - - 0 1', hint:'킹이 도망갈 칸을 막아요' },
+  { name:'스콜라 메이트', diff:'보통', fen:'r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR w KQkq - 0 1', hint:'약한 f7 칸을 노려요' },
+  { name:'룩 맞교환의 함정', diff:'보통', fen:'3r2k1/5ppp/8/8/8/8/5PPP/3R2K1 w - - 0 1', hint:'맞교환처럼 보이지만...' },
+  { name:'질식 메이트', diff:'어려움', fen:'6rk/6pp/7N/8/8/8/8/6RK w - - 0 1', hint:'나이트만 갈 수 있는 칸이 있어요' }
+];
+function renderPuzzleList() {
+  const grid = $('#puzzle-grid');
+  const solved = store.solvedPuzzles;
+  grid.innerHTML = '';
+  PUZZLES.forEach((pz, i) => {
+    const d = document.createElement('div');
+    d.className = 'puzzle-card';
+    d.innerHTML = `<div class="pt">퍼즐 ${i+1}. ${pz.name}</div>
+      <div class="pd">난이도: ${pz.diff} · 흰색 차례</div>
+      <div class="pd">💡 ${pz.hint}</div>
+      ${solved.includes(i) ? '<div class="solved">✅ 풀이 완료</div>' : ''}`;
+    d.addEventListener('click', () => loadPuzzle(i));
+    grid.appendChild(d);
+  });
+}
+function loadPuzzle(idx) {
+  const pz = PUZZLES[idx];
+  startGame({
+    mode:'puzzle', title:`🧩 퍼즐 ${idx+1}. ${pz.name} (${pz.diff})`,
+    pos: fromFEN(pz.fen), puzzleIdx: idx, flipped:false,
+    names:{ w: store.nickname || '기사님', b:'퍼즐' }
+  });
+}
+// 퍼즐 성공 판정: playMove의 종료 판정에서 checkmate가 나오면 성공
+const origEndGame = endGame;
+endGame = function(result, winner, opts) {
+  game.lastResult = result;
+  if (game.mode === 'puzzle') {
+    if (result === 'checkmate') {
+      const solved = store.solvedPuzzles;
+      if (!solved.includes(game.puzzleIdx)) { store.solvedPuzzles = [...solved, game.puzzleIdx]; }
+      game.over = true;
+      $('#go-title').textContent = '🎉 퍼즐 성공!';
+      $('#go-text').textContent = '한 수로 체크메이트! 정말 대단해요!';
+      $('#go-again').style.display = '';
+      $('#go-again').textContent = '🧩 다음 퍼즐';
+      openModal('gameover-modal');
+      badgeQueue.push(...checkAchievements());
+      return;
+    }
+    // 퍼즐에서 다른 종료(스테일메이트)는 실패 처리
+    toast('아쉬워요! 다시 생각해 보세요 🤔');
+    loadPuzzle(game.puzzleIdx);
+    return;
+  }
+  origEndGame(result, winner, opts);
+};
+
+/* ============================================================
+   8. 온라인 대결 (6자리 방 코드 + 1.2초 폴링)
+   ============================================================ */
+// 온라인 대결 방 API 주소.
+// - 빈 문자열('')이면 지금 이 페이지를 서빙하는 서버(예: chess-server.ps1)의 /api/...를 사용합니다.
+// - Cloudflare Worker를 배포했다면, 그 주소(예: 'https://chess-rooms.내계정.workers.dev')를 넣으세요.
+//   그러면 선생님 컴퓨터를 켜두지 않아도 학생들이 언제든 온라인 대결을 할 수 있습니다.
+const CHESS_API_BASE = '';
+const API = {
+  async call(path, body) {
+    const res = await fetch(CHESS_API_BASE + '/api/' + path, body !== undefined
+      ? { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(body) }
+      : undefined);
+    if (!res.ok) throw new Error('서버 오류 (' + res.status + ')');
+    return res.json();
+  },
+  createRoom: hostName => API.call('createRoom', { hostName }),
+  joinRoom: (roomCode, guestName) => API.call('joinRoom', { roomCode, guestName }),
+  makeMove: p => API.call('makeMove', p),
+  resign: (roomCode, color) => API.call('resign', { roomCode, color }),
+  getRoom: roomCode => API.call('getRoom?roomCode=' + roomCode)
+};
+const colorApi = c => c === 'w' ? 'white' : 'black';
+const colorEng = c => c === 'white' ? 'w' : 'b';
+
+let lobbyPoll = null;
+function resetLobby() {
+  $('#lobby-main').style.display = '';
+  $('#lobby-wait').style.display = 'none';
+  $('#lobby-join').style.display = 'none';
+  stopPolling();
+}
+function stopPolling() {
+  if (lobbyPoll) { clearInterval(lobbyPoll); lobbyPoll = null; }
+  if (game.online && game.online.pollTimer) { clearInterval(game.online.pollTimer); game.online.pollTimer = null; }
+}
+function lobbyNick() {
+  const v = $('#lobby-nick').value.trim();
+  if (v) store.nickname = v;
+  refreshNick();
+  return v || store.nickname || '기사님';
+}
+
+$('#btn-show-join').addEventListener('click', () => {
+  const j = $('#lobby-join');
+  j.style.display = j.style.display === 'block' ? 'none' : 'block';
+  $('#join-code').focus();
+});
+
+$('#btn-create-room').addEventListener('click', async () => {
+  const name = lobbyNick();
+  try {
+    const room = await API.createRoom(name);
+    $('#lobby-main').style.display = 'none';
+    $('#lobby-wait').style.display = 'block';
+    $('#room-code-display').textContent = room.roomCode;
+    lobbyPoll = setInterval(async () => {
+      try {
+        const r = await API.getRoom(room.roomCode);
+        if (r && r.status === 'playing') {
+          clearInterval(lobbyPoll); lobbyPoll = null;
+          startOnlineGame(room.roomCode, 'w', name, r.guestName || '친구');
+        }
+      } catch {}
+    }, 1200);
+  } catch (err) {
+    toast('⚠️ 서버에 연결할 수 없어요. chess-server.ps1이 켜져 있는지 확인하세요!');
+  }
+});
+
+$('#btn-copy-code').addEventListener('click', async () => {
+  const code = $('#room-code-display').textContent;
+  try { await navigator.clipboard.writeText(code); toast('방 번호가 복사되었어요! 📋'); }
+  catch { toast('복사 실패 — 번호를 직접 알려주세요: ' + code); }
+});
+
+$('#btn-join-room').addEventListener('click', async () => {
+  const code = $('#join-code').value.trim();
+  if (!/^\d{6}$/.test(code)) { toast('방 번호는 6자리 숫자예요!'); return; }
+  const name = lobbyNick();
+  try {
+    const room = await API.joinRoom(code, name);
+    if (!room) { toast('그 번호의 방을 찾을 수 없어요 😢'); return; }
+    startOnlineGame(code, 'b', room.hostName || '친구', name);
+  } catch (err) {
+    toast('⚠️ 서버에 연결할 수 없어요. chess-server.ps1이 켜져 있는지 확인하세요!');
+  }
+});
+
+function startOnlineGame(roomCode, myColor, hostName, guestName) {
+  const s = store.stats; // 온라인 게임 시작만으로도 '친구 대전' 조건 충족되도록 종료 시 카운트
+  const names = { w: hostName, b: guestName };
+  startGame({
+    mode:'online', title:'🌐 친구와 온라인 대결',
+    names, playerColor:myColor, flipped: myColor === 'b',
+    online:{ roomCode, myColor, pollTimer:null }
+  });
+  game.online.pollTimer = setInterval(syncRoom, 1200);
+}
+
+async function syncRoom() {
+  if (!game.online || game.over) return;
+  try {
+    const room = await API.getRoom(game.online.roomCode);
+    if (!room) return;
+    const remoteMoves = JSON.parse(room.moves || '[]');
+    while (remoteMoves.length > game.movesHist.length) {
+      const sm = remoteMoves[game.movesHist.length];
+      applySerializedMove(sm);
+    }
+    if (room.status === 'finished' && !game.over) {
+      if (room.result === 'resign') endGame('resign', colorEng(room.winner));
+      else if (room.result && room.winner) endGame(room.result, colorEng(room.winner));
+      else if (room.result === 'stalemate') endGame('stalemate', null);
+    }
+  } catch {}
+}
+
+function applySerializedMove(sm) {
+  const promoMap = { queen:'q', rook:'r', bishop:'b', knight:'n' };
+  const legal = legalMovesFrom(game.pos, sm.from.row, sm.from.col, false);
+  let m = legal.find(x => x.tr === sm.to.row && x.tc === sm.to.col);
+  if (!m) return;
+  if (m.needPromo) m = Object.assign({}, m, { promo: promoMap[sm.promotion] || 'q', needPromo:false });
+  playMove(m, { remote:true });
+}
+
+async function postMove(finished) {
+  try {
+    await API.makeMove({
+      roomCode: game.online.roomCode,
+      color: colorApi(game.online.myColor),
+      moves: JSON.stringify(game.movesHist),
+      nextTurn: colorApi(game.pos.turn),
+      finished: finished ? { result: finished.result, winner: finished.winner ? colorApi(finished.winner) : null } : null
+    });
+  } catch { toast('⚠️ 서버 연결이 불안정해요...'); }
+}
+
+async function sendResign(silent) {
+  try {
+    await API.resign(game.online.roomCode, colorApi(game.online.myColor));
+    if (!silent) endGame('resign', enemy(game.online.myColor));
+  } catch { if (!silent) toast('⚠️ 서버에 연결할 수 없어요'); }
+}
+
+/* ============================================================
+   9. 업적 화면
+   ============================================================ */
+function renderAchievements() {
+  const s = store.stats, pzCount = store.solvedPuzzles.length, owned = store.badges;
+  $('#stats-summary').innerHTML =
+    `<span>게임 <b>${s.games}</b>회</span><span>승리 <b>${s.wins}</b>회</span>` +
+    `<span>체크메이트 <b>${s.checkmates}</b>회</span><span>연승 <b>${s.streak}</b></span>` +
+    `<span>퍼즐 풀이 <b>${pzCount}</b>개</span><span>배지 <b>${owned.length}/15</b></span>`;
+  const grid = $('#badge-grid');
+  grid.innerHTML = '';
+  for (const b of BADGES) {
+    const has = owned.includes(b.id);
+    const d = document.createElement('div');
+    d.className = 'badge-card' + (has ? '' : ' locked');
+    d.innerHTML = `<div class="bi">${has ? b.icon : '🔒'}</div><div class="bn">${b.icon} ${b.name}</div><div class="bc">${b.cond}</div>`;
+    grid.appendChild(d);
+  }
+}
+</script>
+</body>
+</html>
