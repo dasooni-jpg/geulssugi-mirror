@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head><meta charset="UTF-8"><title>ideaboard UI preview (FakeD1)</title>
+<style>html,body{margin:0;height:100%}iframe{width:100%;height:100%;border:0;display:block}</style>
+</head>
+<body>
+<iframe id="fr"></iframe>
+<script type="module">
+// 배포 없이 화면을 통째로 시험하는 미리보기.
+// 워커(_worker.js)를 가짜 D1 위에서 돌리고, iframe 안 앱의 fetch 를 워커로 연결한다.
+import worker from "./_worker.js";
+
+class FakeD1 {
+  constructor() { this.row = null; this.files = new Map(); }
+  prepare(sql) {
+    const self = this;
+    const isFiles = sql.includes("board_files");
+    return {
+      _args: [],
+      bind(...a) { this._args = a; return this; },
+      async run() {
+        if (sql.startsWith("CREATE")) return { meta: {} };
+        if (isFiles) {
+          if (sql.startsWith("INSERT")) {
+            const [id, name, mime, data] = this._args;
+            self.files.set(id, { name, mime, data });
+            return { meta: { changes: 1 } };
+          }
+          if (sql.startsWith("DELETE")) return { meta: { changes: self.files.delete(this._args[0]) ? 1 : 0 } };
+        }
+        if (sql.startsWith("INSERT")) {
+          if (self.row) throw new Error("UNIQUE");
+          self.row = { version: 1, data: this._args[0] };
+          return { meta: { changes: 1 } };
+        }
+        if (sql.startsWith("UPDATE")) {
+          const [data, version] = this._args;
+          if (self.row && self.row.version === version) { self.row = { version: version + 1, data }; return { meta: { changes: 1 } }; }
+          return { meta: { changes: 0 } };
+        }
+        throw new Error("sql? " + sql);
+      },
+      async first() {
+        if (isFiles) { const f = self.files.get(this._args[0]); return f ? { name: f.name, mime: f.mime, data: f.data } : null; }
+        return self.row ? { version: self.row.version, data: self.row.data } : null;
+      },
+    };
+  }
+}
+const env = { DB: new FakeD1() };
+window.workerFetch = (url, init) =>
+  worker.fetch(new Request("https://ib.test" + url, init), env);
+
+const html = await (await fetch("/app.html")).text();
+const patch = `<script>
+window.fetch = (u, i) => parent.workerFetch(u, i);
+// /api/file/ 이미지를 워커에서 받아 blob 으로 표시
+addEventListener("DOMContentLoaded", () => {
+  const fix = () => document.querySelectorAll('img[src^="/api/file/"]').forEach(async img => {
+    const u = img.getAttribute("src");
+    img.removeAttribute("src");
+    const r = await parent.workerFetch(u);
+    if (r.status === 200) img.src = URL.createObjectURL(await r.blob());
+  });
+  new MutationObserver(fix).observe(document.body, { childList: true, subtree: true });
+  fix();
+});
+<\/script>`;
+document.getElementById("fr").srcdoc = html.replace("<head>", "<head>" + patch);
+</script>
+</body>
+</html>

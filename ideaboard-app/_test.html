@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head><meta charset="UTF-8"><title>ideaboard worker test</title>
+<style>body{font-family:monospace;font-size:13px;padding:16px}.p{color:green}.f{color:red;font-weight:bold}</style>
+</head>
+<body>
+<h3 id="summary">실행 중...</h3>
+<div id="log"></div>
+<script type="module">
+import worker from "./_worker.js";
+
+// ── 가짜 D1 (board_state 버전 잠금 + board_files 테이블 재현) ──
+class FakeD1 {
+  constructor() { this.row = null; this.files = new Map(); }
+  prepare(sql) {
+    const self = this;
+    const isFiles = sql.includes("board_files");
+    return {
+      _args: [],
+      bind(...a) { this._args = a; return this; },
+      async run() {
+        if (sql.startsWith("CREATE")) return { meta: {} };
+        if (isFiles) {
+          if (sql.startsWith("INSERT")) {
+            const [id, name, mime, data] = this._args;
+            self.files.set(id, { name, mime, data });
+            return { meta: { changes: 1 } };
+          }
+          if (sql.startsWith("DELETE")) {
+            const had = self.files.delete(this._args[0]);
+            return { meta: { changes: had ? 1 : 0 } };
+          }
+          throw new Error("unknown files sql: " + sql);
+        }
+        if (sql.startsWith("INSERT")) {
+          if (self.row) throw new Error("UNIQUE constraint failed");
+          self.row = { version: 1, data: this._args[0] };
+          return { meta: { changes: 1 } };
+        }
+        if (sql.startsWith("UPDATE")) {
+          const [data, version] = this._args;
+          if (self.row && self.row.version === version) {
+            self.row = { version: version + 1, data };
+            return { meta: { changes: 1 } };
+          }
+          return { meta: { changes: 0 } };
+        }
+        throw new Error("unknown sql: " + sql);
+      },
+      async first() {
+        if (!sql.startsWith("SELECT")) throw new Error("unknown sql: " + sql);
+        if (isFiles) {
+          const f = self.files.get(this._args[0]);
+          return f ? { name: f.name, mime: f.mime, data: f.data } : null;
+        }
+        return self.row ? { version: self.row.version, data: self.row.data } : null;
+      },
+    };
+  }
+}
+
+const env = { DB: new FakeD1() };
+let pass = 0, fail = 0;
+const log = document.getElementById("log");
+function check(name, cond) {
+  if (cond) { pass++; log.insertAdjacentHTML("beforeend", `<div class="p">[PASS] ${name}</div>`); }
+  else { fail++; log.insertAdjacentHTML("beforeend", `<div class="f">[FAIL] ${name}</div>`); }
+}
+async function post(path, body) {
+  const r = await worker.fetch(new Request("https://ib.test" + path, { method: "POST", body: JSON.stringify(body || {}), headers: { "Content-Type": "application/json" } }), env);
+  return await r.json();
+}
+async function get(path) {
+  const r = await worker.fetch(new Request("https://ib.test" + path), env);
+  return { status: r.status, text: await r.text(), headers: r.headers };
+}
+
+const T = { role: "teacher", id: "teacher", pw: "0000" };
+const S1 = { role: "student", classCode: "6-1", number: 1, pin: "1111" };
+const S2 = { role: "student", classCode: "6-1", number: 2, pin: "2222" };
+const PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUg=="; // 짧은 가짜 PNG
+const PDF = "data:application/pdf;base64,JVBERi0xLjQ=";
+
+(async () => {
+try {
+  // 0. 정적 화면
+  let g = await get("/");
+  check("앱 화면 서빙(/)", g.status === 200 && g.text.includes("아이디어 보드"));
+  g = await get("/teacher.html");
+  check("교사 주소도 같은 화면", g.status === 200 && g.text.includes("아이디어 보드"));
+
+  // 1. 로그인
+  let r = await post("/api/login", { role: "teacher", id: "teacher", pw: "0000" });
+  check("교사 로그인", r.ok);
+  r = await post("/api/login", { role: "teacher", id: "teacher", pw: "x" });
+  check("교사 로그인 실패(잘못된 비번)", !r.ok);
+
+  // 2. 학생 등록
+  r = await post("/api/teacher/students/save", { auth: T, students: [
+    { number: 1, name: "민준", pin: "1111" },
+    { number: 2, name: "서연", pin: "2222" },
+    { number: 3, name: "지호", pin: "3333" },
+  ]});
+  check("학생 3명 등록", r.ok && r.count === 3);
+  r = await post("/api/teacher/students/save", { auth: T, students: [
+    { number: 1, name: "민준", pin: "1111" }, { number: 1, name: "중복", pin: "9999" },
+  ]});
+  check("번호 중복 거부", !r.ok);
+  r = await post("/api/teacher/students/save", { auth: T, students: [
+    { number: 1, name: "민준", pin: "12" },
+  ]});
+  check("PIN 4자리 아님 거부", !r.ok);
+  // (거부된 저장이 명단을 망치지 않았는지) 다시 3명으로 저장
+  r = await post("/api/teacher/students/save", { auth: T, students: [
+    { number: 1, name: "민준", pin: "1111" },
+    { number: 2, name: "서연", pin: "2222" },
+    { number: 3, name: "지호", pin: "3333" },
+  ]});
+  check("명단 재저장", r.ok && r.count === 3);
+
+  // 3. 학생 로그인
+  r = await post("/api/login", { role: "student", classCode: "6-1", number: 1, pin: "1111" });
+  check("학생 로그인", r.ok && r.name === "민준");
+  r = await post("/api/login", { role: "student", classCode: "6-1", number: 1, pin: "0000" });
+  check("학생 로그인 실패(잘못된 PIN)", !r.ok);
+  r = await post("/api/home", { auth: { role: "student", classCode: "6-1", number: 1, pin: "bad" } });
+  check("무단 접근 차단(401)", !r.ok);
+
+  // 4. 게시판 만들기 (교사)
+  r = await post("/api/teacher/board/create", { auth: T, title: "5월 미술 작품", desc: "완성작을 올려요" });
+  check("게시판 만들기", r.ok && r.board.id > 0);
+  const B1 = r.board.id;
+  r = await post("/api/teacher/board/create", { auth: S1, title: "몰래", desc: "" });
+  check("학생은 게시판 못 만듦", !r.ok);
+  r = await post("/api/teacher/board/create", { auth: T, title: "지울 게시판" });
+  const B2 = r.board.id;
+  r = await post("/api/teacher/board/update", { auth: T, boardId: B1, title: "5월 미술 전시회", desc: "완성작을 올려요" });
+  check("게시판 이름 고치기", r.ok);
+  r = await post("/api/home", { auth: S1 });
+  check("학생 홈: 게시판 2개", r.ok && r.boards.length === 2);
+  check("학생 홈: 바뀐 이름 반영", r.boards.find(b => b.id === B1).title === "5월 미술 전시회");
+  check("학생 홈에는 명단 없음", r.students === undefined);
+  r = await post("/api/home", { auth: T });
+  check("교사 홈: 명단 3명 + 학급코드", r.ok && r.students.length === 3 && r.classCode === "6-1");
+
+  // 5. 글 쓰기
+  r = await post("/api/post/create", { auth: S1, boardId: B1, text: "제 작품이에요 https://example.com" });
+  check("학생 글 쓰기(텍스트)", r.ok && r.post.author.name === "민준");
+  const P1 = r.post.id;
+  r = await post("/api/post/create", { auth: S2, boardId: B1, text: "사진과 파일", files: [
+    { name: "그림.png", data: PNG }, { name: "숙제.pdf", data: PDF },
+  ]});
+  check("첨부 2개 글 쓰기", r.ok && r.post.files.length === 2);
+  check("이미지/일반파일 구분", r.post.files[0].isImage === true && r.post.files[1].isImage === false);
+  const P2 = r.post.id, F_IMG = r.post.files[0].id, F_PDF = r.post.files[1].id;
+  r = await post("/api/post/create", { auth: S1, boardId: B1, text: "" });
+  check("빈 글 거부", !r.ok);
+  r = await post("/api/post/create", { auth: S1, boardId: 99999, text: "x" });
+  check("없는 게시판 거부", !r.ok);
+  r = await post("/api/post/create", { auth: S1, boardId: B1, text: "너무 큰 파일", files: [
+    { name: "big.bin", data: "data:application/octet-stream;base64," + "A".repeat(1500001) },
+  ]});
+  check("1MB 초과 파일 거부", !r.ok);
+  r = await post("/api/post/create", { auth: S1, boardId: B1, text: "많은 파일", files: [
+    { name: "1", data: PNG }, { name: "2", data: PNG }, { name: "3", data: PNG },
+    { name: "4", data: PNG }, { name: "5", data: PNG },
+  ]});
+  check("첨부 5개 거부", !r.ok);
+  r = await post("/api/post/create", { auth: S1, boardId: B1, text: "학생 공지 시도", isNotice: true });
+  check("학생 글은 공지로 못 올림", r.ok && r.post.isNotice === false);
+  const P3 = r.post.id;
+
+  // 6. 첨부 파일 내려받기
+  g = await get("/api/file/" + F_IMG);
+  check("이미지 파일 내려받기", g.status === 200 && g.headers.get("Content-Type") === "image/png");
+  check("이미지는 첨부헤더 없음", !g.headers.get("Content-Disposition"));
+  g = await get("/api/file/" + F_PDF);
+  check("일반 파일은 내려받기 헤더", g.status === 200 && (g.headers.get("Content-Disposition") || "").includes("attachment"));
+  g = await get("/api/file/nope");
+  check("없는 파일 404", g.status === 404);
+
+  // 7. 좋아요
+  r = await post("/api/like/toggle", { auth: S1, postId: P2 });
+  check("좋아요 켜기", r.ok && r.liked === true && r.likeCount === 1);
+  r = await post("/api/like/toggle", { auth: T, postId: P2 });
+  check("교사도 좋아요", r.ok && r.likeCount === 2);
+  r = await post("/api/like/toggle", { auth: S1, postId: P2 });
+  check("좋아요 끄기", r.ok && r.liked === false && r.likeCount === 1);
+  // 동시 좋아요 (버전 충돌 재시도)
+  const [l1, l2] = await Promise.all([
+    post("/api/like/toggle", { auth: S1, postId: P1 }),
+    post("/api/like/toggle", { auth: S2, postId: P1 }),
+  ]);
+  check("동시 좋아요 둘 다 저장", l1.ok && l2.ok);
+  r = await post("/api/board", { auth: T, boardId: B1 });
+  check("동시 좋아요 개수 2", r.posts.find(p => p.id === P1).likeCount === 2);
+
+  // 8. 댓글
+  r = await post("/api/comment/create", { auth: S2, postId: P1, text: "멋져요!" });
+  check("댓글 쓰기", r.ok);
+  const C1 = r.comment.id;
+  r = await post("/api/comment/create", { auth: S2, postId: P1, text: "" });
+  check("빈 댓글 거부", !r.ok);
+  r = await post("/api/comment/delete", { auth: S1, commentId: C1 });
+  check("남의 댓글 못 지움", !r.ok);
+  r = await post("/api/comment/delete", { auth: T, commentId: C1 });
+  check("교사는 댓글 지움", r.ok);
+  r = await post("/api/comment/create", { auth: T, postId: P1, text: "선생님 댓글" });
+  check("교사 댓글", r.ok && r.comment.author.type === "teacher");
+
+  // 9. 공지 고정
+  r = await post("/api/post/notice", { auth: S1, postId: P3, isNotice: true });
+  check("학생은 공지 고정 못 함", !r.ok);
+  r = await post("/api/post/notice", { auth: T, postId: P3, isNotice: true });
+  check("교사 공지 고정", r.ok && r.isNotice === true);
+  r = await post("/api/board", { auth: S1, boardId: B1 });
+  check("공지가 맨 위로", r.posts[0].id === P3 && r.posts[0].isNotice);
+  check("내 좋아요 표시(liked)", r.posts.find(p => p.id === P1).liked === true);
+  check("댓글 포함", r.posts.find(p => p.id === P1).comments.length === 1);
+
+  // 10. 글 지우기
+  r = await post("/api/post/delete", { auth: S1, postId: P2 });
+  check("남의 글 못 지움", !r.ok);
+  r = await post("/api/post/delete", { auth: S2, postId: P2 });
+  check("자기 글 지우기", r.ok);
+  g = await get("/api/file/" + F_IMG);
+  check("지운 글의 첨부도 삭제(404)", g.status === 404);
+  r = await post("/api/board", { auth: S1, boardId: B1 });
+  check("글 2개 남음", r.posts.length === 2);
+
+  // 11. 쪽지: 학생 → 교사
+  r = await post("/api/msg/send", { auth: S1, text: "선생님 상담하고 싶어요" });
+  check("학생→교사 쪽지", r.ok);
+  r = await post("/api/msg/send", { auth: S1, text: "" });
+  check("빈 쪽지 거부", !r.ok);
+  r = await post("/api/poll", { auth: T });
+  check("교사 새 쪽지 1개", r.ok && r.unread === 1 && r.messages[0].text.includes("상담"));
+  const MID = r.messages[0].id;
+  r = await post("/api/msg/read", { auth: S2, ids: [MID] });
+  check("남의 쪽지는 읽음처리 안 됨", r.ok);
+  r = await post("/api/poll", { auth: T });
+  check("여전히 안 읽음 1개", r.unread === 1);
+  r = await post("/api/msg/read", { auth: T, ids: [MID] });
+  check("교사 읽음 처리", r.ok);
+  r = await post("/api/poll", { auth: T });
+  check("읽고 나면 0개", r.unread === 0);
+
+  // 12. 쪽지: 교사 → 개인 / 전체 (받는 사람은 학생 id — 화면의 선택 목록과 동일)
+  r = await post("/api/home", { auth: T });
+  const ID2 = r.students.find(s => s.number === 2).id;
+  r = await post("/api/msg/send", { auth: T, to: String(ID2), text: "서연아 잘했어!" });
+  check("교사→개인 쪽지", r.ok);
+  r = await post("/api/poll", { auth: S2 });
+  check("서연이만 받음", r.unread === 1);
+  r = await post("/api/poll", { auth: S1 });
+  check("민준이는 안 받음", r.unread === 0);
+  r = await post("/api/msg/send", { auth: T, to: "all", text: "내일 준비물: 색연필" });
+  check("교사→전체 쪽지", r.ok);
+  r = await post("/api/poll", { auth: S1 });
+  check("전체 쪽지 도착(민준 1)", r.unread === 1);
+  r = await post("/api/poll", { auth: S2 });
+  check("전체 쪽지 도착(서연 2)", r.unread === 2);
+  r = await post("/api/msg/list", { auth: S2 });
+  check("학생 쪽지함(받은 2)", r.ok && r.messages.filter(m => m.received).length === 2);
+  r = await post("/api/msg/list", { auth: T });
+  check("교사 쪽지함에 보낸 쪽지 표시", r.ok && r.messages.some(m => !m.received && m.toName === "서연"));
+  r = await post("/api/msg/send", { auth: S1, to: String(ID2), text: "학생끼리 몰래" });
+  check("학생 쪽지는 무조건 교사에게", r.ok);
+  r = await post("/api/poll", { auth: S2 });
+  check("학생끼리는 전달 안 됨", r.unread === 2);
+
+  // 13. 게시판 지우기 (글+첨부 연쇄 삭제)
+  r = await post("/api/post/create", { auth: S1, boardId: B2, text: "지워질 글", files: [{ name: "img.png", data: PNG }] });
+  const F_B2 = r.post.files[0].id;
+  r = await post("/api/teacher/board/delete", { auth: T, boardId: B2 });
+  check("게시판 지우기", r.ok);
+  r = await post("/api/home", { auth: T });
+  check("게시판 1개 남음", r.boards.length === 1);
+  g = await get("/api/file/" + F_B2);
+  check("지운 게시판의 첨부도 삭제", g.status === 404);
+  r = await post("/api/board", { auth: S1, boardId: B2 });
+  check("지운 게시판 접근 404", !r.ok);
+
+  // 14. 설정 바꾸기 (마지막에 실행 — 이후 인증이 바뀜)
+  r = await post("/api/teacher/settings/save", { auth: T, className: "6학년 1반 아이디어", classCode: "7-1", newPw: "abcd" });
+  check("설정 저장", r.ok);
+  r = await post("/api/home", { auth: S1 });
+  check("옛 학급코드 로그인 무효", !r.ok);
+  r = await post("/api/home", { auth: { role: "student", classCode: "7-1", number: 1, pin: "1111" } });
+  check("새 학급코드로 접속", r.ok && r.className === "6학년 1반 아이디어");
+  r = await post("/api/home", { auth: T });
+  check("옛 교사 비번 무효", !r.ok);
+  r = await post("/api/home", { auth: { role: "teacher", id: "teacher", pw: "abcd" } });
+  check("새 교사 비번으로 접속", r.ok);
+
+  document.getElementById("summary").textContent =
+    `완료: ${pass} PASS / ${fail} FAIL` + (fail === 0 ? " 🎉" : " ⚠️");
+} catch (e) {
+  document.getElementById("summary").textContent = "오류: " + e.message;
+  console.error(e);
+}
+})();
+</script>
+</body>
+</html>

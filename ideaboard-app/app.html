@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>우리 반 아이디어 보드</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+    background: #f1f3f8; color: #2d3436; -webkit-tap-highlight-color: transparent;
+  }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; font-size: 14px; }
+  input, textarea, select { font-family: inherit; font-size: 15px; }
+  [hidden] { display: none !important; }
+
+  /* ── 로그인 ── */
+  #scr-login {
+    min-height: 100%; display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, #7c4dff 0%, #448aff 55%, #00bcd4 100%); padding: 20px;
+  }
+  .login-card {
+    background: #fff; border-radius: 22px; padding: 34px 30px; width: 360px; max-width: 94vw;
+    box-shadow: 0 18px 50px rgba(20, 20, 60, .35); text-align: center;
+  }
+  .login-card h1 { font-size: 24px; margin-bottom: 4px; }
+  .login-card .sub { color: #888; font-size: 13px; margin-bottom: 20px; }
+  .role-tabs { display: flex; gap: 6px; background: #eef0f6; border-radius: 12px; padding: 5px; margin-bottom: 18px; }
+  .role-tabs button { flex: 1; padding: 9px 0; border-radius: 9px; font-weight: 700; color: #777; }
+  .role-tabs button.on { background: #fff; color: #5b48e0; box-shadow: 0 2px 6px rgba(0,0,0,.12); }
+  .login-card input {
+    width: 100%; padding: 12px 14px; margin-bottom: 10px; border: 2px solid #e3e6ef;
+    border-radius: 11px; outline: none;
+  }
+  .login-card input:focus { border-color: #7c4dff; }
+  .btn-primary {
+    background: linear-gradient(135deg, #7c4dff, #448aff); color: #fff; font-weight: 700;
+    padding: 13px; border-radius: 12px; width: 100%; font-size: 16px;
+  }
+  .login-err { color: #e74c3c; font-size: 13px; min-height: 18px; margin-bottom: 8px; }
+
+  /* ── 상단바 ── */
+  header {
+    position: sticky; top: 0; z-index: 30; color: #fff;
+    background: linear-gradient(135deg, #7c4dff, #448aff);
+    display: flex; align-items: center; gap: 10px; padding: 12px 16px;
+    box-shadow: 0 3px 12px rgba(60, 60, 130, .25);
+  }
+  header .title { font-size: 18px; font-weight: 800; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  header .who { font-size: 13px; background: rgba(255,255,255,.22); padding: 5px 12px; border-radius: 99px; white-space: nowrap; }
+  .icon-btn { position: relative; font-size: 20px; color: #fff; padding: 5px 7px; border-radius: 9px; }
+  .icon-btn:hover { background: rgba(255,255,255,.18); }
+  .badge {
+    position: absolute; top: -2px; right: -2px; background: #ff5252; color: #fff;
+    font-size: 10px; font-weight: 800; border-radius: 99px; padding: 1px 5px; min-width: 16px;
+  }
+
+  main { max-width: 1200px; margin: 0 auto; padding: 20px 16px 60px; }
+
+  /* ── 게시판 카드 그리드 ── */
+  .board-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
+  .board-card {
+    border-radius: 18px; padding: 20px 18px; min-height: 130px; cursor: pointer;
+    display: flex; flex-direction: column; gap: 6px; position: relative;
+    box-shadow: 0 4px 14px rgba(50, 50, 100, .1); transition: transform .12s;
+    border: none; text-align: left;
+  }
+  .board-card:hover { transform: translateY(-3px); }
+  .board-card .b-title { font-size: 17px; font-weight: 800; word-break: keep-all; }
+  .board-card .b-desc { font-size: 13px; color: rgba(0,0,0,.55); flex: 1; word-break: keep-all; }
+  .board-card .b-count { font-size: 12px; font-weight: 700; color: rgba(0,0,0,.45); }
+  .board-card .b-tools { position: absolute; top: 10px; right: 10px; display: flex; gap: 2px; }
+  .board-card .b-tools button { font-size: 14px; padding: 4px 6px; border-radius: 8px; }
+  .board-card .b-tools button:hover { background: rgba(255,255,255,.6); }
+  .board-new {
+    border: 3px dashed #b9c0d8; background: transparent; color: #8a92ad; font-weight: 800;
+    align-items: center; justify-content: center; font-size: 15px; box-shadow: none;
+  }
+  .board-new:hover { border-color: #7c4dff; color: #7c4dff; }
+  .empty-note { text-align: center; color: #99a; padding: 60px 10px; font-size: 15px; }
+
+  /* ── 게시판 화면 ── */
+  .board-head { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .board-head h2 { font-size: 21px; }
+  .board-head .desc { color: #778; font-size: 13px; width: 100%; }
+  .btn-back { font-size: 20px; background: #fff; border-radius: 10px; padding: 6px 11px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+  .btn-write {
+    margin-left: auto; background: linear-gradient(135deg, #ff9048, #ff5e7e); color: #fff;
+    font-weight: 800; padding: 10px 18px; border-radius: 12px; font-size: 15px;
+    box-shadow: 0 4px 12px rgba(255, 100, 100, .35);
+  }
+  .posts { columns: 300px; column-gap: 14px; }
+  .post {
+    background: #fff; border-radius: 16px; padding: 15px; margin-bottom: 14px;
+    break-inside: avoid; box-shadow: 0 3px 12px rgba(50, 50, 100, .09);
+  }
+  .post.notice { border: 2.5px solid #ffc93c; background: #fffcf0; }
+  .chip-notice { background: #ffc93c; color: #6b4b00; font-size: 11px; font-weight: 800; padding: 3px 9px; border-radius: 99px; }
+  .p-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .avatar {
+    width: 32px; height: 32px; border-radius: 50%; color: #fff; font-weight: 800; font-size: 14px;
+    display: flex; align-items: center; justify-content: center; flex: none;
+  }
+  .p-who { flex: 1; min-width: 0; }
+  .p-name { font-size: 14px; font-weight: 700; }
+  .p-time { font-size: 11px; color: #99a; }
+  .p-tools { display: flex; gap: 2px; }
+  .p-tools button { font-size: 13px; padding: 3px 5px; border-radius: 7px; color: #888; }
+  .p-tools button:hover { background: #f0f1f7; }
+  .p-text { font-size: 14px; line-height: 1.55; white-space: pre-wrap; word-break: break-word; margin-bottom: 8px; }
+  .p-text a { color: #3b6cff; word-break: break-all; }
+  .p-img { width: 100%; border-radius: 10px; margin-bottom: 8px; cursor: zoom-in; display: block; background: #f4f4f8; }
+  .p-file {
+    display: flex; align-items: center; gap: 7px; background: #f2f4fb; border-radius: 10px;
+    padding: 8px 11px; margin-bottom: 8px; font-size: 13px; color: #445; text-decoration: none;
+    word-break: break-all;
+  }
+  .p-file:hover { background: #e7ebfa; }
+  .p-foot { display: flex; align-items: center; gap: 4px; border-top: 1px solid #f0f1f6; padding-top: 8px; }
+  .p-foot button { font-size: 13px; color: #778; padding: 5px 9px; border-radius: 9px; font-weight: 700; }
+  .p-foot button:hover { background: #f4f5fa; }
+  .p-foot .liked { color: #ff4d6d; }
+  .comments { margin-top: 8px; border-top: 1px dashed #e7e9f2; padding-top: 8px; }
+  .cmt { display: flex; gap: 7px; margin-bottom: 7px; font-size: 13px; }
+  .cmt .c-body { flex: 1; background: #f5f6fb; border-radius: 10px; padding: 6px 10px; }
+  .cmt .c-name { font-weight: 700; font-size: 12px; margin-right: 4px; }
+  .cmt .c-time { color: #aab; font-size: 10px; margin-left: 5px; }
+  .cmt .c-del { color: #bbc; font-size: 12px; }
+  .cmt-input { display: flex; gap: 6px; margin-top: 4px; }
+  .cmt-input input { flex: 1; border: 1.5px solid #e3e6ef; border-radius: 9px; padding: 7px 10px; font-size: 13px; outline: none; }
+  .cmt-input input:focus { border-color: #7c4dff; }
+  .cmt-input button { background: #7c4dff; color: #fff; border-radius: 9px; padding: 0 13px; font-weight: 700; }
+
+  /* ── 모달 공통 ── */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(25, 25, 60, .45); z-index: 100;
+    display: flex; align-items: center; justify-content: center; padding: 16px;
+  }
+  .modal {
+    background: #fff; border-radius: 18px; width: 520px; max-width: 96vw; max-height: 92vh;
+    display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 24px 70px rgba(10,10,40,.4);
+  }
+  .m-head { display: flex; align-items: center; padding: 15px 18px 12px; font-size: 17px; font-weight: 800; }
+  .m-head .x { margin-left: auto; font-size: 19px; color: #99a; padding: 3px 8px; border-radius: 8px; }
+  .m-head .x:hover { background: #f0f1f7; }
+  .m-body { padding: 4px 18px 18px; overflow-y: auto; }
+  .m-body label { display: block; font-size: 13px; font-weight: 700; color: #667; margin: 10px 0 5px; }
+  .m-body input[type=text], .m-body input[type=password], .m-body input[type=number],
+  .m-body textarea, .m-body select {
+    width: 100%; border: 2px solid #e3e6ef; border-radius: 11px; padding: 10px 12px; outline: none;
+  }
+  .m-body input:focus, .m-body textarea:focus, .m-body select:focus { border-color: #7c4dff; }
+  .m-body textarea { min-height: 110px; resize: vertical; }
+  .m-actions { display: flex; gap: 8px; margin-top: 15px; }
+  .m-actions .grow { flex: 1; }
+  .btn2 { background: #eef0f6; color: #556; font-weight: 700; padding: 11px 16px; border-radius: 11px; }
+  .btn2:hover { background: #e3e6f0; }
+
+  /* ── 글쓰기 첨부 ── */
+  .attach-btns { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .attach-btns button { background: #f2f4fb; border-radius: 10px; padding: 9px 13px; font-weight: 700; color: #445; }
+  .attach-btns button:hover { background: #e7ebfa; }
+  .attach-list { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .att {
+    position: relative; border-radius: 10px; overflow: hidden; background: #f2f4fb;
+    font-size: 12px; color: #556;
+  }
+  .att img { width: 74px; height: 74px; object-fit: cover; display: block; }
+  .att .att-file { padding: 10px 12px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+  .att .rm {
+    position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,.55); color: #fff;
+    border-radius: 50%; width: 20px; height: 20px; font-size: 11px; line-height: 20px; text-align: center;
+  }
+  .check-row { display: flex; align-items: center; gap: 7px; margin-top: 10px; font-size: 14px; font-weight: 700; color: #556; }
+  .check-row input { width: 17px; height: 17px; }
+
+  /* ── 그리기 ── */
+  .draw-modal { width: 1020px; }
+  #draw-canvas {
+    width: 100%; border: 2px solid #e3e6ef; border-radius: 12px; touch-action: none;
+    display: block; background: #fff; cursor: crosshair;
+  }
+  .draw-tools { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 10px 0 4px; }
+  .draw-tools .dot { width: 26px; height: 26px; border-radius: 50%; border: 3px solid transparent; }
+  .draw-tools .dot.on { border-color: #2d3436; transform: scale(1.15); }
+  .draw-tools .szbtn { background: #f2f4fb; border-radius: 9px; padding: 5px 10px; font-weight: 700; color: #445; }
+  .draw-tools .szbtn.on { background: #7c4dff; color: #fff; }
+  .draw-tools .sep { width: 1px; height: 24px; background: #e3e6ef; margin: 0 4px; }
+
+  /* ── 쪽지 ── */
+  .msg-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+  .msg-tabs button { flex: 1; background: #eef0f6; border-radius: 10px; padding: 9px; font-weight: 700; color: #778; }
+  .msg-tabs button.on { background: #7c4dff; color: #fff; }
+  .msg-item { background: #f6f7fc; border-radius: 12px; padding: 10px 13px; margin-bottom: 8px; }
+  .msg-item.unread { background: #fff3f5; border: 1.5px solid #ffd3dc; }
+  .msg-meta { font-size: 12px; color: #889; margin-bottom: 3px; display: flex; gap: 6px; }
+  .msg-meta b { color: #445; }
+  .msg-text { font-size: 14px; white-space: pre-wrap; word-break: break-word; }
+  .msg-compose { border-top: 1px solid #eef0f6; padding-top: 12px; margin-top: 6px; }
+
+  /* ── 새 쪽지 팝업 ── */
+  .popup-modal { width: 430px; border-top: 6px solid #ff5e7e; }
+  .popup-modal .m-head { font-size: 18px; }
+
+  /* ── 학생 관리 표 ── */
+  .stu-table { width: 100%; border-collapse: collapse; }
+  .stu-table th { font-size: 12px; color: #889; text-align: left; padding: 4px 6px; }
+  .stu-table td { padding: 3px 3px; }
+  .stu-table input { width: 100%; border: 1.5px solid #e3e6ef; border-radius: 8px; padding: 7px 9px; font-size: 14px; outline: none; }
+  .stu-table input:focus { border-color: #7c4dff; }
+  .stu-table .del { color: #e74c3c; font-size: 15px; padding: 4px 7px; }
+
+  /* ── 사진 크게 보기 ── */
+  #lightbox { background: rgba(10, 10, 30, .88); cursor: zoom-out; }
+  #lightbox img { max-width: 96vw; max-height: 92vh; border-radius: 8px; }
+
+  /* ── 알림 토스트 ── */
+  #toast {
+    position: fixed; left: 50%; bottom: 30px; transform: translateX(-50%);
+    background: #2d3436; color: #fff; padding: 11px 20px; border-radius: 99px;
+    font-size: 14px; z-index: 300; opacity: 0; transition: opacity .25s; pointer-events: none;
+    max-width: 90vw;
+  }
+  #toast.show { opacity: 1; }
+
+  @media (max-width: 560px) {
+    header .who { display: none; }
+    main { padding: 14px 10px 60px; }
+    .posts { columns: 1; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════ 로그인 ═══════════ -->
+<div id="scr-login">
+  <div class="login-card">
+    <h1>💡 우리 반 아이디어 보드</h1>
+    <div class="sub">글 · 그림 · 사진 · 파일로 아이디어를 나눠요</div>
+    <div class="role-tabs">
+      <button id="tab-student" class="on" onclick="IB.setRole('student')">🧑‍🎓 학생</button>
+      <button id="tab-teacher" onclick="IB.setRole('teacher')">🧑‍🏫 선생님</button>
+    </div>
+    <div id="login-student">
+      <input id="in-class" type="text" placeholder="학급 코드 (예: 6-1)" autocomplete="off">
+      <input id="in-number" type="number" placeholder="번호" min="1">
+      <input id="in-pin" type="password" placeholder="PIN (숫자 4자리)" inputmode="numeric" maxlength="4">
+    </div>
+    <div id="login-teacher" hidden>
+      <input id="in-tid" type="text" placeholder="교사 아이디" value="teacher" autocomplete="off">
+      <input id="in-tpw" type="password" placeholder="비밀번호">
+    </div>
+    <div class="login-err" id="login-err"></div>
+    <button class="btn-primary" onclick="IB.login()">들어가기</button>
+  </div>
+</div>
+
+<!-- ═══════════ 앱 본체 ═══════════ -->
+<div id="scr-app" hidden>
+  <header>
+    <div class="title" id="hd-title">우리 반 아이디어 보드</div>
+    <span class="who" id="hd-who"></span>
+    <button class="icon-btn" title="쪽지" onclick="IB.openMsgs()">✉️<span class="badge" id="hd-badge" hidden></span></button>
+    <button class="icon-btn" id="hd-students" title="학생 관리" onclick="IB.openStudents()" hidden>👥</button>
+    <button class="icon-btn" id="hd-settings" title="설정" onclick="IB.openSettings()" hidden>⚙️</button>
+    <button class="icon-btn" title="나가기" onclick="IB.logout()">🚪</button>
+  </header>
+
+  <!-- 홈: 게시판 목록 -->
+  <main id="view-home">
+    <div class="board-grid" id="board-grid"></div>
+    <div class="empty-note" id="home-empty" hidden>아직 게시판이 없어요.<br>선생님이 게시판을 만들면 여기에 나타나요! 🌱</div>
+  </main>
+
+  <!-- 게시판: 글 목록 -->
+  <main id="view-board" hidden>
+    <div class="board-head">
+      <button class="btn-back" onclick="IB.goHome()">←</button>
+      <h2 id="bd-title"></h2>
+      <button class="btn-write" onclick="IB.openComposer()">✏️ 아이디어 올리기</button>
+      <div class="desc" id="bd-desc"></div>
+    </div>
+    <div class="posts" id="post-list"></div>
+    <div class="empty-note" id="bd-empty" hidden>아직 올라온 아이디어가 없어요.<br>첫 번째 아이디어를 올려 볼까요? ✨</div>
+  </main>
+</div>
+
+<!-- ═══════════ 글쓰기 모달 ═══════════ -->
+<div class="overlay" id="md-compose" hidden>
+  <div class="modal">
+    <div class="m-head">✏️ 아이디어 올리기 <button class="x" onclick="IB.closeComposer()">✕</button></div>
+    <div class="m-body">
+      <textarea id="cmp-text" placeholder="생각을 자유롭게 써 보세요. 링크를 붙여 넣으면 자동으로 연결돼요!"></textarea>
+      <div class="attach-btns">
+        <button onclick="document.getElementById('cmp-photo').click()">📷 사진</button>
+        <button onclick="IB.openDraw()">🎨 그림 그리기</button>
+        <button onclick="document.getElementById('cmp-file').click()">📎 파일</button>
+      </div>
+      <input id="cmp-photo" type="file" accept="image/*" multiple hidden>
+      <input id="cmp-file" type="file" multiple hidden>
+      <div class="attach-list" id="cmp-attach"></div>
+      <div class="check-row" id="cmp-notice-row" hidden>
+        <input type="checkbox" id="cmp-notice"><label for="cmp-notice" style="margin:0">📌 공지로 고정하기</label>
+      </div>
+      <div class="m-actions">
+        <button class="btn-primary grow" id="cmp-submit" onclick="IB.submitPost()">올리기</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 그리기 모달 ═══════════ -->
+<div class="overlay" id="md-draw" hidden>
+  <div class="modal draw-modal">
+    <div class="m-head">🎨 그림 그리기 <button class="x" onclick="IB.closeDraw()">✕</button></div>
+    <div class="m-body">
+      <div class="draw-tools" id="draw-colors"></div>
+      <div class="draw-tools">
+        <button class="szbtn" data-sz="4" onclick="IB.drawSize(4,this)">가는 붓</button>
+        <button class="szbtn on" data-sz="9" onclick="IB.drawSize(9,this)">보통 붓</button>
+        <button class="szbtn" data-sz="20" onclick="IB.drawSize(20,this)">굵은 붓</button>
+        <span class="sep"></span>
+        <button class="szbtn" id="draw-eraser" onclick="IB.drawEraser(this)">🧽 지우개</button>
+        <button class="szbtn" onclick="IB.drawUndo()">↩️ 되돌리기</button>
+        <button class="szbtn" onclick="IB.drawClear()">🗑 모두 지우기</button>
+      </div>
+      <canvas id="draw-canvas" width="960" height="600"></canvas>
+      <div class="m-actions">
+        <button class="btn2" onclick="IB.closeDraw()">취소</button>
+        <button class="btn-primary grow" onclick="IB.finishDraw()">✅ 그림 붙이기</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 쪽지함 모달 ═══════════ -->
+<div class="overlay" id="md-msgs" hidden>
+  <div class="modal">
+    <div class="m-head">✉️ 쪽지 <button class="x" onclick="IB.hide('md-msgs')">✕</button></div>
+    <div class="m-body">
+      <div class="msg-tabs">
+        <button id="mt-recv" class="on" onclick="IB.msgTab('recv')">받은 쪽지</button>
+        <button id="mt-sent" onclick="IB.msgTab('sent')">보낸 쪽지</button>
+      </div>
+      <div id="msg-list"></div>
+      <div class="msg-compose">
+        <label id="msg-to-label">선생님께 쪽지 보내기 (고민 상담, 하고 싶은 말 무엇이든!)</label>
+        <select id="msg-to" hidden></select>
+        <textarea id="msg-text" style="min-height:70px" placeholder="쪽지 내용을 써 주세요"></textarea>
+        <div class="m-actions">
+          <button class="btn-primary grow" onclick="IB.sendMsg()">보내기 💌</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 새 쪽지 팝업 ═══════════ -->
+<div class="overlay" id="md-popup" hidden>
+  <div class="modal popup-modal">
+    <div class="m-head">💌 새 쪽지가 도착했어요!</div>
+    <div class="m-body">
+      <div id="popup-list"></div>
+      <div class="m-actions">
+        <button class="btn-primary grow" onclick="IB.ackPopup()">확인했어요 👍</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 게시판 만들기/고치기 (교사) ═══════════ -->
+<div class="overlay" id="md-board" hidden>
+  <div class="modal">
+    <div class="m-head" id="mb-title">새 게시판 <button class="x" onclick="IB.hide('md-board')">✕</button></div>
+    <div class="m-body">
+      <label>게시판 이름</label>
+      <input type="text" id="mb-name" placeholder="예: 5/27 실과 바느질 작품">
+      <label>안내 (선택)</label>
+      <input type="text" id="mb-desc" placeholder="예: 완성한 작품 사진과 소감을 올려 주세요">
+      <div class="m-actions">
+        <button class="btn-primary grow" onclick="IB.saveBoard()">저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 학생 관리 (교사) ═══════════ -->
+<div class="overlay" id="md-students" hidden>
+  <div class="modal">
+    <div class="m-head">👥 학생 관리 <button class="x" onclick="IB.hide('md-students')">✕</button></div>
+    <div class="m-body">
+      <div style="font-size:13px;color:#889;margin-bottom:8px">
+        학생은 <b>학급 코드 + 번호 + PIN</b> 으로 로그인해요. PIN은 숫자 4자리입니다.
+      </div>
+      <table class="stu-table">
+        <thead><tr><th style="width:60px">번호</th><th>이름</th><th style="width:80px">PIN</th><th style="width:36px"></th></tr></thead>
+        <tbody id="stu-rows"></tbody>
+      </table>
+      <div class="m-actions">
+        <button class="btn2" onclick="IB.addStudentRow()">+ 학생 추가</button>
+        <button class="btn-primary grow" onclick="IB.saveStudents()">저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 설정 (교사) ═══════════ -->
+<div class="overlay" id="md-settings" hidden>
+  <div class="modal">
+    <div class="m-head">⚙️ 설정 <button class="x" onclick="IB.hide('md-settings')">✕</button></div>
+    <div class="m-body">
+      <label>우리 반 이름 (화면 맨 위에 표시)</label>
+      <input type="text" id="set-classname">
+      <label>학급 코드 (학생 로그인용)</label>
+      <input type="text" id="set-classcode">
+      <label>교사 새 비밀번호 (바꾸지 않으려면 비워 두세요)</label>
+      <input type="password" id="set-newpw" placeholder="4자 이상">
+      <div class="m-actions">
+        <button class="btn-primary grow" onclick="IB.saveSettings()">저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 사진 크게 보기 ═══════════ -->
+<div class="overlay" id="lightbox" hidden onclick="IB.hide('lightbox')">
+  <img id="lightbox-img" alt="">
+</div>
+
+<div id="toast"></div>
+
+<script>
+"use strict";
+window.IB = (() => {
+  // ── 상태 ──
+  const LS_KEY = "ideaboard_auth";
+  let AUTH = null;          // {role:"student", classCode, number, pin} | {role:"teacher", id, pw}
+  let ME = null;            // {type, id, name}
+  let HOME = null;          // /api/home 응답
+  let BOARD = null;         // 현재 게시판 {board, posts}
+  let loginRole = "student";
+  let attachments = [];     // 글쓰기 첨부 [{name, mime, data(dataURL), isImage}]
+  let popupIds = [];        // 팝업에 떠 있는 쪽지 id
+  let pollTimer = null;
+  let msgTabName = "recv";
+  let msgCache = [];
+
+  const $ = id => document.getElementById(id);
+  const BOARD_COLORS = ["#ffe3ea", "#fff3c4", "#d7f5e2", "#dbeafe", "#f3e8ff", "#ffe8d6", "#d4f6f2"];
+  const AVATAR_COLORS = ["#ff8fa3", "#ffb347", "#59c98f", "#5aa2ff", "#a980ff", "#ff8b66", "#38c1b8", "#e6739f"];
+
+  // ── 도우미 ──
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g,
+      c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+  function linkify(s) {
+    return esc(s).replace(/(https?:\/\/[^\s<]+)/g,
+      u => '<a href="' + u + '" target="_blank" rel="noopener">' + u + "</a>");
+  }
+  function fmtTime(s) {
+    if (!s) return "";
+    // "2026-07-13 14:22:33" → "7/13 14:22"
+    const mo = Number(s.slice(5, 7)), da = Number(s.slice(8, 10));
+    return mo + "/" + da + " " + s.slice(11, 16);
+  }
+  function toast(msg) {
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(t._tm);
+    t._tm = setTimeout(() => t.classList.remove("show"), 2600);
+  }
+  function show(id) { $(id).hidden = false; }
+  function hide(id) { $(id).hidden = true; }
+  function avatarHtml(author) {
+    const name = author.type === "teacher" ? "선생님" : author.name;
+    const ch = author.type === "teacher" ? "🧑‍🏫" : esc(String(name).charAt(0));
+    const color = author.type === "teacher" ? "#5b48e0"
+      : AVATAR_COLORS[Number(author.id) % AVATAR_COLORS.length];
+    return '<span class="avatar" style="background:' + color + '">' + ch + "</span>";
+  }
+  function isMine(author) {
+    return ME && author.type === ME.type && Number(author.id) === Number(ME.id);
+  }
+
+  async function api(path, body) {
+    const res = await fetch(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(Object.assign({ auth: AUTH }, body || {})),
+    });
+    let data = null;
+    try { data = await res.json(); } catch (e) { throw new Error("서버 응답 오류"); }
+    if (!data.ok) {
+      if (res.status === 401 && path !== "/api/login") { doLogout(); }
+      throw new Error(data.error || "오류가 발생했어요");
+    }
+    return data;
+  }
+  function guard(fn) { return fn.catch(e => toast(e.message)); }
+
+  // ── 로그인 ──
+  function setRole(r) {
+    loginRole = r;
+    $("tab-student").classList.toggle("on", r === "student");
+    $("tab-teacher").classList.toggle("on", r === "teacher");
+    $("login-student").hidden = r !== "student";
+    $("login-teacher").hidden = r !== "teacher";
+    $("login-err").textContent = "";
+  }
+  async function login() {
+    $("login-err").textContent = "";
+    let auth;
+    if (loginRole === "teacher") {
+      auth = { role: "teacher", id: $("in-tid").value.trim(), pw: $("in-tpw").value };
+    } else {
+      auth = {
+        role: "student",
+        classCode: $("in-class").value.trim(),
+        number: Number($("in-number").value),
+        pin: $("in-pin").value.trim(),
+      };
+    }
+    try {
+      const body = Object.assign({}, auth);
+      delete body.auth;
+      const r = await api("/api/login", body);
+      AUTH = auth;
+      localStorage.setItem(LS_KEY, JSON.stringify(auth));
+      if (loginRole === "student") localStorage.setItem("ideaboard_class", auth.classCode);
+      await enterApp();
+    } catch (e) {
+      $("login-err").textContent = e.message;
+    }
+  }
+  async function enterApp() {
+    hide("scr-login");
+    show("scr-app");
+    await loadHome();
+    startPoll();
+  }
+  function doLogout() {
+    AUTH = null; ME = null; HOME = null; BOARD = null;
+    localStorage.removeItem(LS_KEY);
+    stopPoll();
+    show("scr-login");
+    hide("scr-app");
+  }
+  function logout() { doLogout(); }
+
+  // ── 홈 (게시판 목록) ──
+  async function loadHome() {
+    const r = await api("/api/home");
+    HOME = r;
+    ME = r.me;
+    $("hd-title").textContent = r.className;
+    document.title = r.className;
+    $("hd-who").textContent = ME.type === "teacher" ? "🧑‍🏫 선생님" : "🧑‍🎓 " + ME.name;
+    $("hd-students").hidden = ME.type !== "teacher";
+    $("hd-settings").hidden = ME.type !== "teacher";
+    setBadge(r.unread);
+    renderBoards();
+    show("view-home");
+    hide("view-board");
+  }
+  function renderBoards() {
+    const g = $("board-grid");
+    const isT = ME.type === "teacher";
+    let html = "";
+    HOME.boards.forEach((b, i) => {
+      const color = BOARD_COLORS[i % BOARD_COLORS.length];
+      html += '<div class="board-card" style="background:' + color + '" onclick="IB.openBoard(' + b.id + ')">' +
+        (isT ? '<span class="b-tools">' +
+          '<button title="이름 고치기" onclick="event.stopPropagation();IB.editBoard(' + b.id + ')">✏️</button>' +
+          '<button title="게시판 지우기" onclick="event.stopPropagation();IB.deleteBoard(' + b.id + ')">🗑</button></span>' : "") +
+        '<span class="b-title">' + esc(b.title) + "</span>" +
+        '<span class="b-desc">' + esc(b.desc || "") + "</span>" +
+        '<span class="b-count">💡 아이디어 ' + b.postCount + "개</span></div>";
+    });
+    if (isT)
+      html += '<div class="board-card board-new" onclick="IB.newBoard()">＋ 새 게시판 만들기</div>';
+    g.innerHTML = html;
+    $("home-empty").hidden = !(HOME.boards.length === 0 && !isT);
+  }
+  function goHome() { guard(loadHome()); }
+
+  // ── 게시판 ──
+  async function openBoard(id) {
+    const r = await api("/api/board", { boardId: id });
+    BOARD = r;
+    ME = r.me;
+    $("bd-title").textContent = r.board.title;
+    $("bd-desc").textContent = r.board.desc || "";
+    renderPosts();
+    hide("view-home");
+    show("view-board");
+    window.scrollTo(0, 0);
+  }
+  function renderPosts() {
+    const isT = ME.type === "teacher";
+    const wrap = $("post-list");
+    let html = "";
+    for (const p of BOARD.posts) {
+      const name = p.author.type === "teacher" ? "선생님" : p.author.name;
+      html += '<div class="post' + (p.isNotice ? " notice" : "") + '" id="post-' + p.id + '">';
+      html += '<div class="p-head">' + avatarHtml(p.author) +
+        '<div class="p-who"><div class="p-name">' + esc(name) +
+        (p.isNotice ? ' <span class="chip-notice">📌 공지</span>' : "") +
+        '</div><div class="p-time">' + fmtTime(p.createdAt) + "</div></div>" +
+        '<div class="p-tools">' +
+        (isT ? '<button title="공지 고정" onclick="IB.toggleNotice(' + p.id + ',' + (p.isNotice ? "false" : "true") + ')">📌</button>' : "") +
+        ((isT || isMine(p.author)) ? '<button title="지우기" onclick="IB.deletePost(' + p.id + ')">🗑</button>' : "") +
+        "</div></div>";
+      if (p.text) html += '<div class="p-text">' + linkify(p.text) + "</div>";
+      for (const f of p.files) {
+        if (f.isImage)
+          html += '<img class="p-img" loading="lazy" src="/api/file/' + f.id + '" alt="' + esc(f.name) + '" onclick="IB.zoom(\'' + f.id + "')\">";
+        else
+          html += '<a class="p-file" href="/api/file/' + f.id + '">📎 ' + esc(f.name) + "</a>";
+      }
+      html += '<div class="p-foot">' +
+        '<button class="' + (p.liked ? "liked" : "") + '" onclick="IB.toggleLike(' + p.id + ')">' +
+        (p.liked ? "❤️" : "🤍") + ' <span id="likec-' + p.id + '">' + p.likeCount + "</span></button>" +
+        '<button onclick="IB.toggleComments(' + p.id + ')">💬 ' + p.comments.length + "</button></div>";
+      // 댓글
+      html += '<div class="comments" id="cmts-' + p.id + '" hidden>';
+      for (const c of p.comments) {
+        const cname = c.author.type === "teacher" ? "선생님" : c.author.name;
+        html += '<div class="cmt"><div class="c-body"><span class="c-name">' + esc(cname) + "</span>" +
+          esc(c.text) + '<span class="c-time">' + fmtTime(c.createdAt) + "</span>" +
+          ((isT || isMine(c.author)) ? ' <button class="c-del" onclick="IB.deleteComment(' + c.id + ')">✕</button>' : "") +
+          "</div></div>";
+      }
+      html += '<div class="cmt-input"><input id="ci-' + p.id + '" maxlength="500" placeholder="댓글 쓰기..." ' +
+        'onkeydown="if(event.key===\'Enter\')IB.addComment(' + p.id + ')">' +
+        '<button onclick="IB.addComment(' + p.id + ')">등록</button></div></div>';
+      html += "</div>";
+    }
+    wrap.innerHTML = html;
+    $("bd-empty").hidden = BOARD.posts.length > 0;
+  }
+  async function refreshBoard() {
+    if (BOARD) await openBoard(BOARD.board.id);
+  }
+
+  function toggleComments(pid) {
+    const el = $("cmts-" + pid);
+    el.hidden = !el.hidden;
+    if (!el.hidden) { const i = $("ci-" + pid); if (i) i.focus(); }
+  }
+  function toggleLike(pid) {
+    guard((async () => {
+      await api("/api/like/toggle", { postId: pid });
+      await refreshBoard();
+    })());
+  }
+  function addComment(pid) {
+    const inp = $("ci-" + pid);
+    const text = inp.value.trim();
+    if (!text) return;
+    guard((async () => {
+      await api("/api/comment/create", { postId: pid, text });
+      await refreshBoard();
+      const el = $("cmts-" + pid);
+      if (el) el.hidden = false;
+    })());
+  }
+  function deleteComment(cid) {
+    if (!confirm("이 댓글을 지울까요?")) return;
+    guard((async () => {
+      await api("/api/comment/delete", { commentId: cid });
+      await refreshBoard();
+    })());
+  }
+  function deletePost(pid) {
+    if (!confirm("이 글을 지울까요? 붙어 있는 사진·파일도 함께 지워져요.")) return;
+    guard((async () => {
+      await api("/api/post/delete", { postId: pid });
+      await refreshBoard();
+      toast("글을 지웠어요");
+    })());
+  }
+  function toggleNotice(pid, on) {
+    guard((async () => {
+      await api("/api/post/notice", { postId: pid, isNotice: on });
+      await refreshBoard();
+    })());
+  }
+  function zoom(fileId) {
+    $("lightbox-img").src = "/api/file/" + fileId;
+    show("lightbox");
+  }
+
+  // ── 글쓰기 ──
+  function openComposer() {
+    attachments = [];
+    $("cmp-text").value = "";
+    $("cmp-notice").checked = false;
+    $("cmp-notice-row").hidden = ME.type !== "teacher";
+    renderAttach();
+    show("md-compose");
+    $("cmp-text").focus();
+  }
+  function closeComposer() { hide("md-compose"); }
+  function renderAttach() {
+    const w = $("cmp-attach");
+    let html = "";
+    attachments.forEach((a, i) => {
+      html += '<div class="att">' +
+        (a.isImage ? '<img src="' + a.data + '" alt="">'
+          : '<span class="att-file">📎 ' + esc(a.name) + "</span>") +
+        '<button class="rm" onclick="IB.removeAttach(' + i + ')">✕</button></div>';
+    });
+    w.innerHTML = html;
+  }
+  function removeAttach(i) { attachments.splice(i, 1); renderAttach(); }
+
+  // 사진: 기기에서 자동 압축 (최대 1280px, JPEG)
+  function compressImage(file) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const MAX = 1280;
+        let w = img.width, h = img.height;
+        if (Math.max(w, h) > MAX) {
+          const k = MAX / Math.max(w, h);
+          w = Math.round(w * k); h = Math.round(h * k);
+        }
+        const cv = document.createElement("canvas");
+        cv.width = w; cv.height = h;
+        const cx = cv.getContext("2d");
+        cx.fillStyle = "#fff";
+        cx.fillRect(0, 0, w, h);
+        cx.drawImage(img, 0, 0, w, h);
+        resolve(cv.toDataURL("image/jpeg", 0.85));
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("사진을 읽을 수 없어요")); };
+      img.src = url;
+    });
+  }
+  function readFileAsDataURL(file) {
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.onerror = () => reject(new Error("파일을 읽을 수 없어요"));
+      r.readAsDataURL(file);
+    });
+  }
+  async function onPhotoPick(ev) {
+    for (const f of ev.target.files) {
+      if (attachments.length >= 4) { toast("첨부는 4개까지예요"); break; }
+      try {
+        const data = await compressImage(f);
+        attachments.push({ name: f.name || "사진.jpg", mime: "image/jpeg", data, isImage: true });
+      } catch (e) { toast(e.message); }
+    }
+    ev.target.value = "";
+    renderAttach();
+  }
+  async function onFilePick(ev) {
+    for (const f of ev.target.files) {
+      if (attachments.length >= 4) { toast("첨부는 4개까지예요"); break; }
+      if (f.size > 1024 * 1024) { toast('"' + f.name + '" 는 1MB가 넘어서 올릴 수 없어요'); continue; }
+      try {
+        if (f.type.startsWith("image/")) {
+          const data = await compressImage(f);
+          attachments.push({ name: f.name, mime: "image/jpeg", data, isImage: true });
+        } else {
+          const data = await readFileAsDataURL(f);
+          attachments.push({ name: f.name, mime: f.type || "application/octet-stream", data, isImage: false });
+        }
+      } catch (e) { toast(e.message); }
+    }
+    ev.target.value = "";
+    renderAttach();
+  }
+  function submitPost() {
+    const text = $("cmp-text").value.trim();
+    if (!text && attachments.length === 0) { toast("내용을 쓰거나 사진·그림·파일을 붙여 주세요"); return; }
+    const btn = $("cmp-submit");
+    btn.disabled = true; btn.textContent = "올리는 중...";
+    guard((async () => {
+      try {
+        await api("/api/post/create", {
+          boardId: BOARD.board.id,
+          text,
+          files: attachments.map(a => ({ name: a.name, data: a.data })),
+          isNotice: $("cmp-notice").checked,
+        });
+        closeComposer();
+        await refreshBoard();
+        toast("아이디어를 올렸어요! 🎉");
+      } finally {
+        btn.disabled = false; btn.textContent = "올리기";
+      }
+    })());
+  }
+
+  // ── 그리기 캔버스 ──
+  const DRAW_COLORS = ["#2d3436", "#e74c3c", "#ff9f1a", "#f9ca24", "#2ecc71", "#3498db", "#9b59b6", "#e84393", "#8d6e63"];
+  let drawCtx = null, strokes = [], curStroke = null, drawColor = DRAW_COLORS[0], drawWidth = 9, eraserOn = false;
+  function initDraw() {
+    const cv = $("draw-canvas");
+    drawCtx = cv.getContext("2d");
+    const colorWrap = $("draw-colors");
+    colorWrap.innerHTML = DRAW_COLORS.map((c, i) =>
+      '<button class="dot' + (i === 0 ? " on" : "") + '" style="background:' + c + '" data-c="' + c + '" onclick="IB.drawColor(this)"></button>').join("");
+    const pos = ev => {
+      const r = cv.getBoundingClientRect();
+      return { x: (ev.clientX - r.left) * cv.width / r.width, y: (ev.clientY - r.top) * cv.height / r.height };
+    };
+    cv.addEventListener("pointerdown", ev => {
+      ev.preventDefault();
+      try { cv.setPointerCapture(ev.pointerId); } catch (e) {}
+      curStroke = { color: eraserOn ? "#ffffff" : drawColor, width: eraserOn ? drawWidth * 3 : drawWidth, pts: [pos(ev)] };
+    });
+    cv.addEventListener("pointermove", ev => {
+      if (!curStroke) return;
+      curStroke.pts.push(pos(ev));
+      redraw();
+      paintStroke(curStroke);
+    });
+    const up = () => {
+      if (!curStroke) return;
+      strokes.push(curStroke);
+      curStroke = null;
+      redraw();
+    };
+    cv.addEventListener("pointerup", up);
+    cv.addEventListener("pointercancel", up);
+  }
+  function paintStroke(s) {
+    drawCtx.strokeStyle = s.color;
+    drawCtx.lineWidth = s.width;
+    drawCtx.lineCap = "round";
+    drawCtx.lineJoin = "round";
+    drawCtx.beginPath();
+    s.pts.forEach((p, i) => i === 0 ? drawCtx.moveTo(p.x, p.y) : drawCtx.lineTo(p.x, p.y));
+    if (s.pts.length === 1) drawCtx.lineTo(s.pts[0].x + .01, s.pts[0].y);
+    drawCtx.stroke();
+  }
+  function redraw() {
+    const cv = $("draw-canvas");
+    drawCtx.fillStyle = "#ffffff";
+    drawCtx.fillRect(0, 0, cv.width, cv.height);
+    for (const s of strokes) paintStroke(s);
+  }
+  function openDraw() {
+    if (attachments.length >= 4) { toast("첨부는 4개까지예요"); return; }
+    strokes = []; curStroke = null; eraserOn = false;
+    $("draw-eraser").classList.remove("on");
+    if (!drawCtx) initDraw();
+    redraw();
+    show("md-draw");
+  }
+  function closeDraw() { hide("md-draw"); }
+  function drawColorPick(btn) {
+    drawColor = btn.dataset.c;
+    eraserOn = false;
+    $("draw-eraser").classList.remove("on");
+    document.querySelectorAll("#draw-colors .dot").forEach(d => d.classList.toggle("on", d === btn));
+  }
+  function drawSize(sz, btn) {
+    drawWidth = sz;
+    document.querySelectorAll(".szbtn[data-sz]").forEach(b => b.classList.toggle("on", b === btn));
+  }
+  function drawEraser(btn) {
+    eraserOn = !eraserOn;
+    btn.classList.toggle("on", eraserOn);
+  }
+  function drawUndo() { strokes.pop(); redraw(); }
+  function drawClear() { strokes = []; redraw(); }
+  function finishDraw() {
+    if (strokes.length === 0) { toast("아직 아무것도 그리지 않았어요"); return; }
+    const data = $("draw-canvas").toDataURL("image/png");
+    attachments.push({ name: "그림.png", mime: "image/png", data, isImage: true });
+    renderAttach();
+    hide("md-draw");
+    toast("그림을 붙였어요! 🎨");
+  }
+
+  // ── 쪽지 ──
+  function setBadge(n) {
+    const b = $("hd-badge");
+    b.hidden = !n;
+    b.textContent = n > 99 ? "99+" : n;
+  }
+  function openMsgs() {
+    // 받는 사람 선택 (교사만)
+    if (ME.type === "teacher") {
+      $("msg-to-label").textContent = "쪽지 보내기 — 받을 사람";
+      const sel = $("msg-to");
+      sel.hidden = false;
+      sel.innerHTML = '<option value="all">📢 전체 학생</option>' +
+        (HOME.students || []).map(s => '<option value="' + s.id + '">' + s.number + "번 " + esc(s.name) + "</option>").join("");
+    } else {
+      $("msg-to-label").textContent = "선생님께 쪽지 보내기 (고민 상담, 하고 싶은 말 무엇이든!)";
+      $("msg-to").hidden = true;
+    }
+    $("msg-text").value = "";
+    show("md-msgs");
+    guard(loadMsgs());
+  }
+  async function loadMsgs() {
+    const r = await api("/api/msg/list");
+    msgCache = r.messages;
+    renderMsgs();
+    // 받은쪽지 탭을 열면 읽음 처리
+    const unreadIds = msgCache.filter(m => m.received && !m.read).map(m => m.id);
+    if (unreadIds.length) {
+      await api("/api/msg/read", { ids: unreadIds });
+      setBadge(0);
+    }
+  }
+  function msgTab(t) {
+    msgTabName = t;
+    $("mt-recv").classList.toggle("on", t === "recv");
+    $("mt-sent").classList.toggle("on", t === "sent");
+    renderMsgs();
+  }
+  function renderMsgs() {
+    const list = msgCache.filter(m => msgTabName === "recv" ? m.received : !m.received);
+    $("msg-list").innerHTML = list.length === 0
+      ? '<div style="text-align:center;color:#aab;padding:20px 0;font-size:13px">쪽지가 없어요</div>'
+      : list.map(m => {
+        const fromName = m.from.type === "teacher" ? "선생님" : m.from.name;
+        return '<div class="msg-item' + (m.received && !m.read ? " unread" : "") + '">' +
+          '<div class="msg-meta">' +
+          (msgTabName === "recv" ? "<b>" + esc(fromName) + "</b> 님이 보냄" : "<b>" + esc(m.toName) + "</b> 님에게 보냄") +
+          "<span>" + fmtTime(m.createdAt) + "</span></div>" +
+          '<div class="msg-text">' + esc(m.text) + "</div></div>";
+      }).join("");
+  }
+  function sendMsg() {
+    const text = $("msg-text").value.trim();
+    if (!text) { toast("쪽지 내용을 써 주세요"); return; }
+    guard((async () => {
+      const body = { text };
+      if (ME.type === "teacher") body.to = $("msg-to").value;
+      await api("/api/msg/send", body);
+      $("msg-text").value = "";
+      toast("쪽지를 보냈어요 💌");
+      await loadMsgs();
+      msgTab("sent");
+    })());
+  }
+
+  // ── 새 쪽지 팝업 (주기 확인) ──
+  function startPoll() {
+    stopPoll();
+    pollTimer = setInterval(poll, 15000);
+  }
+  function stopPoll() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
+  async function poll() {
+    if (!AUTH) return;
+    try {
+      const r = await api("/api/poll");
+      setBadge(r.unread);
+      // 쪽지함이 열려 있으면 팝업 대신 목록 갱신
+      if (r.messages.length && $("md-msgs").hidden && $("md-popup").hidden) {
+        popupIds = r.messages.map(m => m.id);
+        $("popup-list").innerHTML = r.messages.map(m => {
+          const fromName = m.from.type === "teacher" ? "선생님" : m.from.name;
+          return '<div class="msg-item unread"><div class="msg-meta"><b>' + esc(fromName) +
+            "</b> 님이 보냄 <span>" + fmtTime(m.createdAt) + "</span></div>" +
+            '<div class="msg-text">' + esc(m.text) + "</div></div>";
+        }).join("");
+        show("md-popup");
+      }
+    } catch (e) { /* 네트워크 일시 오류는 조용히 넘어감 */ }
+  }
+  function ackPopup() {
+    guard((async () => {
+      await api("/api/msg/read", { ids: popupIds });
+      popupIds = [];
+      hide("md-popup");
+      setBadge(0);
+    })());
+  }
+
+  // ── 교사: 게시판 관리 ──
+  let editingBoardId = null;
+  function newBoard() {
+    editingBoardId = null;
+    $("mb-title").firstChild.textContent = "새 게시판 ";
+    $("mb-name").value = "";
+    $("mb-desc").value = "";
+    show("md-board");
+    $("mb-name").focus();
+  }
+  function editBoard(id) {
+    const b = HOME.boards.find(x => x.id === id);
+    if (!b) return;
+    editingBoardId = id;
+    $("mb-title").firstChild.textContent = "게시판 고치기 ";
+    $("mb-name").value = b.title;
+    $("mb-desc").value = b.desc || "";
+    show("md-board");
+  }
+  function saveBoard() {
+    guard((async () => {
+      const title = $("mb-name").value.trim();
+      const desc = $("mb-desc").value.trim();
+      if (editingBoardId) await api("/api/teacher/board/update", { boardId: editingBoardId, title, desc });
+      else await api("/api/teacher/board/create", { title, desc });
+      hide("md-board");
+      await loadHome();
+      toast("저장했어요");
+    })());
+  }
+  function deleteBoard(id) {
+    const b = HOME.boards.find(x => x.id === id);
+    if (!b) return;
+    if (!confirm('"' + b.title + '" 게시판을 지울까요?\n안에 있는 글과 사진이 모두 지워져요!')) return;
+    guard((async () => {
+      await api("/api/teacher/board/delete", { boardId: id });
+      await loadHome();
+      toast("게시판을 지웠어요");
+    })());
+  }
+
+  // ── 교사: 학생 관리 ──
+  function openStudents() {
+    const rows = (HOME.students || []).map(s =>
+      studentRowHtml(s.id, s.number, s.name, s.pin)).join("");
+    $("stu-rows").innerHTML = rows;
+    if (!rows) addStudentRow();
+    show("md-students");
+  }
+  function studentRowHtml(id, number, name, pin) {
+    return '<tr data-id="' + (id || "") + '">' +
+      '<td><input type="number" class="st-no" min="1" value="' + (number || "") + '"></td>' +
+      '<td><input type="text" class="st-name" maxlength="20" value="' + esc(name || "") + '"></td>' +
+      '<td><input type="text" class="st-pin" maxlength="4" inputmode="numeric" value="' + esc(pin || "0000") + '"></td>' +
+      '<td><button class="del" onclick="this.closest(\'tr\').remove()">🗑</button></td></tr>';
+  }
+  function addStudentRow() {
+    const tbody = $("stu-rows");
+    const nums = [...tbody.querySelectorAll(".st-no")].map(i => Number(i.value) || 0);
+    const next = nums.length ? Math.max(...nums) + 1 : 1;
+    tbody.insertAdjacentHTML("beforeend", studentRowHtml("", next, "", "0000"));
+    tbody.lastElementChild.querySelector(".st-name").focus();
+  }
+  function saveStudents() {
+    const rows = [...$("stu-rows").querySelectorAll("tr")];
+    const students = rows.map(tr => ({
+      id: tr.dataset.id ? Number(tr.dataset.id) : undefined,
+      number: Number(tr.querySelector(".st-no").value),
+      name: tr.querySelector(".st-name").value.trim(),
+      pin: tr.querySelector(".st-pin").value.trim(),
+    }));
+    guard((async () => {
+      const r = await api("/api/teacher/students/save", { students });
+      hide("md-students");
+      await loadHome();
+      toast("학생 " + r.count + "명을 저장했어요");
+    })());
+  }
+
+  // ── 교사: 설정 ──
+  function openSettings() {
+    $("set-classname").value = HOME.className || "";
+    $("set-classcode").value = HOME.classCode || "";
+    $("set-newpw").value = "";
+    show("md-settings");
+  }
+  function saveSettings() {
+    guard((async () => {
+      await api("/api/teacher/settings/save", {
+        className: $("set-classname").value.trim(),
+        classCode: $("set-classcode").value.trim(),
+        newPw: $("set-newpw").value.trim(),
+      });
+      hide("md-settings");
+      await loadHome();
+      toast("설정을 저장했어요");
+    })());
+  }
+
+  // ── 시작 ──
+  function boot() {
+    $("cmp-photo").addEventListener("change", onPhotoPick);
+    $("cmp-file").addEventListener("change", onFilePick);
+    $("in-class").value = localStorage.getItem("ideaboard_class") || "6-1";
+    // /teacher.html 로 들어오면 교사 탭 먼저
+    if (location.pathname.indexOf("teacher") >= 0) setRole("teacher");
+    const saved = localStorage.getItem(LS_KEY);
+    if (saved) {
+      try { AUTH = JSON.parse(saved); } catch (e) { AUTH = null; }
+      if (AUTH) {
+        enterApp().catch(() => { doLogout(); });
+        return;
+      }
+    }
+  }
+  document.addEventListener("DOMContentLoaded", boot);
+
+  return {
+    setRole, login, logout, goHome, openBoard,
+    toggleComments, toggleLike, addComment, deleteComment, deletePost, toggleNotice, zoom,
+    openComposer, closeComposer, removeAttach, submitPost,
+    openDraw, closeDraw, drawColor: drawColorPick, drawSize, drawEraser, drawUndo, drawClear, finishDraw,
+    openMsgs, msgTab, sendMsg, ackPopup,
+    newBoard, editBoard, saveBoard, deleteBoard,
+    openStudents, addStudentRow, saveStudents,
+    openSettings, saveSettings,
+    hide,
+  };
+})();
+</script>
+</body>
+</html>

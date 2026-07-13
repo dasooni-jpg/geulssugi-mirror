@@ -22,6 +22,13 @@
 # ↓ 다람쌤 오목 대회 플랫폼
 !/omok/
 
+# ↓ 우리 반 아이디어 보드 (와우아이디어스 대체, Cloudflare Worker + D1)
+!/ideaboard-app/
+!/ideaboard-worker.template.js
+!/ideaboard-worker.js
+!/build-ideaboard-worker.ps1
+!/ideaboard-server.ps1
+
 # ───────────────────────────────────────────────
 #  안전장치: 아래는 절대 올리지 않음 (비밀·개인정보)
 # ───────────────────────────────────────────────
