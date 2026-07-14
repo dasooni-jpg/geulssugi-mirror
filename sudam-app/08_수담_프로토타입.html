@@ -1,0 +1,1310 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>수담(數談) — 수학 토론 담화 엔진</title>
+<style>
+  :root{
+    --board-green:#2F5D52;
+    --board-green-dark:#234840;
+    --ink:#22333B;
+    --chalk-white:#FCFBF7;
+    --focus-yellow:#E9B44C;
+    --rebut-red:#B0503C;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Malgun Gothic","맑은 고딕","Apple SD Gothic Neo",sans-serif;
+    background:var(--chalk-white);
+    color:var(--ink);
+    line-height:1.5;
+  }
+  #app{ min-height:100vh; display:flex; flex-direction:column; }
+  button{ font-family:inherit; cursor:pointer; }
+  textarea,input[type=text],input[type=number],input[type=url]{
+    font-family:inherit; font-size:1rem; padding:8px 10px; border:1px solid #c9c2b4; border-radius:8px; background:#fff; color:var(--ink); width:100%;
+  }
+  textarea:focus,input:focus,button:focus{ outline:3px solid var(--focus-yellow); outline-offset:1px; }
+
+  /* ---------- Layout: header ---------- */
+  header.app-header{
+    background:var(--board-green); color:var(--chalk-white);
+    padding:10px 20px; display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    position:sticky; top:0; z-index:20;
+  }
+  header.app-header .brand{ font-weight:800; font-size:1.15rem; cursor:pointer; letter-spacing:.5px; }
+  header.app-header .offline-badge{
+    background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.4); border-radius:20px; padding:3px 10px; font-size:.75rem;
+  }
+  header.app-header .spacer{ flex:1; }
+  .header-btn{
+    background:transparent; border:1px solid rgba(255,255,255,.6); color:var(--chalk-white); border-radius:8px; padding:7px 12px; font-size:.85rem;
+  }
+  .header-btn:hover{ background:rgba(255,255,255,.12); }
+  .header-btn.primary{ background:var(--focus-yellow); color:var(--ink); border-color:var(--focus-yellow); font-weight:700; }
+
+  /* ---------- Stepper ---------- */
+  .stepper{
+    display:flex; gap:6px; padding:10px 20px; background:#eee7d8; flex-wrap:wrap; align-items:center;
+  }
+  .stepper .step{
+    border:none; background:#fff; color:#8a8272; border-radius:20px; padding:6px 16px; font-weight:700; font-size:.85rem;
+    border:2px solid transparent;
+  }
+  .stepper .step[disabled]{ opacity:.45; cursor:not-allowed; }
+  .stepper .step.active{ background:var(--board-green); color:var(--chalk-white); }
+  .stepper .step.visited:not(.active){ border-color:var(--board-green); color:var(--board-green); }
+  .stepper .qtitle{ margin-left:auto; font-size:.85rem; color:var(--ink); opacity:.75; max-width:40%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+  main{ flex:1; padding:20px; max-width:1200px; width:100%; margin:0 auto; }
+
+  /* ---------- Start screen ---------- */
+  .start-wrap{ min-height:100vh; display:flex; align-items:center; justify-content:center; padding:40px 20px; }
+  .start-card{ max-width:720px; text-align:center; }
+  .start-card h1{ font-size:1.9rem; margin-bottom:8px; color:var(--board-green); }
+  .start-card .subtitle{ font-size:1.05rem; color:var(--ink); opacity:.85; margin-bottom:22px; }
+  .start-card .grade-tag{
+    display:inline-block; background:var(--board-green); color:var(--chalk-white); padding:8px 18px; border-radius:24px; font-weight:700; margin-bottom:24px;
+  }
+  .offline-notice{
+    background:#fff; border:2px dashed var(--board-green); border-radius:14px; padding:16px 20px; margin:22px 0; text-align:left; font-size:.92rem;
+  }
+  .start-actions{ margin-top:26px; }
+  .btn{ border:none; border-radius:10px; padding:12px 22px; font-size:1rem; font-weight:700; }
+  .btn-primary{ background:var(--board-green); color:var(--chalk-white); }
+  .btn-primary:hover{ background:var(--board-green-dark); }
+  .btn-secondary{ background:#fff; color:var(--board-green); border:2px solid var(--board-green); }
+  .btn-outline{ background:transparent; color:var(--ink); border:1px solid #b8b0a0; }
+  .btn-danger-outline{ background:transparent; color:var(--rebut-red); border:1px solid var(--rebut-red); }
+  .btn:disabled{ opacity:.5; cursor:not-allowed; }
+
+  /* ---------- Category chips ---------- */
+  .chips{ display:flex; gap:8px; flex-wrap:wrap; margin:14px 0 20px; }
+  .chip{
+    border:1px solid var(--board-green); background:#fff; color:var(--board-green); border-radius:20px; padding:6px 14px; font-size:.85rem; font-weight:600;
+  }
+  .chip.active{ background:var(--board-green); color:var(--chalk-white); }
+
+  /* ---------- Question list ---------- */
+  .list-toolbar{ display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:6px; }
+  .q-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:14px; margin-top:10px; }
+  .q-card{
+    background:#fff; border:1px solid #e2dbc9; border-radius:14px; padding:16px; text-align:left; cursor:pointer; position:relative;
+    display:flex; flex-direction:column; gap:8px;
+  }
+  .q-card:hover{ border-color:var(--board-green); box-shadow:0 2px 10px rgba(47,93,82,.12); }
+  .q-card .cat-badge{
+    display:inline-block; align-self:flex-start; background:#eef3f1; color:var(--board-green); font-size:.72rem; font-weight:700; padding:3px 9px; border-radius:12px;
+  }
+  .q-card .q-id{ font-size:.7rem; color:#999; }
+  .q-card .q-text{ font-size:.92rem; color:var(--ink); }
+  .badge-stu{
+    display:inline-block; background:var(--focus-yellow); color:var(--ink); font-size:.72rem; font-weight:800; padding:3px 9px; border-radius:12px; align-self:flex-start;
+  }
+  .q-card.just-added{ animation:pulseGlow 1.4s ease-in-out 3; border-color:var(--focus-yellow); }
+  @keyframes pulseGlow{
+    0%,100%{ box-shadow:0 0 0 0 rgba(233,180,74,.6); }
+    50%{ box-shadow:0 0 0 8px rgba(233,180,74,0); }
+  }
+
+  /* ---------- Sub cards (submissions) ---------- */
+  .sub-card{ background:#fff; border:1px solid #e2dbc9; border-radius:12px; padding:14px; margin-bottom:12px; }
+  .sub-card .sub-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+  .sub-card .sub-nick{ font-weight:700; color:var(--board-green); }
+  .sub-card .sub-text{ white-space:pre-wrap; font-size:.95rem; }
+  .sub-card .sub-group{ font-size:.75rem; color:#8a8272; margin-top:4px; }
+
+  .tag-row{ display:flex; gap:6px; flex-wrap:wrap; margin-top:10px; }
+  .tag-btn{
+    border:1px solid #cfc7b4; background:#fff; border-radius:20px; padding:5px 10px; font-size:.82rem; display:flex; align-items:center; gap:4px;
+  }
+  .tag-btn.agree:hover{ border-color:var(--board-green); }
+  .tag-btn.rebut:hover{ border-color:var(--rebut-red); }
+  .tag-btn .cnt{ font-weight:700; }
+  .tag-btn[disabled]{ opacity:.4; cursor:not-allowed; }
+  .rebut-form{ margin-top:8px; padding:10px; background:#fbeee7; border:1px solid var(--rebut-red); border-radius:10px; }
+  .rebut-form textarea{ min-height:50px; }
+  .error-text{ color:var(--rebut-red); font-size:.82rem; font-weight:700; margin-top:6px; }
+
+  .reason-log{ font-size:.78rem; color:#6b6455; margin-top:6px; }
+  .reason-log .rl-item{ margin-top:2px; }
+
+  /* ---------- Probe flip cards ---------- */
+  .probe-row{ display:flex; gap:16px; flex-wrap:wrap; margin-top:14px; }
+  .probe-card{ width:230px; height:150px; perspective:1000px; }
+  .probe-card-inner{ position:relative; width:100%; height:100%; transition:transform .6s; transform-style:preserve-3d; }
+  .probe-card.flipped .probe-card-inner{ transform:rotateY(180deg); }
+  .probe-face{ position:absolute; inset:0; backface-visibility:hidden; border-radius:14px; padding:14px; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; }
+  .probe-front{ background:var(--board-green); color:var(--chalk-white); font-weight:700; }
+  .probe-front .big{ font-size:2rem; }
+  .probe-back{ background:#fff; border:2px solid var(--board-green); transform:rotateY(180deg); font-size:.84rem; }
+  .probe-back .caption{ margin-top:8px; font-size:.72rem; color:#8a8272; }
+  @media (prefers-reduced-motion: reduce){ .probe-card-inner{ transition:none !important; } }
+  .probe-source-tag{ font-size:.75rem; padding:3px 9px; border-radius:10px; background:#eef3f1; color:var(--board-green); display:inline-block; margin-bottom:8px; }
+
+  /* ---------- Consensus ---------- */
+  .consensus-option{ display:flex; gap:8px; align-items:flex-start; padding:10px; border:1px solid #e2dbc9; border-radius:10px; margin-bottom:8px; }
+
+  /* ---------- Dashboard ---------- */
+  .backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:29; }
+  .dashboard-panel{
+    position:fixed; top:0; right:0; width:min(420px,100%); height:100vh; background:var(--chalk-white); border-left:3px solid var(--board-green);
+    z-index:30; overflow-y:auto; padding:18px; box-shadow:-4px 0 16px rgba(0,0,0,.15);
+  }
+  .dashboard-panel h2{ color:var(--board-green); margin-top:0; }
+  .heatmap{ border-collapse:collapse; width:100%; font-size:.78rem; }
+  .heatmap th,.heatmap td{ border:1px solid #e2dbc9; padding:6px; text-align:center; }
+  .heatmap th{ background:#eef3f1; }
+  .heatmap td.row-label{ text-align:left; font-weight:700; background:#fbf8f0; }
+  .profile-row{ border:1px solid #e2dbc9; border-radius:10px; padding:10px; margin-bottom:10px; }
+  .profile-bar{ display:flex; height:14px; border-radius:8px; overflow:hidden; margin:6px 0; background:#eee; }
+  .profile-bar .agree-part{ background:var(--board-green); }
+  .profile-bar .rebut-part{ background:var(--rebut-red); }
+  .miss-item{ border:1px solid var(--rebut-red); background:#fbeee7; border-radius:8px; padding:6px 10px; margin-bottom:6px; font-size:.85rem; }
+
+  /* ---------- Modal ---------- */
+  .modal-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.4); display:flex; align-items:center; justify-content:center; z-index:40; padding:16px; }
+  .modal-box{ background:#fff; border-radius:14px; padding:22px; max-width:560px; width:100%; max-height:88vh; overflow-y:auto; }
+  .modal-box h2{ margin-top:0; color:var(--board-green); }
+  .form-row{ margin-bottom:12px; }
+  .form-row label{ display:block; font-weight:700; font-size:.88rem; margin-bottom:4px; }
+  .form-row .hint{ font-size:.76rem; color:#8a8272; margin-top:3px; }
+  .modal-actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:16px; }
+  .no-answer-note{ font-size:.78rem; color:#8a8272; font-style:italic; margin-top:6px; }
+
+  .radio-line{ display:flex; align-items:flex-start; gap:8px; margin-bottom:8px; font-size:.9rem; }
+  .section-title{ color:var(--board-green); margin:22px 0 8px; }
+  .stat-line{ font-size:.85rem; color:#6b6455; margin-bottom:6px; }
+
+  footer.app-footer{ text-align:center; font-size:.72rem; color:#a49c8c; padding:16px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ================= 발문 은행 (오프라인 폴백 카드) — 05_발문은행_폴백카드.json 과 동일 내용 인라인 내장 ================= */
+var BANK_SEED = JSON.parse(`[
+  {
+    "id": "BR-01",
+    "category": "MIX",
+    "question": "설탕물 A(설탕 20g, 물 80g)와 B(설탕 30g, 물 120g) 중 어느 쪽이 더 달까?",
+    "discussionPoint": "절대량 비교와 비율 비교의 대립",
+    "expectedClaims": ["설탕 양만 비교(30g>20g이므로 B)", "전체에 대한 설탕의 비율 비교(20/100 vs 30/150)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "설탕이 많으면 항상 더 달까? 물이 1,000g이라면 어떻게 될까?" },
+      { "order": 2, "text": "설탕 30g에 물 970g을 넣은 컵과 비교하면 주장이 유지될까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-02",
+    "category": "MIX",
+    "question": "소금물 C(소금 15g, 물 135g)와 D(소금 25g, 물 175g) 중 어느 쪽이 더 짤까?",
+    "discussionPoint": "소금 절대량 비교와 비율 비교의 대립",
+    "expectedClaims": ["소금 양만 비교(25g>15g이므로 D가 더 짬)", "전체 대비 비율 비교(15/150 vs 25/200)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "소금이 많으면 항상 더 짤까? 물의 양이 다르면 어떻게 될까?" },
+      { "order": 2, "text": "소금 25g에 물 250g을 넣은 소금물과 비교하면 주장이 유지될까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-03",
+    "category": "MIX",
+    "question": "오렌지 원액 200mL에 물 600mL를 섞은 주스 E와 원액 150mL에 물 350mL를 섞은 주스 F 중 어느 쪽이 더 진할까?",
+    "discussionPoint": "혼합비 표현 방식(전체 대비 vs 물 대비)의 차이",
+    "expectedClaims": ["원액의 양만 비교(E가 원액이 더 많으므로 진하다)", "원액 대 전체(또는 물) 비율로 비교(1:3 vs 3:7)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "원액이 많으면 항상 진할까? 물을 매우 많이 넣으면 어떻게 될까?" },
+      { "order": 2, "text": "F의 원액과 물을 두 배로 늘리면(300mL, 700mL) 비교 결과가 바뀔까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-04",
+    "category": "MIX",
+    "question": "흰색 페인트 4L에 파란색 페인트 1L를 섞은 G와 흰색 6L에 파란색 2L를 섞은 H 중 어느 쪽이 더 진한 파란색일까?",
+    "discussionPoint": "부분 대 부분 비와 부분 대 전체 비의 혼동",
+    "expectedClaims": ["파란색 양만 비교(H가 2L로 더 많으므로 진하다)", "흰색 대 파란색 비로 비교(4:1 vs 6:2=3:1)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "파란색이 많으면 항상 진할까? 흰색도 함께 늘었다면 어떨까?" },
+      { "order": 2, "text": "G를 두 배로 늘리면(흰8L, 파2L) H와 비교가 어떻게 될까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-05",
+    "category": "PRICE",
+    "question": "문구점 A는 연필 12자루를 3,600원에 팔고, 문구점 B는 연필 20자루를 5,800원에 판다. 어느 가게가 더 싼가?",
+    "discussionPoint": "총액 비교와 단가(1개당 가격) 비교의 대립",
+    "expectedClaims": ["총액만 비교(5,800원이 더 비싸므로 A가 싸다)", "1자루당 가격으로 비교(3600/12=300원 vs 5800/20=290원)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "묶음이 크면 항상 더 쌀까? 1개당 가격으로 나누면 어떨까?" },
+      { "order": 2, "text": "두 가게 모두 60자루씩 산다면 각각 얼마가 될까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-06",
+    "category": "PRICE",
+    "question": "마트 A는 딸기 500g을 6,000원에, 마트 B는 딸기 750g을 8,700원에 판매한다. 어느 마트가 더 저렴한가?",
+    "discussionPoint": "무게가 다른 두 상품의 가격 비교 기준",
+    "expectedClaims": ["총 가격만 비교(6,000원이 더 싸므로 A가 저렴)", "100g당 가격으로 비교(6000/5=1200원 vs 8700/7.5=1160원)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "양이 적으면 항상 쌀까? 같은 양으로 맞추면 어떻게 될까?" },
+      { "order": 2, "text": "두 마트에서 1,500g씩 산다면 각각 얼마가 될까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-07",
+    "category": "PRICE",
+    "question": "놀이공원 자유이용권을 4명이 함께 사면 52,000원, 6명이 함께 사면 90,000원이다. 어느 쪽이 1인당 더 저렴한가?",
+    "discussionPoint": "인원수에 따른 총액과 1인당 금액의 관계",
+    "expectedClaims": ["총액만 비교(52,000원이 더 싸므로 4명 조건이 저렴)", "1인당 금액으로 비교(52000/4=13000원 vs 90000/6=15000원)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "인원이 적으면 항상 쌀까? 1인당 금액으로 나눠보면 어떨까?" },
+      { "order": 2, "text": "12명이 각각 4명 조건과 6명 조건으로 나눠 산다면 총액은 얼마가 될까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-08",
+    "category": "PRICE",
+    "question": "문구세트를 A상점은 3개에 4,500원, B상점은 5개에 8,000원에 판다. 어느 상점이 더 유리한가?",
+    "discussionPoint": "개수당 단가를 구하는 절차의 정당화",
+    "expectedClaims": ["총액만 비교(4,500원이 더 싸므로 A가 유리)", "1개당 가격으로 비교(4500/3=1500원 vs 8000/5=1600원)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "개수가 적으면 항상 쌀까? 1개당 가격을 구해보면 어떨까?" },
+      { "order": 2, "text": "15개를 산다면 A상점 조건과 B상점 조건 중 무엇이 더 쌀까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-09",
+    "category": "SPEED",
+    "question": "자전거 선수 갑은 30km를 2시간에 달렸고, 을은 42km를 3시간에 달렸다. 누가 더 빠른가?",
+    "discussionPoint": "이동 거리와 걸린 시간을 함께 고려하는 비교",
+    "expectedClaims": ["거리만 비교(42km가 더 기므로 을이 빠르다)", "시간당 거리(속력)로 비교(30/2=15km/h vs 42/3=14km/h)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "거리가 길면 항상 빠른 걸까? 걸린 시간이 다르면 어떨까?" },
+      { "order": 2, "text": "두 사람이 똑같이 6시간을 달린다면 각각 몇 km를 갈까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-10",
+    "category": "SPEED",
+    "question": "기차 A는 240km를 3시간에, 기차 B는 350km를 5시간에 이동했다. 어느 기차가 더 빠른가?",
+    "discussionPoint": "속력 = 거리 ÷ 시간이라는 비율 개념의 필요성",
+    "expectedClaims": ["거리만 비교(350km가 더 기므로 B가 빠르다)", "시간당 거리로 비교(240/3=80km/h vs 350/5=70km/h)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "거리가 길면 항상 빠른 걸까? 두 기차가 같은 시간 동안 간 거리를 비교하면?" },
+      { "order": 2, "text": "두 기차가 똑같이 1시간을 이동한다면 각각 몇 km를 갈까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-11",
+    "category": "SPEED",
+    "question": "마라톤 선수 갑은 10km를 50분에, 을은 15km를 70분에 완주했다. 누가 더 빨리 달린 것일까?",
+    "discussionPoint": "시간이 다를 때 빠르기를 비교하는 기준",
+    "expectedClaims": ["거리만 비교(15km가 더 기므로 을이 빠르다)", "분당 거리(또는 1km당 걸린 시간)로 비교(10/50=0.2km/분 vs 15/70≈0.214km/분)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "거리가 길면 항상 빠른 걸까? 걸린 시간까지 함께 봐야 하지 않을까?" },
+      { "order": 2, "text": "두 선수가 똑같이 100분을 달린다면 각각 몇 km를 갈까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-12",
+    "category": "SPEED",
+    "question": "로봇청소기 A는 12㎡를 15분에, B는 20㎡를 24분에 청소한다. 어느 로봇이 더 빠르게 청소하는가?",
+    "discussionPoint": "넓이당 시간(또는 시간당 넓이) 비교",
+    "expectedClaims": ["넓이만 비교(20㎡가 더 넓으므로 B가 빠르다)", "분당 청소 넓이로 비교(12/15=0.8㎡/분 vs 20/24≈0.83㎡/분)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "넓이가 넓으면 항상 빠른 걸까? 걸린 시간이 다르면 어떨까?" },
+      { "order": 2, "text": "두 로봇이 똑같이 60분 동안 청소한다면 각각 몇 ㎡를 청소할까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-13",
+    "category": "RATIO",
+    "question": "모둠 A는 남학생 3명, 여학생 2명이고, 모둠 B는 남학생 6명, 여학생 5명이다. 두 모둠 중 남학생 비율이 더 높은 모둠은?",
+    "discussionPoint": "'몇 명 더 많다'와 '비율이 높다'의 차이",
+    "expectedClaims": ["남학생 수만 비교(6명이 더 많으므로 B가 높다)", "전체 대비 비율로 비교(3/5=0.6 vs 6/11≈0.545)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "남학생 수가 많으면 항상 비율도 높을까? 전체 인원이 다르면 어떨까?" },
+      { "order": 2, "text": "B모둠에 남학생 1명이 더 들어와 7:5가 된다면 비율은 어떻게 바뀔까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-14",
+    "category": "RATIO",
+    "question": "반죽에 밀가루와 물을 A는 5:2로, B는 8:3으로 섞는다. 어느 반죽이 더 되직할까(밀가루 비중이 높을까)?",
+    "discussionPoint": "비를 분수로 바꾸어 비교하는 절차의 필요성",
+    "expectedClaims": ["밀가루 숫자만 비교(8이 5보다 크므로 B가 되직하다)", "밀가루 대 전체 비율로 비교(5/7 vs 8/11)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "밀가루 숫자가 크면 항상 되직할까? 물의 양도 함께 봐야 하지 않을까?" },
+      { "order": 2, "text": "두 비를 분모가 같도록 통분하면 어떤 값이 나올까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-15",
+    "category": "RATIO",
+    "question": "독서 동아리 A는 5명 중 3명이 소설을 좋아하고, 동아리 B는 8명 중 5명이 소설을 좋아한다. 어느 동아리가 소설을 더 선호한다고 할 수 있을까?",
+    "discussionPoint": "표본 크기가 다를 때 비율 비교의 타당성",
+    "expectedClaims": ["좋아하는 인원수만 비교(5명이 더 많으므로 B)", "전체 대비 비율로 비교(3/5=0.6 vs 5/8=0.625)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "좋아하는 사람 수가 많으면 항상 더 선호하는 걸까? 전체 인원이 다르면?" },
+      { "order": 2, "text": "두 동아리를 각각 40명으로 늘린다면 소설을 좋아하는 사람은 몇 명이 될까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-16",
+    "category": "RATIO",
+    "question": "모형 자동차를 만드는데 A팀은 바퀴 4개당 몸체 1개, B팀은 바퀴 10개당 몸체 3개 비율로 부품을 준비한다. 어느 팀의 비율이 원래 자동차(바퀴4:몸체1)에 더 가까운가?",
+    "discussionPoint": "기준이 되는 비와 다른 비를 비교하는 절차",
+    "expectedClaims": ["바퀴 개수만 비교(10개가 더 많으므로 B가 가깝다)", "몸체 1개당 바퀴 수로 비교(4/1=4 vs 10/3≈3.33)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "바퀴 수가 많으면 항상 비율이 비슷한 걸까? 몸체 수도 함께 봐야 하지 않을까?" },
+      { "order": 2, "text": "B팀의 비를 몸체 1개 기준으로 바꾸면 바퀴는 몇 개가 될까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-17",
+    "category": "RATE",
+    "question": "축구선수 갑은 20번 슛 중 12골, 을은 25번 슛 중 14골을 넣었다. 누가 더 골을 잘 넣는다고 할 수 있을까?",
+    "discussionPoint": "시도 횟수가 다를 때 성공률 비교",
+    "expectedClaims": ["골 개수만 비교(14골이 더 많으므로 을이 잘한다)", "슛 대비 성공률로 비교(12/20=0.6 vs 14/25=0.56)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "골 개수가 많으면 항상 잘하는 걸까? 시도 횟수가 다르면 어떨까?" },
+      { "order": 2, "text": "두 선수가 똑같이 100번씩 슛을 던진다면 각각 몇 골을 넣을까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-18",
+    "category": "RATE",
+    "question": "농구선수 갑은 자유투 15번 중 9번, 을은 자유투 18번 중 11번을 성공시켰다. 누구의 자유투 성공률이 더 높은가?",
+    "discussionPoint": "분수 비교를 통한 성공률 판단",
+    "expectedClaims": ["성공 횟수만 비교(11번이 더 많으므로 을이 높다)", "시도 대비 성공률로 비교(9/15=0.6 vs 11/18≈0.611)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "성공 횟수가 많으면 항상 성공률도 높을까? 시도 횟수가 다르면?" },
+      { "order": 2, "text": "두 선수가 똑같이 60번씩 시도한다면 각각 몇 번 성공할까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-19",
+    "category": "RATE",
+    "question": "기계 A는 부품 200개 중 4개가 불량이고, 기계 B는 부품 350개 중 6개가 불량이다. 어느 기계의 품질이 더 좋은가?",
+    "discussionPoint": "불량률(비율)을 통한 품질 비교",
+    "expectedClaims": ["불량 개수만 비교(6개가 더 많으므로 A가 좋다)", "생산량 대비 불량률로 비교(4/200=0.02 vs 6/350≈0.017)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "불량 개수가 적으면 항상 품질이 좋은 걸까? 생산량이 다르면 어떨까?" },
+      { "order": 2, "text": "두 기계가 똑같이 1,000개씩 만든다면 불량품은 각각 몇 개가 될까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-20",
+    "category": "RATE",
+    "question": "배드민턴 대회에서 갑 모둠은 9경기 중 6승, 을 모둠은 11경기 중 7승을 거두었다. 어느 모둠의 승률이 더 높은가?",
+    "discussionPoint": "경기 수가 다를 때 승률 비교",
+    "expectedClaims": ["승리 수만 비교(7승이 더 많으므로 을 모둠이 높다)", "경기 대비 승률로 비교(6/9≈0.667 vs 7/11≈0.636)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "이긴 경기 수가 많으면 항상 승률도 높을까? 전체 경기 수가 다르면?" },
+      { "order": 2, "text": "두 모둠이 똑같이 99경기를 치른다면 각각 몇 승을 거둘까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-21",
+    "category": "SCALE",
+    "question": "지도 A는 실제 거리 2km를 4cm로, 지도 B는 실제 거리 3km를 5cm로 나타낸다. 어느 지도가 더 자세한(축척이 큰) 지도인가?",
+    "discussionPoint": "축척(지도상 거리 : 실제 거리)의 비교 기준",
+    "expectedClaims": ["지도상 길이만 비교(5cm가 더 기므로 B가 자세하다)", "실제 거리 대비 지도상 길이 비율로 비교(4/2=2cm/km vs 5/3≈1.67cm/km)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "지도상 길이가 길면 항상 더 자세한 걸까? 나타내는 실제 거리가 다르면?" },
+      { "order": 2, "text": "두 지도에서 실제 거리 6km는 각각 몇 cm로 나타날까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-22",
+    "category": "SCALE",
+    "question": "설계도 C는 실제 길이 150cm인 책상을 10cm로, 설계도 D는 실제 길이 200cm인 책상을 15cm로 그렸다. 어느 설계도가 실제 크기를 덜 축소한 것인가?",
+    "discussionPoint": "축소 비율 비교와 절대 길이 비교의 구분",
+    "expectedClaims": ["그림 길이만 비교(15cm가 더 기므로 D가 덜 축소했다)", "실제 대비 그림 길이 비율로 비교(10/150≈0.067 vs 15/200=0.075)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "그림이 크면 항상 덜 축소한 걸까? 실제 길이가 다르면 어떨까?" },
+      { "order": 2, "text": "두 설계도에서 실제 길이 300cm인 물건은 각각 몇 cm로 그려질까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-23",
+    "category": "SCALE",
+    "question": "사진을 확대할 때 E는 원본 가로 5cm를 15cm로, F는 원본 가로 8cm를 20cm로 확대했다. 어느 사진이 더 많이 확대된 것인가?",
+    "discussionPoint": "확대 배율(비율)의 비교",
+    "expectedClaims": ["늘어난 길이(차이)만 비교(F가 12cm 늘어 더 많이 확대되었다)", "원본 대비 확대 배율로 비교(15/5=3배 vs 20/8=2.5배)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "늘어난 길이가 크면 항상 많이 확대된 걸까? 원본 크기가 다르면?" },
+      { "order": 2, "text": "E와 F를 원본의 4배로 확대하면 각각 몇 cm가 될까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-24",
+    "category": "SCALE",
+    "question": "모형 자동차 G는 실제 자동차 400cm를 20cm로, H는 실제 자동차 450cm를 25cm로 만들었다. 어느 모형이 실제 크기를 더 크게(축척이 더 크게) 만든 것인가?",
+    "discussionPoint": "축척 비교를 통한 정밀도 판단",
+    "expectedClaims": ["모형 길이만 비교(25cm가 더 기므로 H가 더 크게 만들었다)", "실제 대비 모형 길이 비율로 비교(20/400=0.05 vs 25/450≈0.056)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "모형이 크면 항상 비율도 큰 걸까? 실제 크기가 다르면 어떨까?" },
+      { "order": 2, "text": "두 모형을 실제 크기 900cm 기준으로 다시 만들면 각각 몇 cm가 될까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-25",
+    "category": "DENSITY",
+    "question": "상자 A에는 사탕 40개가 부피 2000㎤ 상자에, 상자 B에는 사탕 55개가 부피 2500㎤ 상자에 들어 있다. 어느 상자가 더 빽빽하게(밀도 높게) 담겨 있는가?",
+    "discussionPoint": "개수와 부피를 함께 고려하는 밀도 비교",
+    "expectedClaims": ["사탕 개수만 비교(55개가 더 많으므로 B가 빽빽하다)", "부피당 개수로 비교(40/2000=0.02개/㎤ vs 55/2500=0.022개/㎤)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "사탕이 많으면 항상 빽빽한 걸까? 상자 부피가 다르면 어떨까?" },
+      { "order": 2, "text": "두 상자가 똑같이 5000㎤라면 사탕은 각각 몇 개가 들어갈까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-26",
+    "category": "DENSITY",
+    "question": "텃밭 A에는 나무 12그루가 400㎡에, 텃밭 B에는 나무 18그루가 720㎡에 심어져 있다. 어느 텃밭이 나무를 더 빽빽하게 심었는가?",
+    "discussionPoint": "면적당 개수(밀도) 비교",
+    "expectedClaims": ["나무 수만 비교(18그루가 더 많으므로 B가 빽빽하다)", "면적당 나무 수로 비교(12/400=0.03그루/㎡ vs 18/720=0.025그루/㎡)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "나무 수가 많으면 항상 빽빽한 걸까? 면적이 다르면 어떨까?" },
+      { "order": 2, "text": "두 텃밭이 똑같이 1,200㎡라면 나무는 각각 몇 그루가 될까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-27",
+    "category": "DENSITY",
+    "question": "마을 A는 인구 6,000명이 넓이 3㎢에, 마을 B는 인구 8,400명이 넓이 4.5㎢에 살고 있다. 어느 마을이 더 붐비는가(인구밀도가 높은가)?",
+    "discussionPoint": "인구밀도 개념의 도입",
+    "expectedClaims": ["인구수만 비교(8,400명이 더 많으므로 B가 붐빈다)", "넓이당 인구수로 비교(6000/3=2000명/㎢ vs 8400/4.5≈1867명/㎢)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "인구가 많으면 항상 붐비는 걸까? 넓이가 다르면 어떨까?" },
+      { "order": 2, "text": "두 마을이 똑같이 9㎢라면 인구는 각각 몇 명이 될까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-28",
+    "category": "PERCENT",
+    "question": "옷가게에서 원래 20,000원인 티셔츠를 4,000원 할인하고, 원래 35,000원인 바지를 6,000원 할인한다. 어느 상품이 더 많이 할인된 것인가?",
+    "discussionPoint": "할인 금액과 할인율(백분율)의 차이",
+    "expectedClaims": ["할인 금액만 비교(6,000원이 더 크므로 바지가 많이 할인되었다)", "원래 가격 대비 할인율로 비교(4000/20000=20% vs 6000/35000≈17%)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "할인 금액이 크면 항상 많이 할인된 걸까? 원래 가격이 다르면?" },
+      { "order": 2, "text": "두 상품 모두 원래 가격 100,000원 기준이라면 할인 금액은 각각 얼마가 될까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-29",
+    "category": "PERCENT",
+    "question": "6학년 1반은 학생 25명 중 20명이 안경을 쓰지 않고, 2반은 학생 28명 중 22명이 안경을 쓰지 않는다. 어느 반이 안경을 쓰지 않는 학생 비율이 더 높은가?",
+    "discussionPoint": "인원수가 다른 집단의 백분율 비교",
+    "expectedClaims": ["안경 안 쓴 학생 수만 비교(22명이 더 많으므로 2반이 높다)", "전체 대비 백분율로 비교(20/25=80% vs 22/28≈78.6%)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "인원수가 많으면 항상 비율도 높을까? 전체 학생 수가 다르면?" },
+      { "order": 2, "text": "두 반을 각각 100명으로 늘린다면 안경을 안 쓴 학생은 몇 명이 될까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-30",
+    "category": "PERCENT",
+    "question": "예금 상품 A는 원금 500,000원에 이자 15,000원이 붙고, 상품 B는 원금 800,000원에 이자 20,000원이 붙는다. 어느 상품의 이자율(백분율)이 더 높은가?",
+    "discussionPoint": "이자율(백분율) 비교를 통한 금융 개념 도입",
+    "expectedClaims": ["이자 금액만 비교(20,000원이 더 크므로 B가 유리하다)", "원금 대비 이자율로 비교(15000/500000=3% vs 20000/800000=2.5%)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "이자 금액이 크면 항상 이자율도 높을까? 원금이 다르면 어떨까?" },
+      { "order": 2, "text": "두 상품 모두 원금 1,000,000원이라면 이자는 각각 얼마가 될까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  }
+]`);
+
+/* ================= 상수 ================= */
+var CATEGORY_ORDER = ["MIX","PRICE","SPEED","RATIO","RATE","SCALE","DENSITY","PERCENT","STU","TCH"];
+var CATEGORY_LABELS = {
+  MIX:"농도", PRICE:"가격", SPEED:"속력", RATIO:"비의 기준", RATE:"성공률",
+  SCALE:"확대·축척", DENSITY:"밀도", PERCENT:"백분율", STU:"우리 반 제작", TCH:"교사 제작"
+};
+var AGREE_TAGS = [
+  { code:"agree_calc", emoji:"🔢", label:"식" },
+  { code:"agree_pic", emoji:"🖼", label:"그림" },
+  { code:"agree_criteria", emoji:"⚖", label:"기준" },
+  { code:"agree_new", emoji:"💡", label:"새 방법" }
+];
+var REBUT_TAGS = [
+  { code:"rebut_counter", emoji:"❗", label:"반례" },
+  { code:"rebut_ask", emoji:"❓", label:"근거 요구" },
+  { code:"rebut_check", emoji:"⚠", label:"계산 확인" },
+  { code:"rebut_cond", emoji:"🔀", label:"조건 검토" }
+];
+var ALL_TAGS = AGREE_TAGS.concat(REBUT_TAGS);
+var DEFAULT_PROBES = [
+  { order:1, text:"그렇게 생각한 이유를 한 가지 더 들 수 있을까?" },
+  { order:2, text:"숫자를 바꾸어도(다른 경우에도) 같은 주장이 유지될까?" }
+];
+var STAGE_LABELS = { T:"생각 세우기", O1:"풀이 열기", R:"근거 다투기", O2:"생각 모으기", N:"문제 만들기" };
+var STAGE_ORDER = ["T","O1","R","O2","N"];
+
+/* ================= 메모리 상태 (새로고침 시 초기화 — localStorage 사용 안 함) ================= */
+var state = {
+  view: "start",          // start | list | cycle
+  stage: null,
+  currentQId: null,
+  bank: BANK_SEED.slice(),
+  cycles: {},              // qid -> {submissions:[],tags:[],consensus:null,visited:{},exploreCount:0,groupView:false,probes:null,probesSource:null,probesShown:false,pendingRebuttal:null,pendingError:''}
+  dashboardOpen: false,
+  classSize: null,
+  roster: [],               // [{no,nickname}]
+  backend: { url:"", enabled:false },
+  filterCategory: "ALL",
+  currentTagger: {},        // qid -> {no,nickname}
+  modal: null,              // null | 'create-question' | 'settings'
+  stuSeq: 0,
+  tchSeq: 0,
+  justAddedId: null
+};
+
+function esc(s){
+  return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c];
+  });
+}
+function nl2br(s){ return esc(s).replace(/\n/g,"<br>"); }
+
+function getCycle(qid){
+  if(!state.cycles[qid]){
+    state.cycles[qid] = {
+      submissions: [], tags: [], consensus: null,
+      visited: { T:true }, exploreCount: 0, groupView: false,
+      probes: null, probesSource: null, probesShown: false, probesLoading:false,
+      pendingRebuttal: null, pendingError: ""
+    };
+  }
+  return state.cycles[qid];
+}
+function findQuestion(qid){
+  for(var i=0;i<state.bank.length;i++){ if(state.bank[i].id===qid) return state.bank[i]; }
+  return null;
+}
+function groupLabel(q, key){
+  if(key==="A") return (q.expectedClaims && q.expectedClaims[0]) || "주장 A";
+  if(key==="B") return (q.expectedClaims && q.expectedClaims[1]) || "주장 B";
+  return "기타 · 잘 모르겠음";
+}
+
+/* ================= 렌더링 ================= */
+function render(){
+  var app = document.getElementById("app");
+  var html = "";
+  if(state.view === "start"){
+    html = renderStart();
+  } else {
+    html = renderHeader();
+    if(state.view === "cycle") html += renderStepper();
+    html += "<main>" + (state.view === "list" ? renderList() : renderCycle()) + "</main>";
+    html += renderFooter();
+  }
+  var overlays = "";
+  if(state.modal === "create-question") overlays += renderQuestionModal();
+  if(state.modal === "settings") overlays += renderSettingsModal();
+  if(state.dashboardOpen) overlays += renderDashboard();
+  app.innerHTML = html + overlays;
+}
+
+function renderStart(){
+  return (
+    '<div class="start-wrap"><div class="start-card">' +
+      '<h1>모두의 풀이가 칠판이 되는 교실</h1>' +
+      '<div class="subtitle">수학 토론 소프트웨어 「수담(數談)」 개발과 적용</div>' +
+      '<div class="grade-tag">대상 학년: 초등학교 6학년 · 수학 &#39;비와 비율&#39;</div>' +
+      '<div class="offline-notice">' +
+        '<strong>🔌 오프라인 안내</strong><br>' +
+        '이 프로그램은 인터넷 연결 없이 동작하도록 설계되었습니다. 네트워크를 차단한 상태로 시작해도 T→O→R→O→N 전 순환과 교사 대시보드가 모두 정상적으로 동작합니다.<br>' +
+        '학생 식별은 <strong>출석번호 + 별명</strong>만 사용하며, 실명·사진·연락처는 어디에도 저장하지 않습니다.' +
+      '</div>' +
+      '<div class="start-actions"><button class="btn btn-primary" data-action="start-app">시작하기</button></div>' +
+    '</div></div>'
+  );
+}
+
+function renderHeader(){
+  return (
+    '<header class="app-header">' +
+      '<span class="brand" data-action="go-start">수담(數談)</span>' +
+      '<span class="offline-badge">오프라인 지원</span>' +
+      '<span class="spacer"></span>' +
+      (state.view==="cycle" ? '<button class="header-btn" data-action="go-list">☰ 발문 목록으로</button>' : '') +
+      '<button class="header-btn" data-action="open-settings">⚙ 설정</button>' +
+      '<button class="header-btn primary" data-action="toggle-dashboard">' + (state.dashboardOpen?'대시보드 닫기':'📊 교사 대시보드') + '</button>' +
+    '</header>'
+  );
+}
+
+function renderFooter(){
+  return '<footer class="app-footer">이 카드에 정답은 없음. 판단은 우리 반의 토론이 내림. · 상태는 메모리에만 저장되며 새로고침 시 초기화됩니다(데모 사양).</footer>';
+}
+
+function renderStepper(){
+  var q = findQuestion(state.currentQId);
+  var cyc = q ? getCycle(q.id) : null;
+  var buttons = STAGE_ORDER.map(function(s){
+    var visited = cyc && cyc.visited[s];
+    var cls = "step" + (state.stage===s ? " active" : "") + (visited && state.stage!==s ? " visited" : "");
+    return '<button class="'+cls+'" data-action="go-stage" data-stage="'+s+'" '+(visited?'':'disabled')+'>'+s.replace(/[0-9]/,'')+' · '+STAGE_LABELS[s]+'</button>';
+  }).join("");
+  return '<div class="stepper">'+buttons+'<span class="qtitle">'+(q?esc(q.question):"")+'</span></div>';
+}
+
+/* ---------- 발문 목록 ---------- */
+function renderList(){
+  var chips = ["ALL"].concat(CATEGORY_ORDER).map(function(c){
+    var label = c==="ALL" ? "전체" : CATEGORY_LABELS[c];
+    var active = state.filterCategory===c ? " active" : "";
+    return '<button class="chip'+active+'" data-action="filter-cat" data-cat="'+c+'">'+esc(label)+'</button>';
+  }).join("");
+
+  var items = state.bank.filter(function(q){
+    return state.filterCategory==="ALL" || q.category===state.filterCategory;
+  });
+
+  var cards = items.map(function(q){
+    var justAdded = state.justAddedId===q.id ? " just-added" : "";
+    var stuBadge = q.category==="STU" ? '<span class="badge-stu">🔁 재투입 · 우리 반 제작</span>' : (q.category==="TCH" ? '<span class="badge-stu" style="background:#eef3f1;color:var(--board-green);">교사 제작</span>' : '');
+    var qtext = q.question.length>70 ? q.question.slice(0,70)+"…" : q.question;
+    return (
+      '<div class="q-card'+justAdded+'" data-action="open-question" data-id="'+esc(q.id)+'">' +
+        '<span class="cat-badge">'+esc(CATEGORY_LABELS[q.category]||q.category)+'</span>' +
+        (stuBadge) +
+        '<div class="q-text">'+esc(qtext)+'</div>' +
+        '<div class="q-id">'+esc(q.id)+'</div>' +
+      '</div>'
+    );
+  }).join("");
+
+  return (
+    '<div class="list-toolbar">' +
+      '<h1 style="color:var(--board-green);margin:0;">발문 목록</h1>' +
+      '<button class="btn btn-secondary" data-action="open-create-question">＋ 발문 직접 만들기(교사)</button>' +
+    '</div>' +
+    '<div class="chips">'+chips+'</div>' +
+    '<div class="q-grid">'+(cards || '<p>해당 범주의 발문이 없습니다.</p>')+'</div>'
+  );
+}
+
+/* ---------- 사이클(단계별) 화면 ---------- */
+function renderCycle(){
+  var q = findQuestion(state.currentQId);
+  if(!q) return '<p>발문을 찾을 수 없습니다.</p>';
+  var cyc = getCycle(q.id);
+  var body = "";
+  if(state.stage==="T") body = renderStageT(q, cyc);
+  else if(state.stage==="O1") body = renderStageO1(q, cyc);
+  else if(state.stage==="R") body = renderStageR(q, cyc);
+  else if(state.stage==="O2") body = renderStageO2(q, cyc);
+  else if(state.stage==="N") body = renderStageN(q, cyc);
+  return (
+    '<div class="q-card" style="cursor:default;margin-bottom:18px;">' +
+      '<span class="cat-badge">'+esc(CATEGORY_LABELS[q.category]||q.category)+'</span>' +
+      '<div class="q-text" style="font-size:1.05rem;font-weight:700;">'+esc(q.question)+'</div>' +
+      (q.discussionPoint ? '<div class="sub-group">토론 포인트: '+esc(q.discussionPoint)+'</div>' : '') +
+    '</div>' +
+    body
+  );
+}
+
+function renderStageT(q, cyc){
+  var count = cyc.submissions.length;
+  var rate = state.classSize ? (count+' / '+state.classSize+'명 제출') : (count+'명 제출');
+  var claimA = (q.expectedClaims && q.expectedClaims[0]) || "주장 A";
+  var claimB = (q.expectedClaims && q.expectedClaims[1]) || "주장 B";
+  var subs = cyc.submissions.map(function(s){
+    return '<div class="sub-card"><div class="sub-head"><span class="sub-nick">'+esc(s.nickname)+'</span><span class="sub-group">'+esc(groupLabel(q,s.group))+'</span></div><div class="sub-text">'+nl2br(s.text)+'</div></div>';
+  }).join("");
+  return (
+    '<h2 class="section-title">T · 생각 세우기</h2>' +
+    '<div class="stat-line">제출 현황: '+rate+'</div>' +
+    '<div class="q-card" style="cursor:default;">' +
+      '<div class="form-row"><label>출석번호</label><input type="number" id="t-no" min="1" placeholder="예: 7"></div>' +
+      '<div class="form-row"><label>별명</label><input type="text" id="t-nick" placeholder="예: 초록토끼"></div>' +
+      '<div class="form-row"><label>나의 풀이</label><textarea id="t-text" rows="4" placeholder="풀이 과정과 답을 자유롭게 적어보세요"></textarea></div>' +
+      '<div class="form-row"><label>내 풀이는 어떤 생각에 더 가까운가요?</label>' +
+        '<div class="radio-line"><input type="radio" name="t-group" id="tg-a" value="A"><label for="tg-a" style="font-weight:400;">'+esc(claimA)+'</label></div>' +
+        '<div class="radio-line"><input type="radio" name="t-group" id="tg-b" value="B"><label for="tg-b" style="font-weight:400;">'+esc(claimB)+'</label></div>' +
+        '<div class="radio-line"><input type="radio" name="t-group" id="tg-etc" value="ETC"><label for="tg-etc" style="font-weight:400;">둘 다 아님 / 잘 모르겠음</label></div>' +
+      '</div>' +
+      '<div class="no-answer-note">이 화면에는 정답이 표시되지 않습니다. 자신의 생각을 자유롭게 세워보세요.</div>' +
+      '<div class="error-text" id="t-error"></div>' +
+      '<div class="modal-actions"><button class="btn btn-primary" data-action="submit-think">제출하기</button></div>' +
+    '</div>' +
+    (subs ? '<h3 style="margin-top:20px;">지금까지 제출된 풀이</h3>'+subs : '') +
+    '<div class="modal-actions"><button class="btn btn-secondary" data-action="proceed" data-to="O1">다음: 풀이 열기(O) →</button></div>'
+  );
+}
+
+function renderStageO1(q, cyc){
+  var groupBtn = '<button class="btn btn-outline" data-action="toggle-group-view">'+(cyc.groupView?'병렬 보기로 전환':'유형별로 묶어보기')+'</button>';
+  var body = "";
+  if(cyc.submissions.length===0){
+    body = '<p>아직 제출된 풀이가 없습니다. T단계에서 풀이를 먼저 제출해보세요.</p>';
+  } else if(!cyc.groupView){
+    body = '<div class="q-grid">'+cyc.submissions.map(function(s){ return renderExplorableCard(s, q); }).join("")+'</div>';
+  } else {
+    body = ["A","B","ETC"].map(function(g){
+      var items = cyc.submissions.filter(function(s){ return s.group===g; });
+      if(items.length===0) return "";
+      return '<h3 style="margin-top:18px;">'+esc(groupLabel(q,g))+' ('+items.length+')</h3><div class="q-grid">'+items.map(function(s){ return renderExplorableCard(s, q); }).join("")+'</div>';
+    }).join("");
+  }
+  return (
+    '<h2 class="section-title">O · 풀이 열기 (익명 병렬 보드)</h2>' +
+    '<div class="stat-line">탐색 로그: 카드를 열어 본 횟수 '+cyc.exploreCount+'회</div>' +
+    '<div class="modal-actions" style="justify-content:flex-start;">'+groupBtn+'</div>' +
+    body +
+    '<div class="modal-actions"><button class="btn btn-secondary" data-action="proceed" data-to="R">다음: 근거 다투기(R) →</button></div>'
+  );
+}
+function renderExplorableCard(s, q){
+  var open = !!s._open;
+  return (
+    '<div class="q-card" style="cursor:pointer;" data-action="toggle-explore" data-sub="'+s.id+'">' +
+      '<span class="cat-badge">'+esc(s.nickname)+'</span>' +
+      (open ? '<div class="sub-text">'+nl2br(s.text)+'</div><div class="sub-group">'+esc(groupLabel(q,s.group))+'</div>' : '<div class="sub-group">클릭해서 풀이 보기</div>') +
+    '</div>'
+  );
+}
+
+function renderStageR(q, cyc){
+  var tagger = state.currentTagger[q.id];
+  var taggerForm = (
+    '<div class="q-card" style="cursor:default;">' +
+      '<div class="form-row"><label>태그를 남기는 사람</label>' +
+        '<div style="display:flex;gap:8px;">' +
+          '<input type="number" id="tagger-no" placeholder="출석번호" style="max-width:120px;" value="'+(tagger?esc(tagger.no):'')+'">' +
+          '<input type="text" id="tagger-nick" placeholder="별명" value="'+(tagger?esc(tagger.nickname):'')+'">' +
+          '<button class="btn btn-secondary" data-action="set-tagger">확인</button>' +
+        '</div>' +
+        '<div class="hint">'+(tagger? ('현재 태그 남기는 사람: '+esc(tagger.nickname)) : '태그를 남기려면 먼저 출석번호와 별명을 확인해야 합니다.')+'</div>' +
+      '</div>' +
+    '</div>'
+  );
+
+  var subs = cyc.submissions.length===0 ? '<p>아직 제출된 풀이가 없습니다.</p>' : cyc.submissions.map(function(s){
+    var myTags = cyc.tags.filter(function(t){ return t.subId===s.id; });
+    var tagBtns = ALL_TAGS.map(function(tg){
+      var isRebut = tg.code.indexOf("rebut_")===0;
+      var cnt = myTags.filter(function(t){ return t.tag===tg.code; }).length;
+      var disabled = !tagger;
+      var action = isRebut ? "tag-rebut-open" : "tag-agree";
+      return '<button class="tag-btn '+(isRebut?'rebut':'agree')+'" data-action="'+action+'" data-sub="'+s.id+'" data-tag="'+tg.code+'" '+(disabled?'disabled':'')+' title="'+esc(tg.label)+'">'+tg.emoji+' '+esc(tg.label)+' <span class="cnt">'+cnt+'</span></button>';
+    }).join("");
+
+    var rebutForm = "";
+    if(cyc.pendingRebuttal && cyc.pendingRebuttal.subId===s.id){
+      var pr = cyc.pendingRebuttal;
+      var tagInfo = REBUT_TAGS.filter(function(t){return t.code===pr.tag;})[0];
+      rebutForm = (
+        '<div class="rebut-form">' +
+          '<div style="font-weight:700;margin-bottom:6px;">'+tagInfo.emoji+' '+esc(tagInfo.label)+' — 근거 한 줄은 필수입니다</div>' +
+          '<textarea id="rebut-reason-'+s.id+'" placeholder="예: 물의 양이 다르니까 그냥 설탕 양만 비교하면 안 될 것 같아"></textarea>' +
+          (cyc.pendingError ? '<div class="error-text">'+esc(cyc.pendingError)+'</div>' : '') +
+          '<div class="modal-actions">' +
+            '<button class="btn btn-outline" data-action="tag-rebut-cancel">취소</button>' +
+            '<button class="btn btn-primary" data-action="tag-rebut-submit" data-sub="'+s.id+'" data-tag="'+pr.tag+'">근거 등록</button>' +
+          '</div>' +
+        '</div>'
+      );
+    }
+
+    var reasons = myTags.filter(function(t){ return t.reason; }).map(function(t){
+      var ti = REBUT_TAGS.filter(function(x){return x.code===t.tag;})[0];
+      return '<div class="rl-item">'+ti.emoji+' <strong>'+esc(t.nickname)+'</strong>: '+esc(t.reason)+'</div>';
+    }).join("");
+
+    return (
+      '<div class="sub-card">' +
+        '<div class="sub-head"><span class="sub-nick">'+esc(s.nickname)+'</span><span class="sub-group">'+esc(groupLabel(q,s.group))+'</span></div>' +
+        '<div class="sub-text">'+nl2br(s.text)+'</div>' +
+        '<div class="tag-row">'+tagBtns+'</div>' +
+        rebutForm +
+        (reasons ? '<div class="reason-log">'+reasons+'</div>' : '') +
+      '</div>'
+    );
+  }).join("");
+
+  var probes = renderProbeSection(q, cyc);
+
+  return (
+    '<h2 class="section-title">R · 근거 다투기</h2>' +
+    taggerForm +
+    subs +
+    probes +
+    '<div class="modal-actions"><button class="btn btn-secondary" data-action="proceed" data-to="O2">다음: 생각 모으기(O) →</button></div>'
+  );
+}
+
+function renderProbeSection(q, cyc){
+  var head = '<h3 style="margin-top:24px;">AI 토론 발문 촉진자 — 발문·반례 카드</h3>' +
+    '<div class="hint">실시간(교사 백엔드 경유) 시도 후 실패하면 자동으로 오프라인 폴백 카드를 사용합니다. 이 카드는 정답을 판정하지 않습니다.</div>';
+  if(!cyc.probesShown){
+    return head + '<div class="modal-actions" style="justify-content:flex-start;"><button class="btn btn-primary" data-action="request-probe">🃏 발문 카드 받기</button></div>' + (cyc.probesLoading ? '<p>카드를 불러오는 중…</p>' : '');
+  }
+  var srcLabel = cyc.probesSource==="realtime" ? "실시간 카드 수신" : "오프라인 폴백 카드 사용 중";
+  var cards = (cyc.probes||[]).map(function(p){
+    var flipped = cyc.flipped && cyc.flipped[p.order];
+    return (
+      '<div class="probe-card'+(flipped?' flipped':'')+'" data-action="flip-card" data-order="'+p.order+'">' +
+        '<div class="probe-card-inner">' +
+          '<div class="probe-face probe-front"><div class="big">❓</div><div>발문 카드 '+p.order+'</div></div>' +
+          '<div class="probe-face probe-back"><div>'+esc(p.text)+'</div><div class="caption">이 카드에 정답은 없음. 판단은 우리 반의 토론이 내림.</div></div>' +
+        '</div>' +
+      '</div>'
+    );
+  }).join("");
+  return head + '<div class="probe-source-tag">'+esc(srcLabel)+'</div><div class="probe-row">'+cards+'</div>';
+}
+
+function renderStageO2(q, cyc){
+  var options = cyc.submissions.map(function(s){
+    var checked = cyc.consensus && cyc.consensus.chosenSubId===s.id ? "checked" : "";
+    return (
+      '<label class="consensus-option">' +
+        '<input type="radio" name="consensus-choice" value="'+s.id+'" '+checked+'>' +
+        '<span><strong>'+esc(s.nickname)+'</strong> ('+esc(groupLabel(q,s.group))+') — '+nl2br(s.text)+'</span>' +
+      '</label>'
+    );
+  }).join("");
+  var savedBox = cyc.consensus ? (
+    '<div class="q-card" style="cursor:default;border-color:var(--board-green);">' +
+      '<strong>저장된 합의</strong>' +
+      '<div class="sub-group">선택된 풀이: '+esc((cyc.submissions.filter(function(s){return s.id===cyc.consensus.chosenSubId;})[0]||{}).nickname||'-')+'</div>' +
+      '<div class="sub-text">결론: '+nl2br(cyc.consensus.conclusion)+'</div>' +
+    '</div>'
+  ) : "";
+  return (
+    '<h2 class="section-title">O · 생각 모으기 (합의)</h2>' +
+    (cyc.submissions.length===0 ? '<p>합의할 풀이가 없습니다. T단계에서 풀이를 먼저 제출해보세요.</p>' :
+      '<div class="q-card" style="cursor:default;">' +
+        '<div class="form-row"><label>합의 주장 선택</label>'+options+'</div>' +
+        '<div class="form-row"><label>결론 한 줄</label><textarea id="consensus-text" rows="2" placeholder="우리 반의 결론을 한 줄로 정리해보세요"></textarea></div>' +
+        '<div class="no-answer-note">판단은 소프트웨어가 아니라 우리 반이 내립니다.</div>' +
+        '<div class="error-text" id="o2-error"></div>' +
+        '<div class="modal-actions"><button class="btn btn-primary" data-action="submit-consensus">합의 저장</button></div>' +
+      '</div>'
+    ) +
+    savedBox +
+    '<div class="modal-actions"><button class="btn btn-secondary" data-action="proceed" data-to="N">다음: 문제 만들기(N) →</button></div>'
+  );
+}
+
+function renderStageN(q, cyc){
+  return (
+    '<h2 class="section-title">N · 새 문제 만들기</h2>' +
+    '<div class="q-card" style="cursor:default;">' +
+      '<div class="form-row"><label>새 발문(필수)</label><textarea id="n-question" rows="3" placeholder="우리가 만든 새로운 비교 문제를 적어보세요"></textarea></div>' +
+      '<div class="form-row"><label>토론 포인트(선택)</label><input type="text" id="n-point" placeholder="이 문제로 다투고 싶은 지점"></div>' +
+      '<div class="form-row"><label>예상 주장 A(선택)</label><input type="text" id="n-claim-a"></div>' +
+      '<div class="form-row"><label>예상 주장 B(선택)</label><input type="text" id="n-claim-b"></div>' +
+      '<div class="form-row"><label>폴백 발문 카드 1(선택)</label><input type="text" id="n-probe-1"></div>' +
+      '<div class="form-row"><label>폴백 발문 카드 2(선택)</label><input type="text" id="n-probe-2"></div>' +
+      '<div class="form-row"><label>만든 사람(선택, 출석번호/별명)</label><div style="display:flex;gap:8px;"><input type="number" id="n-no" placeholder="출석번호" style="max-width:120px;"><input type="text" id="n-nick" placeholder="별명"></div></div>' +
+      '<div class="error-text" id="n-error"></div>' +
+      '<div class="modal-actions"><button class="btn btn-primary" data-action="submit-new-question">발문 목록에 재투입하기</button></div>' +
+    '</div>'
+  );
+}
+
+/* ---------- 모달: 발문 직접 만들기(교사) ---------- */
+function renderQuestionModal(){
+  return (
+    '<div class="modal-backdrop" data-action="close-modal-backdrop">' +
+      '<div class="modal-box">' +
+        '<h2>＋ 발문 직접 만들기 (교사)</h2>' +
+        '<div class="form-row"><label>발문(필수)</label><textarea id="cq-question" rows="3" placeholder="즉석에서 던질 토론 문제를 입력하세요"></textarea></div>' +
+        '<div class="form-row"><label>토론 포인트(선택)</label><input type="text" id="cq-point"></div>' +
+        '<div class="form-row"><label>예상 주장 A(선택)</label><input type="text" id="cq-claim-a"></div>' +
+        '<div class="form-row"><label>예상 주장 B(선택)</label><input type="text" id="cq-claim-b"></div>' +
+        '<div class="form-row"><label>폴백 발문 카드 1(선택)</label><input type="text" id="cq-probe-1"></div>' +
+        '<div class="form-row"><label>폴백 발문 카드 2(선택)</label><input type="text" id="cq-probe-2"></div>' +
+        '<div class="error-text" id="cq-error"></div>' +
+        '<div class="modal-actions">' +
+          '<button class="btn btn-outline" data-action="close-modal">취소</button>' +
+          '<button class="btn btn-primary" data-action="submit-create-question">등록</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>'
+  );
+}
+
+/* ---------- 모달: 설정 ---------- */
+function renderSettingsModal(){
+  var rosterText = state.roster.map(function(r){ return r.no+","+r.nickname; }).join("\n");
+  return (
+    '<div class="modal-backdrop" data-action="close-modal-backdrop">' +
+      '<div class="modal-box">' +
+        '<h2>⚙ 설정</h2>' +
+        '<div class="form-row"><label>우리 반 인원수(선택)</label><input type="number" id="set-classsize" value="'+(state.classSize||'')+'" placeholder="예: 24"></div>' +
+        '<div class="form-row"><label>우리 반 명단(선택 — 출석번호,별명 한 줄씩)</label><textarea id="set-roster" rows="5" placeholder="1,초록토끼&#10;2,파란고래">'+esc(rosterText)+'</textarea>' +
+          '<div class="hint">실명·연락처는 입력하지 않습니다. 미참여 학생 강조 표시에 사용됩니다.</div></div>' +
+        '<div class="form-row"><label>AI 발문 서버 주소(선택)</label><input type="url" id="set-backend-url" value="'+esc(state.backend.url)+'" placeholder="https://teacher-backend.example.com/probe"></div>' +
+        '<div class="form-row"><label><input type="checkbox" id="set-backend-enabled" '+(state.backend.enabled?'checked':'')+'> 실시간 서버 연결 시도 (실패 시 자동으로 오프라인 폴백 카드 사용)</label></div>' +
+        '<div class="modal-actions">' +
+          '<button class="btn btn-outline" data-action="close-modal">취소</button>' +
+          '<button class="btn btn-primary" data-action="save-settings">저장</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>'
+  );
+}
+
+/* ---------- 교사 대시보드 ---------- */
+function renderDashboard(){
+  var q = findQuestion(state.currentQId);
+  var cyc = q ? getCycle(q.id) : null;
+
+  var heatmapHtml = '<p>발문을 선택하면 히트맵이 표시됩니다.</p>';
+  if(q && cyc){
+    var groups = ["A","B","ETC"];
+    var counts = {};
+    var max = 1;
+    groups.forEach(function(g){
+      counts[g] = {};
+      ALL_TAGS.forEach(function(tg){
+        var c = cyc.tags.filter(function(t){
+          var sub = cyc.submissions.filter(function(s){return s.id===t.subId;})[0];
+          return sub && sub.group===g && t.tag===tg.code;
+        }).length;
+        counts[g][tg.code] = c;
+        if(c>max) max = c;
+      });
+    });
+    var head = '<tr><th></th>'+ALL_TAGS.map(function(tg){ return '<th title="'+esc(tg.label)+'">'+tg.emoji+'</th>'; }).join("")+'</tr>';
+    var rows = groups.map(function(g){
+      var cells = ALL_TAGS.map(function(tg){
+        var c = counts[g][tg.code];
+        var isRebut = tg.code.indexOf("rebut_")===0;
+        var alpha = c===0 ? 0 : 0.15 + 0.7*(c/max);
+        var color = isRebut ? "176,80,60" : "47,93,82";
+        return '<td style="background:rgba('+color+','+alpha+');font-weight:'+(c>0?'800':'400')+';">'+c+'</td>';
+      }).join("");
+      return '<tr><td class="row-label">'+esc(groupLabel(q,g))+'</td>'+cells+'</tr>';
+    }).join("");
+    heatmapHtml = '<table class="heatmap">'+head+rows+'</table>';
+  }
+
+  var allTags = [];
+  Object.keys(state.cycles).forEach(function(qid){
+    allTags = allTags.concat(state.cycles[qid].tags);
+  });
+  var allSubs = [];
+  Object.keys(state.cycles).forEach(function(qid){
+    allSubs = allSubs.concat(state.cycles[qid].submissions);
+  });
+  var studentKeys = {};
+  allTags.forEach(function(t){ studentKeys[t.studentNo+"|"+t.nickname] = true; });
+  allSubs.forEach(function(s){ studentKeys[s.no+"|"+s.nickname] = true; });
+
+  var profiles = Object.keys(studentKeys).map(function(key){
+    var parts = key.split("|"); var no = parts[0], nick = parts[1];
+    var myTags = allTags.filter(function(t){ return String(t.studentNo)===no && t.nickname===nick; });
+    var agreeCnt = myTags.filter(function(t){ return t.tag.indexOf("agree_")===0; }).length;
+    var rebutCnt = myTags.filter(function(t){ return t.tag.indexOf("rebut_")===0; }).length;
+    var diversity = {};
+    myTags.forEach(function(t){ diversity[t.tag]=true; });
+    var diversityCount = Object.keys(diversity).length;
+    var total = agreeCnt+rebutCnt;
+    var agreePct = total? Math.round(agreeCnt/total*100) : 0;
+    return (
+      '<div class="profile-row">' +
+        '<strong>'+esc(nick)+'</strong> <span class="hint">(출석번호 '+esc(no)+')</span>' +
+        '<div class="profile-bar"><div class="agree-part" style="width:'+agreePct+'%;"></div><div class="rebut-part" style="width:'+(100-agreePct)+'%;"></div></div>' +
+        '<div class="stat-line">동의 '+agreeCnt+' · 반박 '+rebutCnt+' · 태그 다양성 '+diversityCount+'/8</div>' +
+      '</div>'
+    );
+  }).join("") || '<p class="hint">아직 참여 기록이 없습니다.</p>';
+
+  var missingHtml = "";
+  if(state.roster.length){
+    var missing = state.roster.filter(function(r){ return !studentKeys[String(r.no)+"|"+r.nickname]; });
+    missingHtml = missing.length ?
+      missing.map(function(r){ return '<div class="miss-item">⚠ '+esc(r.nickname)+' (출석번호 '+esc(r.no)+') — 아직 제출·태그 참여 기록 없음</div>'; }).join("") :
+      '<p class="hint">등록된 명단 학생이 모두 참여했습니다.</p>';
+  } else {
+    missingHtml = '<p class="hint">설정에서 우리 반 명단을 등록하면 미참여 학생이 강조 표시됩니다.</p>';
+  }
+
+  return (
+    '<div class="backdrop" data-action="close-dashboard"></div>' +
+    '<div class="dashboard-panel">' +
+      '<h2>📊 교사 대시보드</h2>' +
+      '<button class="btn btn-outline" data-action="close-dashboard" style="margin-bottom:14px;">닫기</button>' +
+      '<h3 class="section-title">풀이 유형 × 태그 히트맵'+(q?(' — '+esc(q.id)):'')+'</h3>' +
+      heatmapHtml +
+      '<h3 class="section-title">학생별 프로필 (전체 발문 누적)</h3>' +
+      profiles +
+      '<h3 class="section-title">미참여 학생 강조</h3>' +
+      missingHtml +
+    '</div>'
+  );
+}
+
+/* ================= 액션 처리 ================= */
+function handleAction(action, target){
+  if(action==="start-app"){ state.view="list"; render(); return; }
+  if(action==="go-start"){ state.view="start"; render(); return; }
+  if(action==="go-list"){ state.view="list"; state.justAddedId=null; render(); return; }
+  if(action==="filter-cat"){ state.filterCategory = target.dataset.cat; render(); return; }
+  if(action==="open-question"){
+    var qid = target.dataset.id;
+    var cyc = getCycle(qid);
+    state.currentQId = qid; state.view="cycle"; state.stage = state.stage && cyc.visited[state.stage] ? state.stage : "T";
+    state.stage = "T"; state.justAddedId = null;
+    render(); return;
+  }
+  if(action==="go-stage"){
+    var cyc2 = getCycle(state.currentQId);
+    var st = target.dataset.stage;
+    if(cyc2.visited[st]){ state.stage = st; render(); }
+    return;
+  }
+  if(action==="proceed"){
+    var cyc3 = getCycle(state.currentQId);
+    var to = target.dataset.to;
+    cyc3.visited[to] = true;
+    state.stage = to;
+    render(); return;
+  }
+  if(action==="toggle-dashboard"){ state.dashboardOpen = !state.dashboardOpen; render(); return; }
+  if(action==="close-dashboard"){ state.dashboardOpen = false; render(); return; }
+  if(action==="open-settings"){ state.modal = "settings"; render(); return; }
+  if(action==="open-create-question"){ state.modal = "create-question"; render(); return; }
+  if(action==="close-modal" || action==="close-modal-backdrop"){ state.modal = null; render(); return; }
+
+  if(action==="submit-create-question"){
+    var qtext = document.getElementById("cq-question").value.trim();
+    if(!qtext){ document.getElementById("cq-error").textContent = "발문 내용을 입력해야 등록할 수 있습니다."; return; }
+    state.tchSeq++;
+    var id = "TCH-"+String(state.tchSeq).padStart(2,"0");
+    var newQ = {
+      id: id, category: "TCH", question: qtext,
+      discussionPoint: document.getElementById("cq-point").value.trim(),
+      expectedClaims: [document.getElementById("cq-claim-a").value.trim() || "주장 A", document.getElementById("cq-claim-b").value.trim() || "주장 B"],
+      fallbackProbes: [
+        { order:1, text: document.getElementById("cq-probe-1").value.trim() || DEFAULT_PROBES[0].text },
+        { order:2, text: document.getElementById("cq-probe-2").value.trim() || DEFAULT_PROBES[1].text }
+      ],
+      display: { stage:"R", cardType:"probe", answerProvided:false }
+    };
+    state.bank.unshift(newQ);
+    state.modal = null; state.filterCategory = "TCH"; state.justAddedId = id;
+    render(); return;
+  }
+
+  if(action==="save-settings"){
+    var cs = document.getElementById("set-classsize").value.trim();
+    state.classSize = cs ? parseInt(cs,10) : null;
+    var rosterRaw = document.getElementById("set-roster").value.trim();
+    state.roster = rosterRaw ? rosterRaw.split("\n").map(function(line){
+      var p = line.split(","); return { no:(p[0]||"").trim(), nickname:(p[1]||"").trim() };
+    }).filter(function(r){ return r.no && r.nickname; }) : [];
+    state.backend.url = document.getElementById("set-backend-url").value.trim();
+    state.backend.enabled = document.getElementById("set-backend-enabled").checked;
+    state.modal = null;
+    render(); return;
+  }
+
+  if(action==="submit-think"){
+    var no = document.getElementById("t-no").value.trim();
+    var nick = document.getElementById("t-nick").value.trim();
+    var text = document.getElementById("t-text").value.trim();
+    var groupEl = document.querySelector('input[name="t-group"]:checked');
+    var err = document.getElementById("t-error");
+    if(!no || !nick || !text || !groupEl){ err.textContent = "출석번호·별명·풀이·생각 선택을 모두 입력해야 제출할 수 있습니다."; return; }
+    err.textContent = "";
+    var cyc4 = getCycle(state.currentQId);
+    cyc4.submissions.push({ id:"S"+Date.now()+Math.floor(Math.random()*1000), no:no, nickname:nick, text:text, group:groupEl.value, ts:Date.now() });
+    document.getElementById("t-no").value=""; document.getElementById("t-nick").value=""; document.getElementById("t-text").value="";
+    render(); return;
+  }
+
+  if(action==="toggle-group-view"){
+    var cyc5 = getCycle(state.currentQId); cyc5.groupView = !cyc5.groupView; render(); return;
+  }
+  if(action==="toggle-explore"){
+    var cyc6 = getCycle(state.currentQId);
+    var subId = target.dataset.sub;
+    var sub = cyc6.submissions.filter(function(s){return s.id===subId;})[0];
+    if(sub){ sub._open = !sub._open; cyc6.exploreCount++; }
+    render(); return;
+  }
+
+  if(action==="set-tagger"){
+    var tno = document.getElementById("tagger-no").value.trim();
+    var tnick = document.getElementById("tagger-nick").value.trim();
+    if(!tno || !tnick) return;
+    state.currentTagger[state.currentQId] = { no:tno, nickname:tnick };
+    render(); return;
+  }
+  if(action==="tag-agree"){
+    var tagger2 = state.currentTagger[state.currentQId];
+    if(!tagger2) return;
+    var cyc7 = getCycle(state.currentQId);
+    cyc7.tags.push({ id:"TG"+Date.now()+Math.random(), subId:target.dataset.sub, tag:target.dataset.tag, studentNo:tagger2.no, nickname:tagger2.nickname, reason:null, ts:Date.now() });
+    render(); return;
+  }
+  if(action==="tag-rebut-open"){
+    var tagger3 = state.currentTagger[state.currentQId];
+    if(!tagger3) return;
+    var cyc8 = getCycle(state.currentQId);
+    cyc8.pendingRebuttal = { subId: target.dataset.sub, tag: target.dataset.tag };
+    cyc8.pendingError = "";
+    render(); return;
+  }
+  if(action==="tag-rebut-cancel"){
+    var cyc9 = getCycle(state.currentQId); cyc9.pendingRebuttal = null; cyc9.pendingError=""; render(); return;
+  }
+  if(action==="tag-rebut-submit"){
+    var cyc10 = getCycle(state.currentQId);
+    var subId2 = target.dataset.sub, tagCode = target.dataset.tag;
+    var reasonEl = document.getElementById("rebut-reason-"+subId2);
+    var reason = reasonEl ? reasonEl.value.trim() : "";
+    if(!reason){
+      /* 심장 규칙: 반박 태그는 근거 한 줄 없이는 절대 등록되지 않는다 */
+      cyc10.pendingError = "근거를 입력해야 반박 태그를 남길 수 있습니다. 제출이 차단되었습니다.";
+      render(); return;
+    }
+    var tagger4 = state.currentTagger[state.currentQId];
+    cyc10.tags.push({ id:"TG"+Date.now()+Math.random(), subId:subId2, tag:tagCode, studentNo:tagger4.no, nickname:tagger4.nickname, reason:reason, ts:Date.now() });
+    cyc10.pendingRebuttal = null; cyc10.pendingError = "";
+    render(); return;
+  }
+
+  if(action==="request-probe"){ requestProbe(state.currentQId); return; }
+  if(action==="flip-card"){
+    var cyc11 = getCycle(state.currentQId);
+    if(!cyc11.flipped) cyc11.flipped = {};
+    var ord = target.dataset.order;
+    cyc11.flipped[ord] = !cyc11.flipped[ord];
+    render(); return;
+  }
+
+  if(action==="submit-consensus"){
+    var chosen = document.querySelector('input[name="consensus-choice"]:checked');
+    var conclusion = document.getElementById("consensus-text").value.trim();
+    var err2 = document.getElementById("o2-error");
+    if(!chosen || !conclusion){ err2.textContent = "합의 주장을 선택하고 결론을 입력해야 저장할 수 있습니다."; return; }
+    var cyc12 = getCycle(state.currentQId);
+    cyc12.consensus = { chosenSubId: chosen.value, conclusion: conclusion, ts: Date.now() };
+    render(); return;
+  }
+
+  if(action==="submit-new-question"){
+    var nq = document.getElementById("n-question").value.trim();
+    var nerr = document.getElementById("n-error");
+    if(!nq){ nerr.textContent = "발문 내용을 입력해야 등록할 수 있습니다."; return; }
+    state.stuSeq++;
+    var nid = "STU-"+String(state.stuSeq).padStart(2,"0");
+    var creatorNo = document.getElementById("n-no").value.trim();
+    var creatorNick = document.getElementById("n-nick").value.trim();
+    var newQ2 = {
+      id: nid, category:"STU", question: nq,
+      discussionPoint: document.getElementById("n-point").value.trim(),
+      expectedClaims: [document.getElementById("n-claim-a").value.trim() || "주장 A", document.getElementById("n-claim-b").value.trim() || "주장 B"],
+      fallbackProbes: [
+        { order:1, text: document.getElementById("n-probe-1").value.trim() || DEFAULT_PROBES[0].text },
+        { order:2, text: document.getElementById("n-probe-2").value.trim() || DEFAULT_PROBES[1].text }
+      ],
+      display: { stage:"R", cardType:"probe", answerProvided:false },
+      creator: (creatorNo||creatorNick) ? { no:creatorNo, nickname:creatorNick } : null
+    };
+    state.bank.unshift(newQ2);
+    state.justAddedId = nid;
+    state.view = "list"; state.filterCategory = "STU";
+    render(); return;
+  }
+}
+
+function requestProbe(qid){
+  var cyc = getCycle(qid);
+  var q = findQuestion(qid);
+  cyc.probesLoading = true; render();
+  var finish = function(source, probes){
+    cyc.probes = probes; cyc.probesSource = source; cyc.probesShown = true; cyc.probesLoading = false;
+    render();
+  };
+  if(state.backend.enabled && state.backend.url){
+    var ctrl = (typeof AbortController!=="undefined") ? new AbortController() : null;
+    var timer = setTimeout(function(){ if(ctrl) ctrl.abort(); }, 1500);
+    fetch(state.backend.url, {
+      method: "POST",
+      headers: { "Content-Type":"application/json" },
+      body: JSON.stringify({ question:q.question, discussionPoint:q.discussionPoint }),
+      signal: ctrl ? ctrl.signal : undefined
+    }).then(function(res){
+      clearTimeout(timer);
+      if(!res.ok) throw new Error("bad status");
+      return res.json();
+    }).then(function(data){
+      if(data && Array.isArray(data.probes) && data.probes.length>=2){
+        finish("realtime", [
+          { order:1, text:String(data.probes[0].text||data.probes[0]) },
+          { order:2, text:String(data.probes[1].text||data.probes[1]) }
+        ]);
+      } else {
+        finish("fallback", q.fallbackProbes.slice(0,2));
+      }
+    }).catch(function(){
+      clearTimeout(timer);
+      finish("fallback", q.fallbackProbes.slice(0,2));
+    });
+  } else {
+    finish("fallback", q.fallbackProbes.slice(0,2));
+  }
+}
+
+/* ================= 초기화 ================= */
+document.addEventListener("click", function(e){
+  var t = e.target.closest("[data-action]");
+  if(!t) return;
+  /* 모달 내부 클릭이 배경 클릭 닫기로 새지 않도록 함 */
+  if(t.dataset.action==="close-modal-backdrop" && e.target.closest(".modal-box")) return;
+  handleAction(t.dataset.action, t);
+});
+
+render();
+})();
+</script>
+</body>
+</html>
