@@ -336,6 +336,58 @@ try {
   check("받은 좋아요 합계 집계", r.stats.likeTotal >= 1);
   check("통계 개수 일치", r.stats.postCount === r.posts.length && r.stats.commentCount === r.comments.length);
 
+  // 13.8 글 수정
+  r = await post("/api/post/update", { auth: S2, postId: P1, text: "남의 글 수정 시도" });
+  check("남의 글 수정 거부", !r.ok);
+  r = await post("/api/post/update", { auth: S1, postId: P1, text: "수정된 내 작품!" });
+  check("자기 글 수정", r.ok && r.post.text === "수정된 내 작품!" && !!r.post.editedAt);
+  r = await post("/api/post/update", { auth: T, postId: P1, text: "교사가 고친 글" });
+  check("교사는 아무 글이나 수정", r.ok && r.post.text === "교사가 고친 글");
+  r = await post("/api/post/create", { auth: S1, boardId: B1, text: "첨부글", files: [{ name: "a.png", data: PNG }, { name: "b.png", data: PNG }] });
+  const PE = r.post.id, FE0 = r.post.files[0].id, FE1 = r.post.files[1].id;
+  r = await post("/api/post/update", { auth: S1, postId: PE, text: "첨부 하나만 남김", keepFileIds: [FE0] });
+  check("수정 시 첨부 일부만 남김", r.ok && r.post.files.length === 1 && r.post.files[0].id === FE0);
+  g = await get("/api/file/" + FE1);
+  check("제거된 첨부는 삭제됨", g.status === 404);
+  g = await get("/api/file/" + FE0);
+  check("남긴 첨부는 유지됨", g.status === 200);
+
+  // 13.9 게시판별 좋아요/댓글 켜고 끄기
+  r = await post("/api/teacher/board/create", { auth: T, title: "조용한 게시판", allowLikes: false, allowComments: false });
+  const B3 = r.board.id;
+  r = await post("/api/board", { auth: S1, boardId: B3 });
+  check("게시판 플래그 전달", r.board.allowLikes === false && r.board.allowComments === false);
+  r = await post("/api/post/create", { auth: S1, boardId: B3, text: "조용한 글" });
+  const PQ = r.post.id;
+  r = await post("/api/like/toggle", { auth: S1, postId: PQ });
+  check("좋아요 끈 게시판은 좋아요 거부", !r.ok);
+  r = await post("/api/comment/create", { auth: S1, postId: PQ, text: "댓글" });
+  check("댓글 끈 게시판은 댓글 거부", !r.ok);
+  r = await post("/api/teacher/board/update", { auth: T, boardId: B3, title: "조용한 게시판", allowLikes: true, allowComments: true });
+  check("게시판 수정으로 다시 켜기", r.ok);
+  r = await post("/api/like/toggle", { auth: S1, postId: PQ });
+  check("다시 켜니 좋아요 됨", r.ok && r.likeCount === 1);
+
+  // 13.10 교사 글엔 좋아요 못 누름 + 교사가 좋아요 수 가감
+  r = await post("/api/post/create", { auth: T, boardId: B1, text: "교사 글이에요" });
+  const TP = r.post.id;
+  r = await post("/api/like/toggle", { auth: S1, postId: TP });
+  check("교사 글엔 좋아요 못 누름", !r.ok);
+  r = await post("/api/like/adjust", { auth: S1, postId: TP, delta: 1 });
+  check("학생은 좋아요 가감 못 함", !r.ok);
+  r = await post("/api/like/adjust", { auth: T, postId: TP, delta: 1 });
+  check("교사 좋아요 +1", r.ok && r.likeCount === 1);
+  r = await post("/api/like/adjust", { auth: T, postId: TP, delta: 1 });
+  check("교사 좋아요 +1 또", r.ok && r.likeCount === 2);
+  r = await post("/api/like/adjust", { auth: T, postId: TP, delta: -1 });
+  check("교사 좋아요 -1", r.ok && r.likeCount === 1);
+  await post("/api/like/adjust", { auth: T, postId: TP, delta: -1 });
+  r = await post("/api/like/adjust", { auth: T, postId: TP, delta: -1 });
+  check("좋아요는 0 밑으로 안 내려감", r.likeCount === 0);
+  r = await post("/api/board", { auth: S1, boardId: B1 });
+  check("교사 글은 canEdit=학생은 false", r.posts.find(p => p.id === TP).canEdit === false);
+  check("교사 글 좋아요수 0 표시", r.posts.find(p => p.id === TP).likeCount === 0);
+
   // 14. 설정 바꾸기 (마지막에 실행 — 이후 인증이 바뀜)
   r = await post("/api/teacher/settings/save", { auth: T, className: "6학년 1반 아이디어", classCode: "7-1", newPw: "abcd" });
   check("설정 저장(내 비번 변경)", r.ok);

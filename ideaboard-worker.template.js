@@ -40,8 +40,8 @@ function defaultState() {
     // 선생님 계정(여러 명 가능). 각자 아이디·비밀번호·이름으로 로그인해 글·쪽지가 구분됨
     teachers: [{ id: 1, loginId: "teacher", pw: "0000", name: "선생님" }],
     students: [],  // {id, number, name, pin, active}
-    boards: [],    // {id, title, desc, createdAt}
-    posts: [],     // {id, boardId, author:{type,id,name}, text, files:[{id,name,mime,isImage}], isNotice, createdAt}
+    boards: [],    // {id, title, desc, allowLikes, allowComments, createdAt}
+    posts: [],     // {id, boardId, author:{type,id,name}, text, files:[{id,name,mime,isImage}], isNotice, likeAdjust, createdAt, editedAt}
     comments: [],  // {id, postId, author:{type,id,name}, text, createdAt}
     likes: [],     // {postId, key}   key = "t<교사id>" | "s<학생id>"
     messages: [],  // {id, from:{type,id,name}, toType:"student"|"teacher", toId, text, createdAt, read}
@@ -56,6 +56,14 @@ function migrate(st) {
   }
   if (st.settings) { delete st.settings.teacherId; delete st.settings.teacherPw; }
   if ((st.seq | 0) < 100) st.seq = 100;
+  // 게시판 기능 플래그 기본값(예전 데이터 보정)
+  for (const b of st.boards || []) {
+    if (b.allowLikes === undefined) b.allowLikes = true;
+    if (b.allowComments === undefined) b.allowComments = true;
+  }
+  for (const p of st.posts || []) {
+    if (p.likeAdjust === undefined) p.likeAdjust = 0;
+  }
   return st;
 }
 
@@ -153,13 +161,18 @@ function unreadOf(st, actor) {
       : (m.toType === "student" && Number(m.toId) === Number(actor.id))));
 }
 
+function postLikeCount(st, p) {
+  const base = st.likes.filter(l => l.postId === p.id).length;
+  return Math.max(0, base + (p.likeAdjust | 0));
+}
 function postView(st, p, actor) {
   const likes = st.likes.filter(l => l.postId === p.id);
   return {
     id: p.id, boardId: p.boardId, author: p.author, text: p.text,
-    files: p.files, isNotice: !!p.isNotice, createdAt: p.createdAt,
-    likeCount: likes.length,
+    files: p.files, isNotice: !!p.isNotice, createdAt: p.createdAt, editedAt: p.editedAt || null,
+    likeCount: Math.max(0, likes.length + (p.likeAdjust | 0)),
     liked: likes.some(l => l.key === likeKey(actor)),
+    canEdit: actor.type === "teacher" || sameAuthor(actor, p.author),
     comments: st.comments.filter(c => c.postId === p.id)
       .map(c => ({ id: c.id, author: c.author, text: c.text, createdAt: c.createdAt })),
   };
@@ -188,6 +201,7 @@ function handleApi(st, path, method, d) {
   if (path === "/api/home") {
     const boards = st.boards.map(b => ({
       id: b.id, title: b.title, desc: b.desc, createdAt: b.createdAt,
+      allowLikes: b.allowLikes !== false, allowComments: b.allowComments !== false,
       postCount: st.posts.filter(p => p.boardId === b.id).length,
     }));
     const res = {
@@ -216,7 +230,7 @@ function handleApi(st, path, method, d) {
       .sort((a, x) => (!!x.isNotice - !!a.isNotice) || (a.createdAt < x.createdAt ? 1 : -1) || (x.id - a.id))
       .map(p => postView(st, p, actor));
     return ok({
-      board: { id: b.id, title: b.title, desc: b.desc },
+      board: { id: b.id, title: b.title, desc: b.desc, allowLikes: b.allowLikes !== false, allowComments: b.allowComments !== false },
       me: { type: actor.type, id: actor.id, name: actor.name },
       posts,
     });
@@ -236,11 +250,34 @@ function handleApi(st, path, method, d) {
       text,
       files: pf.files.map(f => ({ id: f.id, name: f.name, mime: f.mime, isImage: f.isImage })),
       isNotice: isTeacher && !!d.isNotice,
+      likeAdjust: 0,
       createdAt: kst().datetime,
     };
     st.posts.push(post);
     return Object.assign(ok({ post: postView(st, post, actor) }),
       { mutated: true, saveFiles: pf.files });
+  }
+
+  // ══════════ 글 수정 (본인 또는 교사) ══════════
+  if (path === "/api/post/update") {
+    const p = st.posts.find(x => x.id === Number(d.postId));
+    if (!p) return fail("없는 글입니다.", 404);
+    if (!isTeacher && !sameAuthor(actor, p.author)) return fail("자기가 쓴 글만 고칠 수 있어요.", 403);
+    const text = String(d.text || "").trim().slice(0, 3000);
+    // 남길 기존 첨부(keepFileIds)만 유지, 나머지는 삭제. 새 첨부는 추가.
+    const keep = Array.isArray(d.keepFileIds) ? d.keepFileIds.map(String) : p.files.map(f => f.id);
+    const keptFiles = p.files.filter(f => keep.includes(String(f.id)));
+    const removedFileIds = p.files.filter(f => !keep.includes(String(f.id))).map(f => f.id);
+    const pf = parseFiles(d.files);
+    if (pf.error) return fail(pf.error);
+    if (keptFiles.length + pf.files.length > MAX_FILES) return fail("첨부는 " + MAX_FILES + "개까지예요.");
+    if (!text && keptFiles.length === 0 && pf.files.length === 0)
+      return fail("내용을 쓰거나 사진·그림·파일을 붙여 주세요.");
+    p.text = text;
+    p.files = keptFiles.concat(pf.files.map(f => ({ id: f.id, name: f.name, mime: f.mime, isImage: f.isImage })));
+    p.editedAt = kst().datetime;
+    return Object.assign(ok({ post: postView(st, p, actor) }),
+      { mutated: true, saveFiles: pf.files, deleteFiles: removedFileIds });
   }
 
   // ══════════ 글 지우기 (본인 또는 교사) ══════════
@@ -268,6 +305,8 @@ function handleApi(st, path, method, d) {
   if (path === "/api/comment/create") {
     const p = st.posts.find(x => x.id === Number(d.postId));
     if (!p) return fail("없는 글입니다.", 404);
+    const cb = st.boards.find(x => x.id === p.boardId);
+    if (cb && cb.allowComments === false) return fail("이 게시판은 댓글을 쓸 수 없어요.", 403);
     const text = String(d.text || "").trim().slice(0, 500);
     if (!text) return fail("댓글 내용을 써 주세요.");
     const c = {
@@ -290,14 +329,30 @@ function handleApi(st, path, method, d) {
   if (path === "/api/like/toggle") {
     const p = st.posts.find(x => x.id === Number(d.postId));
     if (!p) return fail("없는 글입니다.", 404);
+    const lb = st.boards.find(x => x.id === p.boardId);
+    if (lb && lb.allowLikes === false) return fail("이 게시판은 좋아요를 쓸 수 없어요.", 403);
+    if (p.author.type === "teacher") return fail("선생님이 쓴 글에는 좋아요를 누를 수 없어요.", 403);
     const key = likeKey(actor);
     const has = st.likes.some(l => l.postId === p.id && l.key === key);
     if (has) st.likes = st.likes.filter(l => !(l.postId === p.id && l.key === key));
     else st.likes.push({ postId: p.id, key });
     return Object.assign(ok({
       liked: !has,
-      likeCount: st.likes.filter(l => l.postId === p.id).length,
+      likeCount: postLikeCount(st, p),
     }), { mutated: true });
+  }
+  // 교사 전용: 좋아요 수를 직접 올리거나 내림 (delta = +1 / -1)
+  if (path === "/api/like/adjust") {
+    if (!isTeacher) return fail("선생님만 할 수 있어요.", 403);
+    const p = st.posts.find(x => x.id === Number(d.postId));
+    if (!p) return fail("없는 글입니다.", 404);
+    const lb = st.boards.find(x => x.id === p.boardId);
+    if (lb && lb.allowLikes === false) return fail("이 게시판은 좋아요를 쓸 수 없어요.", 403);
+    const delta = Number(d.delta) > 0 ? 1 : -1;
+    // 내려서 총합이 0 밑으로 가지 않게 (표시 개수는 항상 0 이상)
+    if (delta < 0 && postLikeCount(st, p) <= 0) return ok({ likeCount: 0 });
+    p.likeAdjust = (p.likeAdjust | 0) + delta;
+    return Object.assign(ok({ likeCount: postLikeCount(st, p) }), { mutated: true });
   }
 
   // ══════════ 쪽지 ══════════
@@ -374,7 +429,11 @@ function handleApi(st, path, method, d) {
     if (path === "/api/teacher/board/create") {
       const title = String(d.title || "").trim().slice(0, 60);
       if (!title) return fail("게시판 이름을 써 주세요.");
-      const b = { id: nextId(st), title, desc: String(d.desc || "").trim().slice(0, 200), createdAt: kst().datetime };
+      const b = {
+        id: nextId(st), title, desc: String(d.desc || "").trim().slice(0, 200),
+        allowLikes: d.allowLikes !== false, allowComments: d.allowComments !== false,
+        createdAt: kst().datetime,
+      };
       st.boards.push(b);
       return Object.assign(ok({ board: b }), { mutated: true });
     }
@@ -385,6 +444,8 @@ function handleApi(st, path, method, d) {
       if (!title) return fail("게시판 이름을 써 주세요.");
       b.title = title;
       b.desc = String(d.desc || "").trim().slice(0, 200);
+      b.allowLikes = d.allowLikes !== false;
+      b.allowComments = d.allowComments !== false;
       return Object.assign(ok({}), { mutated: true });
     }
     if (path === "/api/teacher/board/delete") {

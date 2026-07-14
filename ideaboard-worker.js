@@ -173,6 +173,11 @@ const APP_HTML = `<!DOCTYPE html>
   .p-foot button { font-size: 13px; color: #778; padding: 5px 9px; border-radius: 9px; font-weight: 700; }
   .p-foot button:hover { background: #f4f5fa; }
   .p-foot .liked { color: #ff4d6d; }
+  .p-time .edited { color: #b7bccb; font-size: 10px; }
+  .like-adjust { display: inline-flex; align-items: center; gap: 2px; }
+  .like-adjust button { font-size: 12px; color: var(--accent); padding: 4px 7px; border-radius: 8px; font-weight: 800; }
+  .like-adjust .like-badge { font-size: 13px; font-weight: 700; color: #ff4d6d; padding: 0 3px; }
+  .like-readonly { font-size: 13px; font-weight: 700; color: #ff8fa3; padding: 5px 9px; }
   .comments { margin-top: 8px; border-top: 1px dashed #e7e9f2; padding-top: 8px; }
   .cmt { display: flex; gap: 7px; margin-bottom: 7px; font-size: 13px; }
   .cmt .c-body { flex: 1; background: #f5f6fb; border-radius: 10px; padding: 6px 10px; }
@@ -260,6 +265,8 @@ const APP_HTML = `<!DOCTYPE html>
   .stu-table th { font-size: 12px; color: #889; text-align: left; padding: 4px 6px; }
   .stu-table td { padding: 3px 3px; }
   .stu-table input { width: 100%; border: 1.5px solid #e3e6ef; border-radius: 8px; padding: 7px 9px; font-size: 14px; outline: none; }
+  .stu-table .st-no { text-align: center; font-weight: 700; -moz-appearance: textfield; }
+  .stu-table .st-no::-webkit-outer-spin-button, .stu-table .st-no::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
   .stu-table input:focus { border-color: var(--brand-1); }
   .stu-table .del { color: #e74c3c; font-size: 15px; padding: 4px 7px; }
   .add-n { display: inline-flex; align-items: center; border: 2px solid #e3e6ef; border-radius: 11px; overflow: hidden; }
@@ -386,7 +393,7 @@ const APP_HTML = `<!DOCTYPE html>
 <!-- ═══════════ 글쓰기 모달 ═══════════ -->
 <div class="overlay" id="md-compose" hidden>
   <div class="modal">
-    <div class="m-head">✏️ 아이디어 올리기 <button class="x" onclick="IB.closeComposer()">✕</button></div>
+    <div class="m-head"><span id="cmp-head">✏️ 아이디어 올리기</span> <button class="x" onclick="IB.closeComposer()">✕</button></div>
     <div class="m-body">
       <textarea id="cmp-text" placeholder="생각을 자유롭게 써 보세요. 링크를 붙여 넣으면 자동으로 연결돼요!"></textarea>
       <div class="attach-btns">
@@ -475,6 +482,8 @@ const APP_HTML = `<!DOCTYPE html>
       <input type="text" id="mb-name" placeholder="예: 5/27 실과 바느질 작품">
       <label>안내 (선택)</label>
       <input type="text" id="mb-desc" placeholder="예: 완성한 작품 사진과 소감을 올려 주세요">
+      <div class="check-row"><input type="checkbox" id="mb-likes" checked><label for="mb-likes" style="margin:0">❤️ 좋아요 사용하기</label></div>
+      <div class="check-row"><input type="checkbox" id="mb-comments" checked><label for="mb-comments" style="margin:0">💬 댓글 사용하기</label></div>
       <div class="m-actions">
         <button class="btn-primary grow" onclick="IB.saveBoard()">저장</button>
       </div>
@@ -491,7 +500,7 @@ const APP_HTML = `<!DOCTYPE html>
         학생은 <b>학급 코드 + 번호 + PIN</b> 으로 로그인해요. PIN은 숫자 4자리입니다.
       </div>
       <table class="stu-table">
-        <thead><tr><th style="width:56px">번호</th><th>이름</th><th style="width:74px">PIN</th><th style="width:70px"></th></tr></thead>
+        <thead><tr><th style="width:76px">번호</th><th>이름</th><th style="width:74px">PIN</th><th style="width:64px"></th></tr></thead>
         <tbody id="stu-rows"></tbody>
       </table>
       <div class="m-actions" style="align-items:center;flex-wrap:wrap">
@@ -581,9 +590,11 @@ window.IB = (() => {
   let HOME = null;          // /api/home 응답
   let BOARD = null;         // 현재 게시판 {board, posts}
   let loginRole = "student";
-  let attachments = [];     // 글쓰기 첨부 [{name, mime, data(dataURL), isImage}]
+  let attachments = [];     // 글쓰기 첨부 (새 파일 {name,mime,data,isImage} | 기존 파일 {existing:true,id,name,isImage})
+  let editingPostId = null; // 글 수정 중이면 그 글 id, 새 글이면 null
   let popupIds = [];        // 팝업에 떠 있는 쪽지 id
   let pollTimer = null;
+  let boardTimer = null;
   let msgTabName = "recv";
   let msgCache = [];
 
@@ -745,17 +756,22 @@ window.IB = (() => {
   }
   function renderPosts() {
     const isT = ME.type === "teacher";
+    const allowLikes = BOARD.board.allowLikes !== false;
+    const allowComments = BOARD.board.allowComments !== false;
     const wrap = $("post-list");
     let html = "";
     for (const p of BOARD.posts) {
+      const isTeacherPost = p.author.type === "teacher";
       html += '<div class="post' + (p.isNotice ? " notice" : "") + '" id="post-' + p.id + '">';
       html += '<div class="p-head">' + avatarHtml(p.author) +
         '<div class="p-who"><div class="p-name">' + authorLabel(p.author) +
         (p.isNotice ? ' <span class="chip-notice">📌 공지</span>' : "") +
-        '</div><div class="p-time">' + fmtTime(p.createdAt) + "</div></div>" +
+        '</div><div class="p-time">' + fmtTime(p.createdAt) +
+        (p.editedAt ? ' <span class="edited">(수정됨)</span>' : "") + "</div></div>" +
         '<div class="p-tools">' +
         (isT ? '<button title="공지 고정" onclick="IB.toggleNotice(' + p.id + ',' + (p.isNotice ? "false" : "true") + ')">📌</button>' : "") +
-        ((isT || isMine(p.author)) ? '<button title="지우기" onclick="IB.deletePost(' + p.id + ')">🗑</button>' : "") +
+        (p.canEdit ? '<button title="고치기" onclick="IB.editPost(' + p.id + ')">✏️</button>' : "") +
+        (p.canEdit ? '<button title="지우기" onclick="IB.deletePost(' + p.id + ')">🗑</button>' : "") +
         "</div></div>";
       if (p.text) html += '<div class="p-text">' + linkify(p.text) + "</div>";
       for (const f of p.files) {
@@ -764,25 +780,53 @@ window.IB = (() => {
         else
           html += '<a class="p-file" href="/api/file/' + f.id + '">📎 ' + esc(f.name) + "</a>";
       }
-      html += '<div class="p-foot">' +
-        '<button class="' + (p.liked ? "liked" : "") + '" onclick="IB.toggleLike(' + p.id + ')">' +
-        (p.liked ? "❤️" : "🤍") + ' <span id="likec-' + p.id + '">' + p.likeCount + "</span></button>" +
-        '<button onclick="IB.toggleComments(' + p.id + ')">💬 ' + p.comments.length + "</button></div>";
-      // 댓글
-      html += '<div class="comments" id="cmts-' + p.id + '" hidden>';
-      for (const c of p.comments) {
-        html += '<div class="cmt"><div class="c-body"><span class="c-name">' + authorLabel(c.author) + "</span>" +
-          esc(c.text) + '<span class="c-time">' + fmtTime(c.createdAt) + "</span>" +
-          ((isT || isMine(c.author)) ? ' <button class="c-del" onclick="IB.deleteComment(' + c.id + ')">✕</button>' : "") +
-          "</div></div>";
+      // 발(좋아요/댓글) — 게시판 설정에 따라 표시
+      if (allowLikes || allowComments) {
+        html += '<div class="p-foot">';
+        if (allowLikes) {
+          if (isT) {
+            // 교사: 좋아요 수를 직접 늘리거나 줄임
+            html += '<span class="like-adjust"><button title="좋아요 줄이기" onclick="IB.adjustLike(' + p.id + ',-1)">➖</button>' +
+              '<span class="like-badge">❤️ <span id="likec-' + p.id + '">' + p.likeCount + '</span></span>' +
+              '<button title="좋아요 늘리기" onclick="IB.adjustLike(' + p.id + ',1)">➕</button></span>';
+          } else if (isTeacherPost) {
+            // 학생이 보는 교사 글: 좋아요는 누를 수 없고 개수만 표시
+            html += '<span class="like-readonly">❤️ <span id="likec-' + p.id + '">' + p.likeCount + '</span></span>';
+          } else {
+            html += '<button class="' + (p.liked ? "liked" : "") + '" onclick="IB.toggleLike(' + p.id + ')">' +
+              (p.liked ? "❤️" : "🤍") + ' <span id="likec-' + p.id + '">' + p.likeCount + "</span></button>";
+          }
+        }
+        if (allowComments)
+          html += '<button onclick="IB.toggleComments(' + p.id + ')">💬 ' + p.comments.length + "</button>";
+        html += "</div>";
       }
-      html += '<div class="cmt-input"><input id="ci-' + p.id + '" maxlength="500" placeholder="댓글 쓰기..." ' +
-        'onkeydown="if(event.key===\\'Enter\\')IB.addComment(' + p.id + ')">' +
-        '<button onclick="IB.addComment(' + p.id + ')">등록</button></div></div>';
+      // 댓글
+      if (allowComments) {
+        html += '<div class="comments" id="cmts-' + p.id + '" hidden>';
+        for (const c of p.comments) {
+          html += '<div class="cmt"><div class="c-body"><span class="c-name">' + authorLabel(c.author) + "</span>" +
+            esc(c.text) + '<span class="c-time">' + fmtTime(c.createdAt) + "</span>" +
+            ((isT || isMine(c.author)) ? ' <button class="c-del" onclick="IB.deleteComment(' + c.id + ')">✕</button>' : "") +
+            "</div></div>";
+        }
+        html += '<div class="cmt-input"><input id="ci-' + p.id + '" maxlength="500" placeholder="댓글 쓰기..." ' +
+          'onkeydown="if(event.key===\\'Enter\\')IB.addComment(' + p.id + ')">' +
+          '<button onclick="IB.addComment(' + p.id + ')">등록</button></div></div>';
+      }
       html += "</div>";
     }
     wrap.innerHTML = html;
     $("bd-empty").hidden = BOARD.posts.length > 0;
+  }
+  function adjustLike(pid, delta) {
+    guard((async () => {
+      const r = await api("/api/like/adjust", { postId: pid, delta });
+      const el = $("likec-" + pid);
+      if (el) el.textContent = r.likeCount;
+      const bp = BOARD && BOARD.posts.find(x => x.id === pid);
+      if (bp) bp.likeCount = r.likeCount;
+    })());
   }
   async function refreshBoard() {
     if (BOARD) await openBoard(BOARD.board.id);
@@ -836,12 +880,29 @@ window.IB = (() => {
     show("lightbox");
   }
 
-  // ── 글쓰기 ──
+  // ── 글쓰기 / 글 수정 ──
   function openComposer() {
+    editingPostId = null;
     attachments = [];
+    $("cmp-head").textContent = "✏️ 아이디어 올리기";
+    $("cmp-submit").textContent = "올리기";
     $("cmp-text").value = "";
     $("cmp-notice").checked = false;
     $("cmp-notice-row").hidden = ME.type !== "teacher";
+    renderAttach();
+    show("md-compose");
+    $("cmp-text").focus();
+  }
+  function editPost(pid) {
+    const p = BOARD.posts.find(x => x.id === pid);
+    if (!p) return;
+    editingPostId = pid;
+    // 기존 첨부는 서버에 있는 파일이므로 existing 표시로 담아 둠
+    attachments = p.files.map(f => ({ existing: true, id: f.id, name: f.name, isImage: f.isImage }));
+    $("cmp-head").textContent = "✏️ 아이디어 고치기";
+    $("cmp-submit").textContent = "수정 저장";
+    $("cmp-text").value = p.text || "";
+    $("cmp-notice-row").hidden = true; // 공지 고정은 📌 버튼으로 따로
     renderAttach();
     show("md-compose");
     $("cmp-text").focus();
@@ -851,8 +912,9 @@ window.IB = (() => {
     const w = $("cmp-attach");
     let html = "";
     attachments.forEach((a, i) => {
+      const src = a.existing ? "/api/file/" + a.id : a.data;
       html += '<div class="att">' +
-        (a.isImage ? '<img src="' + a.data + '" alt="">'
+        (a.isImage ? '<img src="' + src + '" alt="">'
           : '<span class="att-file">📎 ' + esc(a.name) + "</span>") +
         '<button class="rm" onclick="IB.removeAttach(' + i + ')">✕</button></div>';
     });
@@ -925,20 +987,35 @@ window.IB = (() => {
     const text = $("cmp-text").value.trim();
     if (!text && attachments.length === 0) { toast("내용을 쓰거나 사진·그림·파일을 붙여 주세요"); return; }
     const btn = $("cmp-submit");
-    btn.disabled = true; btn.textContent = "올리는 중...";
+    const editing = editingPostId;
+    const label = btn.textContent;
+    btn.disabled = true; btn.textContent = editing ? "저장 중..." : "올리는 중...";
+    const newFiles = attachments.filter(a => !a.existing).map(a => ({ name: a.name, data: a.data }));
     guard((async () => {
       try {
-        await api("/api/post/create", {
-          boardId: BOARD.board.id,
-          text,
-          files: attachments.map(a => ({ name: a.name, data: a.data })),
-          isNotice: $("cmp-notice").checked,
-        });
-        closeComposer();
-        await refreshBoard();
-        toast("아이디어를 올렸어요! 🎉");
+        if (editing) {
+          await api("/api/post/update", {
+            postId: editing,
+            text,
+            keepFileIds: attachments.filter(a => a.existing).map(a => a.id),
+            files: newFiles,
+          });
+          closeComposer();
+          await refreshBoard();
+          toast("아이디어를 고쳤어요! ✏️");
+        } else {
+          await api("/api/post/create", {
+            boardId: BOARD.board.id,
+            text,
+            files: newFiles,
+            isNotice: $("cmp-notice").checked,
+          });
+          closeComposer();
+          await refreshBoard();
+          toast("아이디어를 올렸어요! 🎉");
+        }
       } finally {
-        btn.disabled = false; btn.textContent = "올리기";
+        btn.disabled = false; btn.textContent = label;
       }
     })());
   }
@@ -1102,12 +1179,49 @@ window.IB = (() => {
     })());
   }
 
-  // ── 새 쪽지 팝업 (주기 확인) ──
+  // ── 새 쪽지 팝업 + 게시판 자동 새로고침 (주기 확인) ──
   function startPoll() {
     stopPoll();
     pollTimer = setInterval(poll, 15000);
+    boardTimer = setInterval(pollBoard, 8000);  // 다른 사람이 올린 글이 바로 보이도록
   }
-  function stopPoll() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
+  function stopPoll() {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    if (boardTimer) { clearInterval(boardTimer); boardTimer = null; }
+  }
+  // 현재 보고 있는 게시판을 조용히 다시 불러와, 바뀐 게 있으면 새로 그림
+  function boardSignature(b) {
+    return JSON.stringify((b.posts || []).map(p =>
+      [p.id, p.text, p.likeCount, p.editedAt, p.isNotice, p.files.length,
+       p.comments.map(c => c.id + ":" + c.text)]));
+  }
+  async function pollBoard() {
+    if (!AUTH || !BOARD) return;
+    if ($("view-board").hidden) return;                 // 게시판 화면일 때만
+    if (!$("md-compose").hidden || !$("md-draw").hidden) return;  // 글 쓰는 중이면 방해 안 함
+    // 댓글을 입력 중(글자가 있음)이면 이번 차례는 건너뜀
+    const act = document.activeElement;
+    if (act && act.closest && act.closest(".cmt-input") && act.value) return;
+    try {
+      const r = await api("/api/board", { boardId: BOARD.board.id });
+      if ($("view-board").hidden) return;
+      if (boardSignature(r) === boardSignature(BOARD)) return;   // 변화 없으면 그대로 둠
+      // 입력·펼침·스크롤 상태 보존
+      const openCmts = [...document.querySelectorAll(".comments")].filter(el => !el.hidden).map(el => el.id.slice(5));
+      const drafts = {};
+      document.querySelectorAll(".cmt-input input").forEach(i => { if (i.value) drafts[i.id] = i.value; });
+      const focusId = document.activeElement ? document.activeElement.id : null;
+      const scrollY = window.scrollY;
+      BOARD = r; ME = r.me;
+      $("bd-title").textContent = r.board.title;
+      $("bd-desc").textContent = r.board.desc || "";
+      renderPosts();
+      for (const pid of openCmts) { const el = $("cmts-" + pid); if (el) el.hidden = false; }
+      for (const id in drafts) { const i = $(id); if (i) i.value = drafts[id]; }
+      if (focusId) { const el = $(focusId); if (el && el.focus) { el.focus(); if (el.select) el.select(); } }
+      window.scrollTo(0, scrollY);
+    } catch (e) { /* 일시 오류는 조용히 넘어감 */ }
+  }
   async function poll() {
     if (!AUTH) return;
     try {
@@ -1142,6 +1256,8 @@ window.IB = (() => {
     $("mb-title").firstChild.textContent = "새 게시판 ";
     $("mb-name").value = "";
     $("mb-desc").value = "";
+    $("mb-likes").checked = true;
+    $("mb-comments").checked = true;
     show("md-board");
     $("mb-name").focus();
   }
@@ -1152,14 +1268,18 @@ window.IB = (() => {
     $("mb-title").firstChild.textContent = "게시판 고치기 ";
     $("mb-name").value = b.title;
     $("mb-desc").value = b.desc || "";
+    $("mb-likes").checked = b.allowLikes !== false;
+    $("mb-comments").checked = b.allowComments !== false;
     show("md-board");
   }
   function saveBoard() {
     guard((async () => {
       const title = $("mb-name").value.trim();
       const desc = $("mb-desc").value.trim();
-      if (editingBoardId) await api("/api/teacher/board/update", { boardId: editingBoardId, title, desc });
-      else await api("/api/teacher/board/create", { title, desc });
+      const allowLikes = $("mb-likes").checked;
+      const allowComments = $("mb-comments").checked;
+      if (editingBoardId) await api("/api/teacher/board/update", { boardId: editingBoardId, title, desc, allowLikes, allowComments });
+      else await api("/api/teacher/board/create", { title, desc, allowLikes, allowComments });
       hide("md-board");
       await loadHome();
       toast("저장했어요");
@@ -1360,9 +1480,23 @@ window.IB = (() => {
   }
 
   // ── 시작 ──
+  // 학생 명단에서 ↑/↓ 화살표로 위/아래 학생 줄로 이동
+  function stuNav(e) {
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+    const input = e.target;
+    const cls = ["st-no", "st-name", "st-pin"].find(c => input.classList && input.classList.contains(c));
+    if (!cls) return;
+    const tr = input.closest("tr");
+    const sib = e.key === "ArrowDown" ? tr.nextElementSibling : tr.previousElementSibling;
+    if (sib) {
+      const t = sib.querySelector("." + cls);
+      if (t) { e.preventDefault(); t.focus(); if (t.select) t.select(); }
+    }
+  }
   function boot() {
     $("cmp-photo").addEventListener("change", onPhotoPick);
     $("cmp-file").addEventListener("change", onFilePick);
+    $("stu-rows").addEventListener("keydown", stuNav);
     $("in-class").value = localStorage.getItem("ideaboard_class") || "6-1";
     // /teacher.html 로 들어오면 교사 탭 먼저
     if (location.pathname.indexOf("teacher") >= 0) setRole("teacher");
@@ -1379,7 +1513,7 @@ window.IB = (() => {
 
   return {
     setRole, login, logout, goHome, openBoard,
-    toggleComments, toggleLike, addComment, deleteComment, deletePost, toggleNotice, zoom,
+    toggleComments, toggleLike, adjustLike, addComment, deleteComment, deletePost, editPost, toggleNotice, zoom,
     openComposer, closeComposer, removeAttach, submitPost,
     openDraw, closeDraw, drawColor: drawColorPick, drawSize, drawEraser, drawUndo, drawClear, finishDraw,
     openMsgs, msgTab, sendMsg, ackPopup,
@@ -1409,8 +1543,8 @@ function defaultState() {
     // 선생님 계정(여러 명 가능). 각자 아이디·비밀번호·이름으로 로그인해 글·쪽지가 구분됨
     teachers: [{ id: 1, loginId: "teacher", pw: "0000", name: "선생님" }],
     students: [],  // {id, number, name, pin, active}
-    boards: [],    // {id, title, desc, createdAt}
-    posts: [],     // {id, boardId, author:{type,id,name}, text, files:[{id,name,mime,isImage}], isNotice, createdAt}
+    boards: [],    // {id, title, desc, allowLikes, allowComments, createdAt}
+    posts: [],     // {id, boardId, author:{type,id,name}, text, files:[{id,name,mime,isImage}], isNotice, likeAdjust, createdAt, editedAt}
     comments: [],  // {id, postId, author:{type,id,name}, text, createdAt}
     likes: [],     // {postId, key}   key = "t<교사id>" | "s<학생id>"
     messages: [],  // {id, from:{type,id,name}, toType:"student"|"teacher", toId, text, createdAt, read}
@@ -1425,6 +1559,14 @@ function migrate(st) {
   }
   if (st.settings) { delete st.settings.teacherId; delete st.settings.teacherPw; }
   if ((st.seq | 0) < 100) st.seq = 100;
+  // 게시판 기능 플래그 기본값(예전 데이터 보정)
+  for (const b of st.boards || []) {
+    if (b.allowLikes === undefined) b.allowLikes = true;
+    if (b.allowComments === undefined) b.allowComments = true;
+  }
+  for (const p of st.posts || []) {
+    if (p.likeAdjust === undefined) p.likeAdjust = 0;
+  }
   return st;
 }
 
@@ -1522,13 +1664,18 @@ function unreadOf(st, actor) {
       : (m.toType === "student" && Number(m.toId) === Number(actor.id))));
 }
 
+function postLikeCount(st, p) {
+  const base = st.likes.filter(l => l.postId === p.id).length;
+  return Math.max(0, base + (p.likeAdjust | 0));
+}
 function postView(st, p, actor) {
   const likes = st.likes.filter(l => l.postId === p.id);
   return {
     id: p.id, boardId: p.boardId, author: p.author, text: p.text,
-    files: p.files, isNotice: !!p.isNotice, createdAt: p.createdAt,
-    likeCount: likes.length,
+    files: p.files, isNotice: !!p.isNotice, createdAt: p.createdAt, editedAt: p.editedAt || null,
+    likeCount: Math.max(0, likes.length + (p.likeAdjust | 0)),
     liked: likes.some(l => l.key === likeKey(actor)),
+    canEdit: actor.type === "teacher" || sameAuthor(actor, p.author),
     comments: st.comments.filter(c => c.postId === p.id)
       .map(c => ({ id: c.id, author: c.author, text: c.text, createdAt: c.createdAt })),
   };
@@ -1557,6 +1704,7 @@ function handleApi(st, path, method, d) {
   if (path === "/api/home") {
     const boards = st.boards.map(b => ({
       id: b.id, title: b.title, desc: b.desc, createdAt: b.createdAt,
+      allowLikes: b.allowLikes !== false, allowComments: b.allowComments !== false,
       postCount: st.posts.filter(p => p.boardId === b.id).length,
     }));
     const res = {
@@ -1585,7 +1733,7 @@ function handleApi(st, path, method, d) {
       .sort((a, x) => (!!x.isNotice - !!a.isNotice) || (a.createdAt < x.createdAt ? 1 : -1) || (x.id - a.id))
       .map(p => postView(st, p, actor));
     return ok({
-      board: { id: b.id, title: b.title, desc: b.desc },
+      board: { id: b.id, title: b.title, desc: b.desc, allowLikes: b.allowLikes !== false, allowComments: b.allowComments !== false },
       me: { type: actor.type, id: actor.id, name: actor.name },
       posts,
     });
@@ -1605,11 +1753,34 @@ function handleApi(st, path, method, d) {
       text,
       files: pf.files.map(f => ({ id: f.id, name: f.name, mime: f.mime, isImage: f.isImage })),
       isNotice: isTeacher && !!d.isNotice,
+      likeAdjust: 0,
       createdAt: kst().datetime,
     };
     st.posts.push(post);
     return Object.assign(ok({ post: postView(st, post, actor) }),
       { mutated: true, saveFiles: pf.files });
+  }
+
+  // ══════════ 글 수정 (본인 또는 교사) ══════════
+  if (path === "/api/post/update") {
+    const p = st.posts.find(x => x.id === Number(d.postId));
+    if (!p) return fail("없는 글입니다.", 404);
+    if (!isTeacher && !sameAuthor(actor, p.author)) return fail("자기가 쓴 글만 고칠 수 있어요.", 403);
+    const text = String(d.text || "").trim().slice(0, 3000);
+    // 남길 기존 첨부(keepFileIds)만 유지, 나머지는 삭제. 새 첨부는 추가.
+    const keep = Array.isArray(d.keepFileIds) ? d.keepFileIds.map(String) : p.files.map(f => f.id);
+    const keptFiles = p.files.filter(f => keep.includes(String(f.id)));
+    const removedFileIds = p.files.filter(f => !keep.includes(String(f.id))).map(f => f.id);
+    const pf = parseFiles(d.files);
+    if (pf.error) return fail(pf.error);
+    if (keptFiles.length + pf.files.length > MAX_FILES) return fail("첨부는 " + MAX_FILES + "개까지예요.");
+    if (!text && keptFiles.length === 0 && pf.files.length === 0)
+      return fail("내용을 쓰거나 사진·그림·파일을 붙여 주세요.");
+    p.text = text;
+    p.files = keptFiles.concat(pf.files.map(f => ({ id: f.id, name: f.name, mime: f.mime, isImage: f.isImage })));
+    p.editedAt = kst().datetime;
+    return Object.assign(ok({ post: postView(st, p, actor) }),
+      { mutated: true, saveFiles: pf.files, deleteFiles: removedFileIds });
   }
 
   // ══════════ 글 지우기 (본인 또는 교사) ══════════
@@ -1637,6 +1808,8 @@ function handleApi(st, path, method, d) {
   if (path === "/api/comment/create") {
     const p = st.posts.find(x => x.id === Number(d.postId));
     if (!p) return fail("없는 글입니다.", 404);
+    const cb = st.boards.find(x => x.id === p.boardId);
+    if (cb && cb.allowComments === false) return fail("이 게시판은 댓글을 쓸 수 없어요.", 403);
     const text = String(d.text || "").trim().slice(0, 500);
     if (!text) return fail("댓글 내용을 써 주세요.");
     const c = {
@@ -1659,14 +1832,30 @@ function handleApi(st, path, method, d) {
   if (path === "/api/like/toggle") {
     const p = st.posts.find(x => x.id === Number(d.postId));
     if (!p) return fail("없는 글입니다.", 404);
+    const lb = st.boards.find(x => x.id === p.boardId);
+    if (lb && lb.allowLikes === false) return fail("이 게시판은 좋아요를 쓸 수 없어요.", 403);
+    if (p.author.type === "teacher") return fail("선생님이 쓴 글에는 좋아요를 누를 수 없어요.", 403);
     const key = likeKey(actor);
     const has = st.likes.some(l => l.postId === p.id && l.key === key);
     if (has) st.likes = st.likes.filter(l => !(l.postId === p.id && l.key === key));
     else st.likes.push({ postId: p.id, key });
     return Object.assign(ok({
       liked: !has,
-      likeCount: st.likes.filter(l => l.postId === p.id).length,
+      likeCount: postLikeCount(st, p),
     }), { mutated: true });
+  }
+  // 교사 전용: 좋아요 수를 직접 올리거나 내림 (delta = +1 / -1)
+  if (path === "/api/like/adjust") {
+    if (!isTeacher) return fail("선생님만 할 수 있어요.", 403);
+    const p = st.posts.find(x => x.id === Number(d.postId));
+    if (!p) return fail("없는 글입니다.", 404);
+    const lb = st.boards.find(x => x.id === p.boardId);
+    if (lb && lb.allowLikes === false) return fail("이 게시판은 좋아요를 쓸 수 없어요.", 403);
+    const delta = Number(d.delta) > 0 ? 1 : -1;
+    // 내려서 총합이 0 밑으로 가지 않게 (표시 개수는 항상 0 이상)
+    if (delta < 0 && postLikeCount(st, p) <= 0) return ok({ likeCount: 0 });
+    p.likeAdjust = (p.likeAdjust | 0) + delta;
+    return Object.assign(ok({ likeCount: postLikeCount(st, p) }), { mutated: true });
   }
 
   // ══════════ 쪽지 ══════════
@@ -1743,7 +1932,11 @@ function handleApi(st, path, method, d) {
     if (path === "/api/teacher/board/create") {
       const title = String(d.title || "").trim().slice(0, 60);
       if (!title) return fail("게시판 이름을 써 주세요.");
-      const b = { id: nextId(st), title, desc: String(d.desc || "").trim().slice(0, 200), createdAt: kst().datetime };
+      const b = {
+        id: nextId(st), title, desc: String(d.desc || "").trim().slice(0, 200),
+        allowLikes: d.allowLikes !== false, allowComments: d.allowComments !== false,
+        createdAt: kst().datetime,
+      };
       st.boards.push(b);
       return Object.assign(ok({ board: b }), { mutated: true });
     }
@@ -1754,6 +1947,8 @@ function handleApi(st, path, method, d) {
       if (!title) return fail("게시판 이름을 써 주세요.");
       b.title = title;
       b.desc = String(d.desc || "").trim().slice(0, 200);
+      b.allowLikes = d.allowLikes !== false;
+      b.allowComments = d.allowComments !== false;
       return Object.assign(ok({}), { mutated: true });
     }
     if (path === "/api/teacher/board/delete") {
