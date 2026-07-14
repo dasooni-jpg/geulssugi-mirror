@@ -418,6 +418,44 @@ function handleApi(st, path, method, d) {
       return Object.assign(ok({ count: next.length }), { mutated: true });
     }
 
+    // 학생 포트폴리오: 한 학생이 올린 글·자료·댓글을 모두 모아서 반환
+    if (path === "/api/teacher/portfolio") {
+      const stu = st.students.find(s => s.id === Number(d.studentId));
+      if (!stu) return fail("학생을 찾을 수 없어요.", 404);
+      const boardTitle = id => (st.boards.find(b => b.id === Number(id)) || { title: "(지워진 게시판)" }).title;
+      const isMe = a => a && a.type === "student" && Number(a.id) === Number(stu.id);
+      // 이 학생이 쓴 글 (오래된 → 최신)
+      const posts = st.posts.filter(p => isMe(p.author))
+        .sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1))
+        .map(p => ({
+          id: p.id, boardId: p.boardId, boardTitle: boardTitle(p.boardId),
+          text: p.text, files: p.files, isNotice: !!p.isNotice, createdAt: p.createdAt,
+          likeCount: st.likes.filter(l => l.postId === p.id).length,
+          comments: st.comments.filter(c => c.postId === p.id)
+            .map(c => ({ author: c.author, text: c.text, createdAt: c.createdAt })),
+        }));
+      // 이 학생이 남긴 댓글 (다른 사람 글에)
+      const comments = st.comments.filter(c => isMe(c.author))
+        .sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1))
+        .map(c => {
+          const p = st.posts.find(x => x.id === c.postId);
+          return {
+            text: c.text, createdAt: c.createdAt,
+            onBoard: p ? boardTitle(p.boardId) : "(지워진 글)",
+            onPost: p ? (p.text ? p.text.slice(0, 40) : "(사진/파일 글)") : "(지워진 글)",
+          };
+        });
+      const fileCount = posts.reduce((n, p) => n + p.files.length, 0);
+      const likeTotal = posts.reduce((n, p) => n + p.likeCount, 0);
+      return ok({
+        className: st.settings.className,
+        student: { id: stu.id, number: stu.number, name: stu.name },
+        posts, comments,
+        stats: { postCount: posts.length, fileCount, likeTotal, commentCount: comments.length },
+        generatedAt: kst().datetime,
+      });
+    }
+
     // 선생님 계정 명단 일괄 저장 (여러 명 등록 가능)
     if (path === "/api/teacher/teachers/save") {
       if (!Array.isArray(d.teachers)) return fail("목록이 올바르지 않아요.");

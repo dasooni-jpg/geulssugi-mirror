@@ -321,6 +321,19 @@ try {
   r = await post("/api/msg/list", { auth: K });
   check("둘째 선생님 쪽지함엔 자기 것만", r.messages.every(m => m.received ? m.toId === kimId : m.from.id === kimId));
 
+  // 13.7 학생 포트폴리오 (민준=학생1이 P1 글 작성, P1은 좋아요 여러 개 받음)
+  const idMinjun = (await post("/api/home", { auth: T })).students.find(s => s.number === 1).id;
+  r = await post("/api/teacher/portfolio", { auth: T, studentId: 999999 });
+  check("없는 학생 포트폴리오 거부", !r.ok);
+  r = await post("/api/teacher/portfolio", { auth: S1, studentId: idMinjun });
+  check("학생은 포트폴리오 못 봄", !r.ok);
+  r = await post("/api/teacher/portfolio", { auth: T, studentId: idMinjun });
+  check("포트폴리오 조회", r.ok && r.student.name === "민준");
+  check("올린 글 모음(P1 포함)", r.posts.some(p => p.text.includes("작품이에요")));
+  check("글에 게시판 이름 포함", r.posts.every(p => typeof p.boardTitle === "string"));
+  check("받은 좋아요 합계 집계", r.stats.likeTotal >= 1);
+  check("통계 개수 일치", r.stats.postCount === r.posts.length && r.stats.commentCount === r.comments.length);
+
   // 14. 설정 바꾸기 (마지막에 실행 — 이후 인증이 바뀜)
   r = await post("/api/teacher/settings/save", { auth: T, className: "6학년 1반 아이디어", classCode: "7-1", newPw: "abcd" });
   check("설정 저장(내 비번 변경)", r.ok);

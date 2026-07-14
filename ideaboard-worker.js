@@ -252,6 +252,43 @@ const APP_HTML = `<!DOCTYPE html>
   }
   #toast.show { opacity: 1; }
 
+  /* ── 포트폴리오 ── */
+  .stu-table .pf { color: #5b48e0; font-size: 15px; padding: 4px 7px; }
+  .pf-stats { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .pf-stat { background: #f2f4fb; border-radius: 12px; padding: 8px 14px; text-align: center; flex: 1; min-width: 72px; }
+  .pf-stat b { display: block; font-size: 20px; color: #5b48e0; }
+  .pf-stat span { font-size: 12px; color: #778; }
+  .pf-section-title { font-size: 15px; font-weight: 800; margin: 16px 0 8px; color: #445; }
+  .pf-item { border: 1.5px solid #eef0f6; border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; }
+  .pf-item .pf-meta { font-size: 12px; color: #889; margin-bottom: 6px; }
+  .pf-item .pf-meta b { color: #5b48e0; }
+  .pf-item .pf-text { font-size: 14px; line-height: 1.55; white-space: pre-wrap; word-break: break-word; margin-bottom: 8px; }
+  .pf-item img { max-width: 220px; max-height: 220px; border-radius: 8px; margin: 4px 6px 4px 0; border: 1px solid #eee; vertical-align: top; }
+  .pf-item .pf-file { display: inline-block; background: #f2f4fb; border-radius: 8px; padding: 5px 10px; font-size: 13px; color: #445; text-decoration: none; margin: 2px 4px 2px 0; }
+  .pf-item .pf-badge { font-size: 12px; color: #889; }
+  .pf-cmts { margin-top: 6px; padding-top: 6px; border-top: 1px dashed #eef0f6; font-size: 13px; }
+  .pf-cmts .pf-c { color: #556; margin-bottom: 3px; }
+  .pf-cmts .pf-c b { color: #445; }
+  .pf-empty { color: #99a; font-size: 13px; padding: 8px 0; }
+
+  /* ── 인쇄(PDF 저장) 전용 ── */
+  #print-area { display: none; }
+  @media print {
+    body { background: #fff; }
+    body > *:not(#print-area) { display: none !important; }
+    #print-area { display: block !important; padding: 0; color: #000; }
+    #print-area .pf-print-head { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 16px; }
+    #print-area .pf-print-head h1 { font-size: 22px; margin-bottom: 4px; }
+    #print-area .pf-print-head .sub { font-size: 13px; color: #333; }
+    #print-area .pf-stats { display: flex; gap: 10px; margin-bottom: 16px; }
+    #print-area .pf-stat { border: 1px solid #ccc; }
+    #print-area .pf-stat b { color: #000; }
+    #print-area .pf-section-title { border-bottom: 1px solid #999; }
+    #print-area .pf-item { border: 1px solid #bbb; page-break-inside: avoid; }
+    #print-area .pf-item img { max-width: 260px; max-height: 260px; }
+    @page { margin: 14mm; }
+  }
+
   @media (max-width: 560px) {
     header .who { display: none; }
     main { padding: 14px 10px 60px; }
@@ -423,12 +460,27 @@ const APP_HTML = `<!DOCTYPE html>
         학생은 <b>학급 코드 + 번호 + PIN</b> 으로 로그인해요. PIN은 숫자 4자리입니다.
       </div>
       <table class="stu-table">
-        <thead><tr><th style="width:60px">번호</th><th>이름</th><th style="width:80px">PIN</th><th style="width:36px"></th></tr></thead>
+        <thead><tr><th style="width:56px">번호</th><th>이름</th><th style="width:74px">PIN</th><th style="width:70px"></th></tr></thead>
         <tbody id="stu-rows"></tbody>
       </table>
       <div class="m-actions">
         <button class="btn2" onclick="IB.addStudentRow()">+ 학생 추가</button>
         <button class="btn-primary grow" onclick="IB.saveStudents()">저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 학생 포트폴리오 (교사) ═══════════ -->
+<div class="overlay" id="md-portfolio" hidden>
+  <div class="modal" style="width:720px">
+    <div class="m-head"><span id="pf-title">📁 포트폴리오</span>
+      <button class="x" onclick="IB.hide('md-portfolio')">✕</button></div>
+    <div class="m-body">
+      <div id="pf-content"></div>
+      <div class="m-actions">
+        <button class="btn2" onclick="IB.hide('md-portfolio')">닫기</button>
+        <button class="btn-primary grow" onclick="IB.printPortfolio()">📄 PDF로 저장 / 인쇄</button>
       </div>
     </div>
   </div>
@@ -477,6 +529,9 @@ const APP_HTML = `<!DOCTYPE html>
 <div class="overlay" id="lightbox" hidden onclick="IB.hide('lightbox')">
   <img id="lightbox-img" alt="">
 </div>
+
+<!-- 인쇄(PDF 저장) 전용 영역 — 평소엔 숨김 -->
+<div id="print-area"></div>
 
 <div id="toast"></div>
 
@@ -1098,7 +1153,9 @@ window.IB = (() => {
       '<td><input type="number" class="st-no" min="1" value="' + (number || "") + '"></td>' +
       '<td><input type="text" class="st-name" maxlength="20" value="' + esc(name || "") + '"></td>' +
       '<td><input type="text" class="st-pin" maxlength="4" inputmode="numeric" value="' + esc(pin || "0000") + '"></td>' +
-      '<td><button class="del" onclick="this.closest(\\'tr\\').remove()">🗑</button></td></tr>';
+      '<td style="white-space:nowrap">' +
+      (id ? '<button class="pf" title="포트폴리오 보기" onclick="IB.openPortfolio(' + id + ')">📁</button>' : "") +
+      '<button class="del" onclick="this.closest(\\'tr\\').remove()">🗑</button></td></tr>';
   }
   function addStudentRow() {
     const tbody = $("stu-rows");
@@ -1121,6 +1178,68 @@ window.IB = (() => {
       await loadHome();
       toast("학생 " + r.count + "명을 저장했어요");
     })());
+  }
+
+  // ── 교사: 학생 포트폴리오 + PDF ──
+  let portfolio = null;
+  function openPortfolio(studentId) {
+    guard((async () => {
+      const r = await api("/api/teacher/portfolio", { studentId });
+      portfolio = r;
+      $("pf-title").textContent = "📁 " + r.student.number + "번 " + r.student.name + " 포트폴리오";
+      $("pf-content").innerHTML = portfolioHtml(r, false);
+      show("md-portfolio");
+    })());
+  }
+  function portfolioHtml(r, forPrint) {
+    const s = r.stats;
+    let h = "";
+    if (forPrint) {
+      h += '<div class="pf-print-head"><h1>' + esc(r.student.number + "번 " + r.student.name) + " 포트폴리오</h1>" +
+        '<div class="sub">' + esc(r.className) + " · 출력일 " + fmtTime(r.generatedAt) + "</div></div>";
+    }
+    h += '<div class="pf-stats">' +
+      '<div class="pf-stat"><b>' + s.postCount + '</b><span>올린 글</span></div>' +
+      '<div class="pf-stat"><b>' + s.fileCount + '</b><span>사진·파일</span></div>' +
+      '<div class="pf-stat"><b>' + s.likeTotal + '</b><span>받은 좋아요</span></div>' +
+      '<div class="pf-stat"><b>' + s.commentCount + '</b><span>쓴 댓글</span></div></div>';
+
+    h += '<div class="pf-section-title">📝 올린 글 (' + r.posts.length + ")</div>";
+    if (r.posts.length === 0) h += '<div class="pf-empty">아직 올린 글이 없어요.</div>';
+    for (const p of r.posts) {
+      h += '<div class="pf-item"><div class="pf-meta"><b>' + esc(p.boardTitle) + "</b> · " +
+        fmtTime(p.createdAt) + (p.isNotice ? " · 📌공지" : "") + " · ❤️ " + p.likeCount + "</div>";
+      if (p.text) h += '<div class="pf-text">' + (forPrint ? esc(p.text) : linkify(p.text)) + "</div>";
+      for (const f of p.files) {
+        if (f.isImage) h += '<img loading="lazy" src="/api/file/' + f.id + '" alt="' + esc(f.name) + '">';
+        else h += '<a class="pf-file" href="/api/file/' + f.id + '">📎 ' + esc(f.name) + "</a>";
+      }
+      if (p.comments.length) {
+        h += '<div class="pf-cmts">';
+        for (const c of p.comments) {
+          const cn = c.author.name + (c.author.type === "teacher" ? " 선생님" : "");
+          h += '<div class="pf-c"><b>' + esc(cn) + ":</b> " + esc(c.text) + "</div>";
+        }
+        h += "</div>";
+      }
+      h += "</div>";
+    }
+
+    if (r.comments.length) {
+      h += '<div class="pf-section-title">💬 다른 친구 글에 쓴 댓글 (' + r.comments.length + ")</div>";
+      for (const c of r.comments) {
+        h += '<div class="pf-item"><div class="pf-meta"><b>' + esc(c.onBoard) + "</b> · " +
+          fmtTime(c.createdAt) + ' · "' + esc(c.onPost) + '" 글에</div>' +
+          '<div class="pf-text">' + esc(c.text) + "</div></div>";
+      }
+    }
+    return h;
+  }
+  function printPortfolio() {
+    if (!portfolio) return;
+    $("print-area").innerHTML = portfolioHtml(portfolio, true);
+    // 인쇄 대화상자에서 "PDF로 저장"을 고르면 파일로 저장됩니다
+    setTimeout(() => window.print(), 150);
   }
 
   // ── 교사: 선생님 계정 관리 ──
@@ -1212,6 +1331,7 @@ window.IB = (() => {
     openMsgs, msgTab, sendMsg, ackPopup,
     newBoard, editBoard, saveBoard, deleteBoard,
     openStudents, addStudentRow, saveStudents,
+    openPortfolio, printPortfolio,
     openTeachers, addTeacherRow, saveTeachers,
     openSettings, saveSettings,
     hide,
@@ -1611,6 +1731,44 @@ function handleApi(st, path, method, d) {
       }
       st.students = next.sort((a, b) => a.number - b.number);
       return Object.assign(ok({ count: next.length }), { mutated: true });
+    }
+
+    // 학생 포트폴리오: 한 학생이 올린 글·자료·댓글을 모두 모아서 반환
+    if (path === "/api/teacher/portfolio") {
+      const stu = st.students.find(s => s.id === Number(d.studentId));
+      if (!stu) return fail("학생을 찾을 수 없어요.", 404);
+      const boardTitle = id => (st.boards.find(b => b.id === Number(id)) || { title: "(지워진 게시판)" }).title;
+      const isMe = a => a && a.type === "student" && Number(a.id) === Number(stu.id);
+      // 이 학생이 쓴 글 (오래된 → 최신)
+      const posts = st.posts.filter(p => isMe(p.author))
+        .sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1))
+        .map(p => ({
+          id: p.id, boardId: p.boardId, boardTitle: boardTitle(p.boardId),
+          text: p.text, files: p.files, isNotice: !!p.isNotice, createdAt: p.createdAt,
+          likeCount: st.likes.filter(l => l.postId === p.id).length,
+          comments: st.comments.filter(c => c.postId === p.id)
+            .map(c => ({ author: c.author, text: c.text, createdAt: c.createdAt })),
+        }));
+      // 이 학생이 남긴 댓글 (다른 사람 글에)
+      const comments = st.comments.filter(c => isMe(c.author))
+        .sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1))
+        .map(c => {
+          const p = st.posts.find(x => x.id === c.postId);
+          return {
+            text: c.text, createdAt: c.createdAt,
+            onBoard: p ? boardTitle(p.boardId) : "(지워진 글)",
+            onPost: p ? (p.text ? p.text.slice(0, 40) : "(사진/파일 글)") : "(지워진 글)",
+          };
+        });
+      const fileCount = posts.reduce((n, p) => n + p.files.length, 0);
+      const likeTotal = posts.reduce((n, p) => n + p.likeCount, 0);
+      return ok({
+        className: st.settings.className,
+        student: { id: stu.id, number: stu.number, name: stu.name },
+        posts, comments,
+        stats: { postCount: posts.length, fileCount, likeTotal, commentCount: comments.length },
+        generatedAt: kst().datetime,
+      });
     }
 
     // 선생님 계정 명단 일괄 저장 (여러 명 등록 가능)
