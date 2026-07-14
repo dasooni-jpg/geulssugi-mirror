@@ -18,8 +18,10 @@ function Escape-ForTemplateLiteral($s) {
 
 $app = Escape-ForTemplateLiteral (Read-Utf8 (Join-Path $root "ideaboard-app\app.html"))
 $tpl = Read-Utf8 (Join-Path $root "ideaboard-worker.template.js")
+$mascotB64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes((Join-Path $root "ideaboard-app\mascot.png")))
 
 $out = $tpl.Replace('__APP_HTML__', ('`' + $app + '`'))
+$out = $out.Replace('__MASCOT_B64__', $mascotB64)
 
 $dest = Join-Path $root "ideaboard-worker.js"
 [IO.File]::WriteAllText($dest, $out, (New-Object Text.UTF8Encoding $false))

@@ -26,6 +26,8 @@
  */
 
 const APP_HTML = __APP_HTML__;
+// 다람쌤 마스코트 (build 스크립트가 ideaboard-app/mascot.png 를 base64 로 넣어 줌)
+const MASCOT_PNG_B64 = "__MASCOT_B64__";
 
 // ── 기본 데이터 ──
 function defaultState() {
@@ -537,6 +539,10 @@ export default {
     if (method === "GET" || method === "HEAD") {
       if (path === "/" || path === "/index.html" || path === "/teacher.html")
         return new Response(APP_HTML, { headers: { "Content-Type": "text/html; charset=utf-8" } });
+      if (path === "/mascot.png") {
+        const bytes = Uint8Array.from(atob(MASCOT_PNG_B64), c => c.charCodeAt(0));
+        return new Response(bytes, { headers: { "Content-Type": "image/png", "Cache-Control": "public, max-age=31536000, immutable" } });
+      }
     }
 
     // ── 첨부 파일 내려주기 (주소는 무작위 24자리라 추측 불가) ──

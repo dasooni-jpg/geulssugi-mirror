@@ -88,6 +88,8 @@ try {
   check("앱 화면 서빙(/)", g.status === 200 && g.text.includes("아이디어 보드"));
   g = await get("/teacher.html");
   check("교사 주소도 같은 화면", g.status === 200 && g.text.includes("아이디어 보드"));
+  g = await get("/mascot.png");
+  check("다람쌤 마스코트 서빙", g.status === 200 && g.headers.get("Content-Type") === "image/png");
 
   // 1. 로그인
   let r = await post("/api/login", { role: "teacher", id: "teacher", pw: "0000" });

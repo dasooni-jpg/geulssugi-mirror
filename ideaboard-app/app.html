@@ -5,11 +5,32 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>우리 반 아이디어 보드</title>
 <style>
+  /* ═══════════════════════════════════════════════════════════
+     🎨 디자인(색) 설정 — 여기 값만 바꾸면 앱 전체 색이 바뀝니다!
+     · --brand-1, --brand-2 : 상단 바·버튼의 그라데이션 두 색
+     · --brand-3            : 로그인 배경 아래쪽 색
+     · --accent            : 강조 글자색(이름·아이콘)
+     · --action-1, -2       : '아이디어 올리기' 버튼 그라데이션
+     · --page-bg           : 전체 배경색
+     예) 초록 테마로: --brand-1:#2ecc71; --brand-2:#16a085; --accent:#0e8f6e;
+     예) 분홍 테마로: --brand-1:#ff6aa2; --brand-2:#ff8f6b; --accent:#e0468a;
+     ═══════════════════════════════════════════════════════════ */
+  :root {
+    --brand-1: #7c4dff;
+    --brand-2: #448aff;
+    --brand-3: #00bcd4;
+    --accent:  #5b48e0;
+    --action-1: #ff9048;
+    --action-2: #ff5e7e;
+    --page-bg: #f1f3f8;
+    --ink: #2d3436;
+    --brand-grad: linear-gradient(135deg, var(--brand-1), var(--brand-2));
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; }
   body {
     font-family: "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
-    background: #f1f3f8; color: #2d3436; -webkit-tap-highlight-color: transparent;
+    background: var(--page-bg); color: var(--ink); -webkit-tap-highlight-color: transparent;
   }
   button { font-family: inherit; cursor: pointer; border: none; background: none; font-size: 14px; }
   input, textarea, select { font-family: inherit; font-size: 15px; }
@@ -18,24 +39,25 @@
   /* ── 로그인 ── */
   #scr-login {
     min-height: 100%; display: flex; align-items: center; justify-content: center;
-    background: linear-gradient(135deg, #7c4dff 0%, #448aff 55%, #00bcd4 100%); padding: 20px;
+    background: linear-gradient(135deg, var(--brand-1) 0%, var(--brand-2) 55%, var(--brand-3) 100%); padding: 20px;
   }
   .login-card {
     background: #fff; border-radius: 22px; padding: 34px 30px; width: 360px; max-width: 94vw;
     box-shadow: 0 18px 50px rgba(20, 20, 60, .35); text-align: center;
   }
+  .login-mascot { width: 104px; height: 104px; object-fit: contain; display: block; margin: -8px auto 2px; filter: drop-shadow(0 5px 10px rgba(92,46,13,.22)); }
   .login-card h1 { font-size: 24px; margin-bottom: 4px; }
   .login-card .sub { color: #888; font-size: 13px; margin-bottom: 20px; }
   .role-tabs { display: flex; gap: 6px; background: #eef0f6; border-radius: 12px; padding: 5px; margin-bottom: 18px; }
   .role-tabs button { flex: 1; padding: 9px 0; border-radius: 9px; font-weight: 700; color: #777; }
-  .role-tabs button.on { background: #fff; color: #5b48e0; box-shadow: 0 2px 6px rgba(0,0,0,.12); }
+  .role-tabs button.on { background: #fff; color: var(--accent); box-shadow: 0 2px 6px rgba(0,0,0,.12); }
   .login-card input {
     width: 100%; padding: 12px 14px; margin-bottom: 10px; border: 2px solid #e3e6ef;
     border-radius: 11px; outline: none;
   }
-  .login-card input:focus { border-color: #7c4dff; }
+  .login-card input:focus { border-color: var(--brand-1); }
   .btn-primary {
-    background: linear-gradient(135deg, #7c4dff, #448aff); color: #fff; font-weight: 700;
+    background: var(--brand-grad); color: #fff; font-weight: 700;
     padding: 13px; border-radius: 12px; width: 100%; font-size: 16px;
   }
   .login-err { color: #e74c3c; font-size: 13px; min-height: 18px; margin-bottom: 8px; }
@@ -43,10 +65,11 @@
   /* ── 상단바 ── */
   header {
     position: sticky; top: 0; z-index: 30; color: #fff;
-    background: linear-gradient(135deg, #7c4dff, #448aff);
+    background: var(--brand-grad);
     display: flex; align-items: center; gap: 10px; padding: 12px 16px;
     box-shadow: 0 3px 12px rgba(60, 60, 130, .25);
   }
+  .hd-mascot { width: 36px; height: 36px; object-fit: contain; flex: none; filter: drop-shadow(0 2px 3px rgba(0,0,0,.2)); }
   header .title { font-size: 18px; font-weight: 800; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   header .who { font-size: 13px; background: rgba(255,255,255,.22); padding: 5px 12px; border-radius: 99px; white-space: nowrap; }
   .icon-btn { position: relative; font-size: 20px; color: #fff; padding: 5px 7px; border-radius: 9px; }
@@ -77,8 +100,9 @@
     border: 3px dashed #b9c0d8; background: transparent; color: #8a92ad; font-weight: 800;
     align-items: center; justify-content: center; font-size: 15px; box-shadow: none;
   }
-  .board-new:hover { border-color: #7c4dff; color: #7c4dff; }
-  .empty-note { text-align: center; color: #99a; padding: 60px 10px; font-size: 15px; }
+  .board-new:hover { border-color: var(--brand-1); color: var(--brand-1); }
+  .empty-note { text-align: center; color: #99a; padding: 40px 10px; font-size: 15px; }
+  .empty-mascot { width: 120px; height: 120px; object-fit: contain; display: block; margin: 0 auto 12px; opacity: .92; }
 
   /* ── 게시판 화면 ── */
   .board-head { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
@@ -86,7 +110,7 @@
   .board-head .desc { color: #778; font-size: 13px; width: 100%; }
   .btn-back { font-size: 20px; background: #fff; border-radius: 10px; padding: 6px 11px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
   .btn-write {
-    margin-left: auto; background: linear-gradient(135deg, #ff9048, #ff5e7e); color: #fff;
+    margin-left: auto; background: linear-gradient(135deg, var(--action-1), var(--action-2)); color: #fff;
     font-weight: 800; padding: 10px 18px; border-radius: 12px; font-size: 15px;
     box-shadow: 0 4px 12px rgba(255, 100, 100, .35);
   }
@@ -97,7 +121,7 @@
   }
   .post.notice { border: 2.5px solid #ffc93c; background: #fffcf0; }
   .chip-notice { background: #ffc93c; color: #6b4b00; font-size: 11px; font-weight: 800; padding: 3px 9px; border-radius: 99px; }
-  .tag-teacher { background: #ece4ff; color: #5b48e0; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 99px; margin-left: 4px; }
+  .tag-teacher { background: #ece4ff; color: var(--accent); font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 99px; margin-left: 4px; }
   .p-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
   .avatar {
     width: 32px; height: 32px; border-radius: 50%; color: #fff; font-weight: 800; font-size: 14px;
@@ -130,8 +154,8 @@
   .cmt .c-del { color: #bbc; font-size: 12px; }
   .cmt-input { display: flex; gap: 6px; margin-top: 4px; }
   .cmt-input input { flex: 1; border: 1.5px solid #e3e6ef; border-radius: 9px; padding: 7px 10px; font-size: 13px; outline: none; }
-  .cmt-input input:focus { border-color: #7c4dff; }
-  .cmt-input button { background: #7c4dff; color: #fff; border-radius: 9px; padding: 0 13px; font-weight: 700; }
+  .cmt-input input:focus { border-color: var(--brand-1); }
+  .cmt-input button { background: var(--brand-1); color: #fff; border-radius: 9px; padding: 0 13px; font-weight: 700; }
 
   /* ── 모달 공통 ── */
   .overlay {
@@ -151,7 +175,7 @@
   .m-body textarea, .m-body select {
     width: 100%; border: 2px solid #e3e6ef; border-radius: 11px; padding: 10px 12px; outline: none;
   }
-  .m-body input:focus, .m-body textarea:focus, .m-body select:focus { border-color: #7c4dff; }
+  .m-body input:focus, .m-body textarea:focus, .m-body select:focus { border-color: var(--brand-1); }
   .m-body textarea { min-height: 110px; resize: vertical; }
   .m-actions { display: flex; gap: 8px; margin-top: 15px; }
   .m-actions .grow { flex: 1; }
@@ -186,13 +210,13 @@
   .draw-tools .dot { width: 26px; height: 26px; border-radius: 50%; border: 3px solid transparent; }
   .draw-tools .dot.on { border-color: #2d3436; transform: scale(1.15); }
   .draw-tools .szbtn { background: #f2f4fb; border-radius: 9px; padding: 5px 10px; font-weight: 700; color: #445; }
-  .draw-tools .szbtn.on { background: #7c4dff; color: #fff; }
+  .draw-tools .szbtn.on { background: var(--brand-1); color: #fff; }
   .draw-tools .sep { width: 1px; height: 24px; background: #e3e6ef; margin: 0 4px; }
 
   /* ── 쪽지 ── */
   .msg-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
   .msg-tabs button { flex: 1; background: #eef0f6; border-radius: 10px; padding: 9px; font-weight: 700; color: #778; }
-  .msg-tabs button.on { background: #7c4dff; color: #fff; }
+  .msg-tabs button.on { background: var(--brand-1); color: #fff; }
   .msg-item { background: #f6f7fc; border-radius: 12px; padding: 10px 13px; margin-bottom: 8px; }
   .msg-item.unread { background: #fff3f5; border: 1.5px solid #ffd3dc; }
   .msg-meta { font-size: 12px; color: #889; margin-bottom: 3px; display: flex; gap: 6px; }
@@ -209,8 +233,13 @@
   .stu-table th { font-size: 12px; color: #889; text-align: left; padding: 4px 6px; }
   .stu-table td { padding: 3px 3px; }
   .stu-table input { width: 100%; border: 1.5px solid #e3e6ef; border-radius: 8px; padding: 7px 9px; font-size: 14px; outline: none; }
-  .stu-table input:focus { border-color: #7c4dff; }
+  .stu-table input:focus { border-color: var(--brand-1); }
   .stu-table .del { color: #e74c3c; font-size: 15px; padding: 4px 7px; }
+  .add-n { display: inline-flex; align-items: center; border: 2px solid #e3e6ef; border-radius: 11px; overflow: hidden; }
+  .add-n input { width: 46px; text-align: center; border: none; padding: 9px 0; outline: none; font-weight: 700; -moz-appearance: textfield; }
+  .add-n input::-webkit-outer-spin-button, .add-n input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .add-n-btn { width: 34px; padding: 9px 0; font-size: 18px; font-weight: 800; color: var(--accent); background: #f5f6fb; }
+  .add-n-btn:hover { background: #e9ebf6; }
 
   /* ── 사진 크게 보기 ── */
   #lightbox { background: rgba(10, 10, 30, .88); cursor: zoom-out; }
@@ -226,15 +255,15 @@
   #toast.show { opacity: 1; }
 
   /* ── 포트폴리오 ── */
-  .stu-table .pf { color: #5b48e0; font-size: 15px; padding: 4px 7px; }
+  .stu-table .pf { color: var(--accent); font-size: 15px; padding: 4px 7px; }
   .pf-stats { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
   .pf-stat { background: #f2f4fb; border-radius: 12px; padding: 8px 14px; text-align: center; flex: 1; min-width: 72px; }
-  .pf-stat b { display: block; font-size: 20px; color: #5b48e0; }
+  .pf-stat b { display: block; font-size: 20px; color: var(--accent); }
   .pf-stat span { font-size: 12px; color: #778; }
   .pf-section-title { font-size: 15px; font-weight: 800; margin: 16px 0 8px; color: #445; }
   .pf-item { border: 1.5px solid #eef0f6; border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; }
   .pf-item .pf-meta { font-size: 12px; color: #889; margin-bottom: 6px; }
-  .pf-item .pf-meta b { color: #5b48e0; }
+  .pf-item .pf-meta b { color: var(--accent); }
   .pf-item .pf-text { font-size: 14px; line-height: 1.55; white-space: pre-wrap; word-break: break-word; margin-bottom: 8px; }
   .pf-item img { max-width: 220px; max-height: 220px; border-radius: 8px; margin: 4px 6px 4px 0; border: 1px solid #eee; vertical-align: top; }
   .pf-item .pf-file { display: inline-block; background: #f2f4fb; border-radius: 8px; padding: 5px 10px; font-size: 13px; color: #445; text-decoration: none; margin: 2px 4px 2px 0; }
@@ -274,8 +303,9 @@
 <!-- ═══════════ 로그인 ═══════════ -->
 <div id="scr-login">
   <div class="login-card">
-    <h1>💡 우리 반 아이디어 보드</h1>
-    <div class="sub">글 · 그림 · 사진 · 파일로 아이디어를 나눠요</div>
+    <img class="login-mascot" src="/mascot.png" alt="다람쌤 마스코트">
+    <h1>우리 반 아이디어 보드</h1>
+    <div class="sub">다람쌤과 함께 글 · 그림 · 사진 · 파일로 아이디어를 나눠요</div>
     <div class="role-tabs">
       <button id="tab-student" class="on" onclick="IB.setRole('student')">🧑‍🎓 학생</button>
       <button id="tab-teacher" onclick="IB.setRole('teacher')">🧑‍🏫 선생님</button>
@@ -297,6 +327,7 @@
 <!-- ═══════════ 앱 본체 ═══════════ -->
 <div id="scr-app" hidden>
   <header>
+    <img class="hd-mascot" src="/mascot.png" alt="다람쌤">
     <div class="title" id="hd-title">우리 반 아이디어 보드</div>
     <span class="who" id="hd-who"></span>
     <button class="icon-btn" title="쪽지" onclick="IB.openMsgs()">✉️<span class="badge" id="hd-badge" hidden></span></button>
@@ -309,7 +340,7 @@
   <!-- 홈: 게시판 목록 -->
   <main id="view-home">
     <div class="board-grid" id="board-grid"></div>
-    <div class="empty-note" id="home-empty" hidden>아직 게시판이 없어요.<br>선생님이 게시판을 만들면 여기에 나타나요! 🌱</div>
+    <div class="empty-note" id="home-empty" hidden><img class="empty-mascot" src="/mascot.png" alt="다람쌤">아직 게시판이 없어요.<br>선생님이 게시판을 만들면 여기에 나타나요! 🌱</div>
   </main>
 
   <!-- 게시판: 글 목록 -->
@@ -321,7 +352,7 @@
       <div class="desc" id="bd-desc"></div>
     </div>
     <div class="posts" id="post-list"></div>
-    <div class="empty-note" id="bd-empty" hidden>아직 올라온 아이디어가 없어요.<br>첫 번째 아이디어를 올려 볼까요? ✨</div>
+    <div class="empty-note" id="bd-empty" hidden><img class="empty-mascot" src="/mascot.png" alt="다람쌤">아직 올라온 아이디어가 없어요.<br>첫 번째 아이디어를 올려 볼까요? ✨</div>
   </main>
 </div>
 
@@ -436,8 +467,13 @@
         <thead><tr><th style="width:56px">번호</th><th>이름</th><th style="width:74px">PIN</th><th style="width:70px"></th></tr></thead>
         <tbody id="stu-rows"></tbody>
       </table>
-      <div class="m-actions">
-        <button class="btn2" onclick="IB.addStudentRow()">+ 학생 추가</button>
+      <div class="m-actions" style="align-items:center;flex-wrap:wrap">
+        <div class="add-n">
+          <button class="add-n-btn" onclick="IB.stepAddCount(-1)">−</button>
+          <input type="number" id="stu-addn" min="1" max="50" value="5" onchange="IB.clampAddCount()">
+          <button class="add-n-btn" onclick="IB.stepAddCount(1)">+</button>
+        </div>
+        <button class="btn2" onclick="IB.addStudentRows()">명 추가 👥</button>
         <button class="btn-primary grow" onclick="IB.saveStudents()">저장</button>
       </div>
     </div>
@@ -554,7 +590,7 @@ window.IB = (() => {
   function hide(id) { $(id).hidden = true; }
   function avatarHtml(author) {
     const ch = author.type === "teacher" ? "🧑‍🏫" : esc(String(author.name || "?").charAt(0));
-    const color = author.type === "teacher" ? "#5b48e0"
+    const color = author.type === "teacher" ? "var(--accent)"
       : AVATAR_COLORS[Number(author.id) % AVATAR_COLORS.length];
     return '<span class="avatar" style="background:' + color + '">' + ch + "</span>";
   }
@@ -1130,12 +1166,30 @@ window.IB = (() => {
       (id ? '<button class="pf" title="포트폴리오 보기" onclick="IB.openPortfolio(' + id + ')">📁</button>' : "") +
       '<button class="del" onclick="this.closest(\'tr\').remove()">🗑</button></td></tr>';
   }
-  function addStudentRow() {
+  function addStudentRow() { addStudentRows(1); }
+  // 원하는 인원수만큼 한 번에 추가 (번호는 이어서 자동 매김)
+  function addStudentRows(n) {
     const tbody = $("stu-rows");
+    if (typeof n !== "number") n = clampAddCount();
     const nums = [...tbody.querySelectorAll(".st-no")].map(i => Number(i.value) || 0);
-    const next = nums.length ? Math.max(...nums) + 1 : 1;
-    tbody.insertAdjacentHTML("beforeend", studentRowHtml("", next, "", "0000"));
-    tbody.lastElementChild.querySelector(".st-name").focus();
+    let next = nums.length ? Math.max(...nums) + 1 : 1;
+    let firstNew = null;
+    for (let i = 0; i < n; i++) {
+      tbody.insertAdjacentHTML("beforeend", studentRowHtml("", next++, "", "0000"));
+      if (!firstNew) firstNew = tbody.lastElementChild;
+    }
+    if (firstNew) firstNew.querySelector(".st-name").focus();
+  }
+  function clampAddCount() {
+    const el = $("stu-addn");
+    let v = Math.round(Number(el.value) || 1);
+    v = Math.max(1, Math.min(50, v));
+    el.value = v;
+    return v;
+  }
+  function stepAddCount(delta) {
+    $("stu-addn").value = clampAddCount() + delta;
+    clampAddCount();
   }
   function saveStudents() {
     const rows = [...$("stu-rows").querySelectorAll("tr")];
@@ -1303,7 +1357,7 @@ window.IB = (() => {
     openDraw, closeDraw, drawColor: drawColorPick, drawSize, drawEraser, drawUndo, drawClear, finishDraw,
     openMsgs, msgTab, sendMsg, ackPopup,
     newBoard, editBoard, saveBoard, deleteBoard,
-    openStudents, addStudentRow, saveStudents,
+    openStudents, addStudentRow, addStudentRows, stepAddCount, clampAddCount, saveStudents,
     openPortfolio, printPortfolio,
     openTeachers, addTeacherRow, saveTeachers,
     openSettings, saveSettings,
