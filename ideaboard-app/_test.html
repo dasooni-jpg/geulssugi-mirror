@@ -281,9 +281,49 @@ try {
   r = await post("/api/board", { auth: S1, boardId: B2 });
   check("지운 게시판 접근 404", !r.ok);
 
+  // 13.5 여러 선생님 계정
+  r = await post("/api/home", { auth: S1 });
+  check("기본: 선생님 목록 1명", r.teacherList.length === 1 && r.teacherList[0].name === "선생님");
+  r = await post("/api/home", { auth: T });
+  const t1 = r.teachers.find(t => t.loginId === "teacher");
+  check("교사 홈에 선생님 명단(비번 포함)", !!t1 && t1.pw === "0000");
+  r = await post("/api/teacher/teachers/save", { auth: T, teachers: [
+    { id: t1.id, loginId: "teacher", name: "선생님", pw: "0000" },
+    { loginId: "kim", name: "김쌤", pw: "kim1" },
+  ]});
+  check("선생님 2명 저장", r.ok && r.count === 2);
+  r = await post("/api/teacher/teachers/save", { auth: T, teachers: [
+    { loginId: "same", name: "A", pw: "1234" }, { loginId: "same", name: "B", pw: "1234" },
+  ]});
+  check("교사 아이디 중복 거부", !r.ok);
+  r = await post("/api/teacher/teachers/save", { auth: T, teachers: [{ loginId: "x", name: "X", pw: "12" }] });
+  check("교사 비번 4자 미만 거부", !r.ok);
+  r = await post("/api/teacher/teachers/save", { auth: T, teachers: [] });
+  check("선생님 0명 거부", !r.ok);
+  const K = { role: "teacher", id: "kim", pw: "kim1" };
+  r = await post("/api/login", { role: "teacher", id: "kim", pw: "kim1" });
+  check("둘째 선생님 로그인", r.ok && r.name === "김쌤");
+  r = await post("/api/home", { auth: S1 });
+  check("학생 홈: 선생님 목록 2명", r.teacherList.length === 2);
+  const kimId = r.teacherList.find(t => t.name === "김쌤").id;
+  r = await post("/api/msg/send", { auth: S1, to: String(kimId), text: "김쌤께 질문이요" });
+  check("학생→특정 선생님 쪽지", r.ok);
+  r = await post("/api/poll", { auth: K });
+  check("지정한 선생님만 받음", r.messages.some(m => m.text.includes("김쌤께")));
+  r = await post("/api/poll", { auth: T });
+  check("다른 선생님은 안 받음", !r.messages.some(m => m.text.includes("김쌤께")));
+  r = await post("/api/post/create", { auth: K, boardId: B1, text: "김쌤이 쓴 공지", isNotice: true });
+  check("둘째 선생님 글(이름·공지)", r.ok && r.post.author.name === "김쌤" && r.post.author.type === "teacher" && r.post.isNotice);
+  r = await post("/api/like/toggle", { auth: T, postId: P1 });
+  const lc = r.likeCount;
+  r = await post("/api/like/toggle", { auth: K, postId: P1 });
+  check("선생님별 좋아요 따로 셈", r.likeCount === lc + 1);
+  r = await post("/api/msg/list", { auth: K });
+  check("둘째 선생님 쪽지함엔 자기 것만", r.messages.every(m => m.received ? m.toId === kimId : m.from.id === kimId));
+
   // 14. 설정 바꾸기 (마지막에 실행 — 이후 인증이 바뀜)
   r = await post("/api/teacher/settings/save", { auth: T, className: "6학년 1반 아이디어", classCode: "7-1", newPw: "abcd" });
-  check("설정 저장", r.ok);
+  check("설정 저장(내 비번 변경)", r.ok);
   r = await post("/api/home", { auth: S1 });
   check("옛 학급코드 로그인 무효", !r.ok);
   r = await post("/api/home", { auth: { role: "student", classCode: "7-1", number: 1, pin: "1111" } });
@@ -291,7 +331,9 @@ try {
   r = await post("/api/home", { auth: T });
   check("옛 교사 비번 무효", !r.ok);
   r = await post("/api/home", { auth: { role: "teacher", id: "teacher", pw: "abcd" } });
-  check("새 교사 비번으로 접속", r.ok);
+  check("바뀐 내 비번으로 접속", r.ok);
+  r = await post("/api/home", { auth: K });
+  check("다른 선생님 비번은 그대로 유효", r.ok && r.me.name === "김쌤");
 
   document.getElementById("summary").textContent =
     `완료: ${pass} PASS / ${fail} FAIL` + (fail === 0 ? " 🎉" : " ⚠️");

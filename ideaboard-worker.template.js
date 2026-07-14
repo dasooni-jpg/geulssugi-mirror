@@ -34,16 +34,27 @@ function defaultState() {
     settings: {
       classCode: "6-1",
       className: "우리 반 아이디어 보드",
-      teacherId: "teacher",
-      teacherPw: "0000",
     },
+    // 선생님 계정(여러 명 가능). 각자 아이디·비밀번호·이름으로 로그인해 글·쪽지가 구분됨
+    teachers: [{ id: 1, loginId: "teacher", pw: "0000", name: "선생님" }],
     students: [],  // {id, number, name, pin, active}
     boards: [],    // {id, title, desc, createdAt}
     posts: [],     // {id, boardId, author:{type,id,name}, text, files:[{id,name,mime,isImage}], isNotice, createdAt}
     comments: [],  // {id, postId, author:{type,id,name}, text, createdAt}
-    likes: [],     // {postId, key}   key = "t" | "s<학생id>"
+    likes: [],     // {postId, key}   key = "t<교사id>" | "s<학생id>"
     messages: [],  // {id, from:{type,id,name}, toType:"student"|"teacher", toId, text, createdAt, read}
   };
+}
+
+// 예전(교사 1명) 데이터를 새 구조(teachers 배열)로 맞춰 줌
+function migrate(st) {
+  if (!Array.isArray(st.teachers) || st.teachers.length === 0) {
+    const s = st.settings || {};
+    st.teachers = [{ id: 1, loginId: s.teacherId || "teacher", pw: s.teacherPw || "0000", name: "선생님" }];
+  }
+  if (st.settings) { delete st.settings.teacherId; delete st.settings.teacherPw; }
+  if ((st.seq | 0) < 100) st.seq = 100;
+  return st;
 }
 
 // ── 한국 시간 (Worker 는 UTC 로 돌므로 반드시 서울 기준으로 변환) ──
@@ -64,10 +75,10 @@ function randId() {
   for (const b of a) s += b.toString(16).padStart(2, "0");
   return s;
 }
-function testTeacher(st, auth) {
-  if (!auth) return false;
-  const s = st.settings;
-  return String(auth.id) === String(s.teacherId) && String(auth.pw) === String(s.teacherPw);
+function findTeacher(st, auth) {
+  if (!auth) return null;
+  return (st.teachers || []).find(t =>
+    String(t.loginId) === String(auth.id) && String(t.pw) === String(auth.pw)) || null;
 }
 function authStudent(st, auth) {
   if (!auth) return null;
@@ -78,12 +89,14 @@ function authStudent(st, auth) {
 // 요청의 auth 로 행위자(교사/학생)를 판별
 function getActor(st, auth) {
   if (!auth) return null;
-  if (auth.role === "teacher")
-    return testTeacher(st, auth) ? { type: "teacher", id: 0, name: "선생님" } : null;
+  if (auth.role === "teacher") {
+    const t = findTeacher(st, auth);
+    return t ? { type: "teacher", id: t.id, name: t.name } : null;
+  }
   const s = authStudent(st, auth);
   return s ? { type: "student", id: s.id, name: s.name, number: s.number } : null;
 }
-function likeKey(actor) { return actor.type === "teacher" ? "t" : "s" + actor.id; }
+function likeKey(actor) { return (actor.type === "teacher" ? "t" : "s") + actor.id; }
 function sameAuthor(actor, author) {
   return author && author.type === actor.type && Number(author.id) === Number(actor.id);
 }
@@ -133,7 +146,8 @@ function ok(obj) { return { status: 200, body: Object.assign({ ok: true }, obj) 
 
 function unreadOf(st, actor) {
   return st.messages.filter(m => !m.read &&
-    (actor.type === "teacher" ? m.toType === "teacher"
+    (actor.type === "teacher"
+      ? (m.toType === "teacher" && Number(m.toId) === Number(actor.id))
       : (m.toType === "student" && Number(m.toId) === Number(actor.id))));
 }
 
@@ -155,7 +169,8 @@ function handleApi(st, path, method, d) {
   // ══════════ 로그인 ══════════
   if (path === "/api/login") {
     if (d.role === "teacher") {
-      if (testTeacher(st, { id: d.id, pw: d.pw })) return ok({ name: "선생님" });
+      const t = findTeacher(st, { id: d.id, pw: d.pw });
+      if (t) return ok({ id: t.id, name: t.name });
       return fail("아이디 또는 비밀번호가 맞지 않습니다.", 401);
     }
     const stu = authStudent(st, { classCode: d.classCode, number: d.number, pin: d.pin });
@@ -177,12 +192,16 @@ function handleApi(st, path, method, d) {
       className: st.settings.className,
       me: { type: actor.type, id: actor.id, name: actor.name },
       boards, unread: unreadOf(st, actor).length,
+      // 이름·id만 (비밀번호 제외) — 학생이 쪽지 받을 선생님을 고를 때 사용
+      teacherList: st.teachers.map(t => ({ id: t.id, name: t.name })),
     };
     if (isTeacher) {
       res.students = st.students.filter(s => s.active)
         .map(s => ({ id: s.id, number: s.number, name: s.name, pin: s.pin }))
         .sort((a, b) => a.number - b.number);
       res.classCode = st.settings.classCode;
+      // 선생님 계정 관리용 (교사에게만 비밀번호 포함)
+      res.teachers = st.teachers.map(t => ({ id: t.id, loginId: t.loginId, name: t.name, pw: t.pw }));
     }
     return ok(res);
   }
@@ -297,24 +316,31 @@ function handleApi(st, path, method, d) {
         st.messages.push({ id: nextId(st), from, toType: "student", toId: s.id, text, createdAt: now, read: false });
       }
     } else {
-      st.messages.push({ id: nextId(st), from, toType: "teacher", toId: 0, text, createdAt: now, read: false });
+      // 학생 → 선생님. 받는 사람은 반드시 선생님(학생끼리 쪽지 불가).
+      // 선생님이 여러 명이면 고른 선생님, 지정이 없거나 잘못됐고 선생님이 한 명뿐이면 그 선생님에게 자동 전송
+      let target = null;
+      if (d.to) target = st.teachers.find(t => t.id === Number(d.to));
+      if (!target && st.teachers.length === 1) target = st.teachers[0];
+      if (!target) return fail("쪽지를 보낼 선생님을 골라 주세요.", 400);
+      st.messages.push({ id: nextId(st), from, toType: "teacher", toId: target.id, text, createdAt: now, read: false });
     }
     return Object.assign(ok({}), { mutated: true });
   }
   if (path === "/api/msg/list") {
-    const toName = m => m.toType === "teacher" ? "선생님"
+    const teacherName = id => (st.teachers.find(t => t.id === Number(id)) || { name: "선생님" }).name;
+    const toName = m => m.toType === "teacher" ? teacherName(m.toId)
       : (st.students.find(s => s.id === Number(m.toId)) || { name: "?" }).name;
-    const mine = st.messages.filter(m =>
-      (actor.type === "teacher" ? (m.toType === "teacher" || m.from.type === "teacher")
-        : (m.from.type === "student" && Number(m.from.id) === Number(actor.id)) ||
-          (m.toType === "student" && Number(m.toId) === Number(actor.id))))
+    const receivedBy = m => actor.type === "teacher"
+      ? (m.toType === "teacher" && Number(m.toId) === Number(actor.id))
+      : (m.toType === "student" && Number(m.toId) === Number(actor.id));
+    const sentBy = m => m.from.type === actor.type && Number(m.from.id) === Number(actor.id);
+    const mine = st.messages.filter(m => receivedBy(m) || sentBy(m))
       .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1) || (b.id - a.id))
       .slice(0, 200)
       .map(m => ({
         id: m.id, from: m.from, toType: m.toType, toId: m.toId, toName: toName(m),
         text: m.text, createdAt: m.createdAt, read: !!m.read,
-        received: actor.type === "teacher" ? m.toType === "teacher"
-          : m.toType === "student" && Number(m.toId) === Number(actor.id),
+        received: receivedBy(m),
       }));
     return ok({ messages: mine });
   }
@@ -322,8 +348,9 @@ function handleApi(st, path, method, d) {
     const ids = Array.isArray(d.ids) ? d.ids.map(Number) : [];
     let changed = false;
     for (const m of st.messages) {
-      const isMine = actor.type === "teacher" ? m.toType === "teacher"
-        : m.toType === "student" && Number(m.toId) === Number(actor.id);
+      const isMine = actor.type === "teacher"
+        ? (m.toType === "teacher" && Number(m.toId) === Number(actor.id))
+        : (m.toType === "student" && Number(m.toId) === Number(actor.id));
       if (isMine && !m.read && ids.includes(m.id)) { m.read = true; changed = true; }
     }
     if (!changed) return ok({});
@@ -391,6 +418,26 @@ function handleApi(st, path, method, d) {
       return Object.assign(ok({ count: next.length }), { mutated: true });
     }
 
+    // 선생님 계정 명단 일괄 저장 (여러 명 등록 가능)
+    if (path === "/api/teacher/teachers/save") {
+      if (!Array.isArray(d.teachers)) return fail("목록이 올바르지 않아요.");
+      const seen = new Set();
+      const next = [];
+      for (const t of d.teachers) {
+        const loginId = String(t.loginId || "").trim().slice(0, 30);
+        const name = String(t.name || "").trim().slice(0, 20);
+        const pw = String(t.pw || "").trim();
+        if (!loginId || !name) return fail("아이디와 이름을 모두 채워 주세요.");
+        if (pw.length < 4) return fail(name + " 선생님: 비밀번호는 4자 이상이어야 해요.");
+        if (seen.has(loginId)) return fail("아이디 '" + loginId + "'가 겹쳐요.");
+        seen.add(loginId);
+        next.push({ id: t.id ? Number(t.id) : nextId(st), loginId, pw, name });
+      }
+      if (next.length === 0) return fail("선생님은 최소 한 명은 있어야 해요.");
+      st.teachers = next;
+      return Object.assign(ok({ count: next.length }), { mutated: true });
+    }
+
     if (path === "/api/teacher/settings/save") {
       const classCode = String(d.classCode || "").trim().slice(0, 20);
       const className = String(d.className || "").trim().slice(0, 40);
@@ -400,7 +447,8 @@ function handleApi(st, path, method, d) {
       if (d.newPw) {
         const pw = String(d.newPw).trim();
         if (pw.length < 4) return fail("새 비밀번호는 4자 이상이어야 해요.");
-        st.settings.teacherPw = pw;
+        const me = st.teachers.find(t => t.id === actor.id);  // 지금 로그인한 선생님 본인 비밀번호
+        if (me) me.pw = pw;
       }
       return Object.assign(ok({}), { mutated: true });
     }
@@ -420,7 +468,7 @@ async function ensureSchema(db) {
 async function loadState(db) {
   const row = await db.prepare("SELECT version, data FROM board_state WHERE id = 1").first();
   if (!row) return { version: 0, state: defaultState() };
-  return { version: row.version, state: JSON.parse(row.data) };
+  return { version: row.version, state: migrate(JSON.parse(row.data)) };
 }
 async function saveState(db, version, state) {
   prune(state);

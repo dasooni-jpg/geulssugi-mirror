@@ -124,6 +124,7 @@ const APP_HTML = `<!DOCTYPE html>
   }
   .post.notice { border: 2.5px solid #ffc93c; background: #fffcf0; }
   .chip-notice { background: #ffc93c; color: #6b4b00; font-size: 11px; font-weight: 800; padding: 3px 9px; border-radius: 99px; }
+  .tag-teacher { background: #ece4ff; color: #5b48e0; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 99px; margin-left: 4px; }
   .p-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
   .avatar {
     width: 32px; height: 32px; border-radius: 50%; color: #fff; font-weight: 800; font-size: 14px;
@@ -290,6 +291,7 @@ const APP_HTML = `<!DOCTYPE html>
     <span class="who" id="hd-who"></span>
     <button class="icon-btn" title="쪽지" onclick="IB.openMsgs()">✉️<span class="badge" id="hd-badge" hidden></span></button>
     <button class="icon-btn" id="hd-students" title="학생 관리" onclick="IB.openStudents()" hidden>👥</button>
+    <button class="icon-btn" id="hd-teachers" title="선생님 계정 관리" onclick="IB.openTeachers()" hidden>🧑‍🏫</button>
     <button class="icon-btn" id="hd-settings" title="설정" onclick="IB.openSettings()" hidden>⚙️</button>
     <button class="icon-btn" title="나가기" onclick="IB.logout()">🚪</button>
   </header>
@@ -432,6 +434,27 @@ const APP_HTML = `<!DOCTYPE html>
   </div>
 </div>
 
+<!-- ═══════════ 선생님 계정 관리 (교사) ═══════════ -->
+<div class="overlay" id="md-teachers" hidden>
+  <div class="modal">
+    <div class="m-head">🧑‍🏫 선생님 계정 관리 <button class="x" onclick="IB.hide('md-teachers')">✕</button></div>
+    <div class="m-body">
+      <div style="font-size:13px;color:#889;margin-bottom:8px">
+        여러 선생님이 <b>각자 아이디·비밀번호</b>로 로그인해요. 글·쪽지에 이름이 따로 표시됩니다.<br>
+        (옆 반·전담·보결 선생님을 추가해 보세요. 비밀번호는 4자 이상)
+      </div>
+      <table class="stu-table">
+        <thead><tr><th>이름</th><th>아이디</th><th style="width:90px">비밀번호</th><th style="width:36px"></th></tr></thead>
+        <tbody id="tch-rows"></tbody>
+      </table>
+      <div class="m-actions">
+        <button class="btn2" onclick="IB.addTeacherRow()">+ 선생님 추가</button>
+        <button class="btn-primary grow" onclick="IB.saveTeachers()">저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════════ 설정 (교사) ═══════════ -->
 <div class="overlay" id="md-settings" hidden>
   <div class="modal">
@@ -441,8 +464,8 @@ const APP_HTML = `<!DOCTYPE html>
       <input type="text" id="set-classname">
       <label>학급 코드 (학생 로그인용)</label>
       <input type="text" id="set-classcode">
-      <label>교사 새 비밀번호 (바꾸지 않으려면 비워 두세요)</label>
-      <input type="password" id="set-newpw" placeholder="4자 이상">
+      <label>내 비밀번호 바꾸기 (바꾸지 않으려면 비워 두세요)</label>
+      <input type="password" id="set-newpw" placeholder="4자 이상 — 지금 로그인한 선생님 계정">
       <div class="m-actions">
         <button class="btn-primary grow" onclick="IB.saveSettings()">저장</button>
       </div>
@@ -502,11 +525,14 @@ window.IB = (() => {
   function show(id) { $(id).hidden = false; }
   function hide(id) { $(id).hidden = true; }
   function avatarHtml(author) {
-    const name = author.type === "teacher" ? "선생님" : author.name;
-    const ch = author.type === "teacher" ? "🧑‍🏫" : esc(String(name).charAt(0));
+    const ch = author.type === "teacher" ? "🧑‍🏫" : esc(String(author.name || "?").charAt(0));
     const color = author.type === "teacher" ? "#5b48e0"
       : AVATAR_COLORS[Number(author.id) % AVATAR_COLORS.length];
     return '<span class="avatar" style="background:' + color + '">' + ch + "</span>";
+  }
+  // 글쓴이 이름 (선생님이면 이름 옆에 '선생님' 표시)
+  function authorLabel(author) {
+    return esc(author.name) + (author.type === "teacher" ? ' <span class="tag-teacher">선생님</span>' : "");
   }
   function isMine(author) {
     return ME && author.type === ME.type && Number(author.id) === Number(ME.id);
@@ -584,8 +610,9 @@ window.IB = (() => {
     ME = r.me;
     $("hd-title").textContent = r.className;
     document.title = r.className;
-    $("hd-who").textContent = ME.type === "teacher" ? "🧑‍🏫 선생님" : "🧑‍🎓 " + ME.name;
+    $("hd-who").textContent = (ME.type === "teacher" ? "🧑‍🏫 " : "🧑‍🎓 ") + ME.name;
     $("hd-students").hidden = ME.type !== "teacher";
+    $("hd-teachers").hidden = ME.type !== "teacher";
     $("hd-settings").hidden = ME.type !== "teacher";
     setBadge(r.unread);
     renderBoards();
@@ -630,10 +657,9 @@ window.IB = (() => {
     const wrap = $("post-list");
     let html = "";
     for (const p of BOARD.posts) {
-      const name = p.author.type === "teacher" ? "선생님" : p.author.name;
       html += '<div class="post' + (p.isNotice ? " notice" : "") + '" id="post-' + p.id + '">';
       html += '<div class="p-head">' + avatarHtml(p.author) +
-        '<div class="p-who"><div class="p-name">' + esc(name) +
+        '<div class="p-who"><div class="p-name">' + authorLabel(p.author) +
         (p.isNotice ? ' <span class="chip-notice">📌 공지</span>' : "") +
         '</div><div class="p-time">' + fmtTime(p.createdAt) + "</div></div>" +
         '<div class="p-tools">' +
@@ -654,8 +680,7 @@ window.IB = (() => {
       // 댓글
       html += '<div class="comments" id="cmts-' + p.id + '" hidden>';
       for (const c of p.comments) {
-        const cname = c.author.type === "teacher" ? "선생님" : c.author.name;
-        html += '<div class="cmt"><div class="c-body"><span class="c-name">' + esc(cname) + "</span>" +
+        html += '<div class="cmt"><div class="c-body"><span class="c-name">' + authorLabel(c.author) + "</span>" +
           esc(c.text) + '<span class="c-time">' + fmtTime(c.createdAt) + "</span>" +
           ((isT || isMine(c.author)) ? ' <button class="c-del" onclick="IB.deleteComment(' + c.id + ')">✕</button>' : "") +
           "</div></div>";
@@ -917,16 +942,24 @@ window.IB = (() => {
     b.textContent = n > 99 ? "99+" : n;
   }
   function openMsgs() {
-    // 받는 사람 선택 (교사만)
+    const sel = $("msg-to");
     if (ME.type === "teacher") {
+      // 교사: 받을 학생 선택
       $("msg-to-label").textContent = "쪽지 보내기 — 받을 사람";
-      const sel = $("msg-to");
       sel.hidden = false;
       sel.innerHTML = '<option value="all">📢 전체 학생</option>' +
         (HOME.students || []).map(s => '<option value="' + s.id + '">' + s.number + "번 " + esc(s.name) + "</option>").join("");
     } else {
-      $("msg-to-label").textContent = "선생님께 쪽지 보내기 (고민 상담, 하고 싶은 말 무엇이든!)";
-      $("msg-to").hidden = true;
+      // 학생: 선생님이 여러 명이면 받을 선생님 선택, 한 명이면 자동
+      const teachers = HOME.teacherList || [];
+      if (teachers.length > 1) {
+        $("msg-to-label").textContent = "쪽지 보낼 선생님을 골라 주세요 (고민 상담, 하고 싶은 말 무엇이든!)";
+        sel.hidden = false;
+        sel.innerHTML = teachers.map(t => '<option value="' + t.id + '">' + esc(t.name) + " 선생님</option>").join("");
+      } else {
+        $("msg-to-label").textContent = "선생님께 쪽지 보내기 (고민 상담, 하고 싶은 말 무엇이든!)";
+        sel.hidden = true;
+      }
     }
     $("msg-text").value = "";
     show("md-msgs");
@@ -954,10 +987,11 @@ window.IB = (() => {
     $("msg-list").innerHTML = list.length === 0
       ? '<div style="text-align:center;color:#aab;padding:20px 0;font-size:13px">쪽지가 없어요</div>'
       : list.map(m => {
-        const fromName = m.from.type === "teacher" ? "선생님" : m.from.name;
+        const fromName = m.from.name + (m.from.type === "teacher" ? " 선생님" : "");
+        const toName = m.toName + (m.toType === "teacher" ? " 선생님" : "");
         return '<div class="msg-item' + (m.received && !m.read ? " unread" : "") + '">' +
           '<div class="msg-meta">' +
-          (msgTabName === "recv" ? "<b>" + esc(fromName) + "</b> 님이 보냄" : "<b>" + esc(m.toName) + "</b> 님에게 보냄") +
+          (msgTabName === "recv" ? "<b>" + esc(fromName) + "</b> 님이 보냄" : "<b>" + esc(toName) + "</b> 님에게 보냄") +
           "<span>" + fmtTime(m.createdAt) + "</span></div>" +
           '<div class="msg-text">' + esc(m.text) + "</div></div>";
       }).join("");
@@ -967,7 +1001,8 @@ window.IB = (() => {
     if (!text) { toast("쪽지 내용을 써 주세요"); return; }
     guard((async () => {
       const body = { text };
-      if (ME.type === "teacher") body.to = $("msg-to").value;
+      // 교사는 항상, 학생은 선생님 선택칸이 보일 때(선생님 여러 명)만 받는 사람을 넣음
+      if (!$("msg-to").hidden) body.to = $("msg-to").value;
       await api("/api/msg/send", body);
       $("msg-text").value = "";
       toast("쪽지를 보냈어요 💌");
@@ -991,7 +1026,7 @@ window.IB = (() => {
       if (r.messages.length && $("md-msgs").hidden && $("md-popup").hidden) {
         popupIds = r.messages.map(m => m.id);
         $("popup-list").innerHTML = r.messages.map(m => {
-          const fromName = m.from.type === "teacher" ? "선생님" : m.from.name;
+          const fromName = m.from.name + (m.from.type === "teacher" ? " 선생님" : "");
           return '<div class="msg-item unread"><div class="msg-meta"><b>' + esc(fromName) +
             "</b> 님이 보냄 <span>" + fmtTime(m.createdAt) + "</span></div>" +
             '<div class="msg-text">' + esc(m.text) + "</div></div>";
@@ -1088,6 +1123,49 @@ window.IB = (() => {
     })());
   }
 
+  // ── 교사: 선생님 계정 관리 ──
+  function openTeachers() {
+    const rows = (HOME.teachers || []).map(t =>
+      teacherRowHtml(t.id, t.name, t.loginId, t.pw)).join("");
+    $("tch-rows").innerHTML = rows;
+    if (!rows) addTeacherRow();
+    show("md-teachers");
+  }
+  function teacherRowHtml(id, name, loginId, pw) {
+    return '<tr data-id="' + (id || "") + '">' +
+      '<td><input type="text" class="tc-name" maxlength="20" value="' + esc(name || "") + '" placeholder="예: 김담임"></td>' +
+      '<td><input type="text" class="tc-login" maxlength="30" value="' + esc(loginId || "") + '" placeholder="예: kim" autocomplete="off"></td>' +
+      '<td><input type="text" class="tc-pw" value="' + esc(pw || "") + '" placeholder="4자 이상"></td>' +
+      '<td><button class="del" onclick="this.closest(\\'tr\\').remove()">🗑</button></td></tr>';
+  }
+  function addTeacherRow() {
+    const tbody = $("tch-rows");
+    tbody.insertAdjacentHTML("beforeend", teacherRowHtml("", "", "", ""));
+    tbody.lastElementChild.querySelector(".tc-name").focus();
+  }
+  function saveTeachers() {
+    const rows = [...$("tch-rows").querySelectorAll("tr")];
+    if (rows.length === 0) { toast("선생님은 최소 한 명은 있어야 해요"); return; }
+    const teachers = rows.map(tr => ({
+      id: tr.dataset.id ? Number(tr.dataset.id) : undefined,
+      name: tr.querySelector(".tc-name").value.trim(),
+      loginId: tr.querySelector(".tc-login").value.trim(),
+      pw: tr.querySelector(".tc-pw").value.trim(),
+    }));
+    guard((async () => {
+      const r = await api("/api/teacher/teachers/save", { teachers });
+      hide("md-teachers");
+      // 내 계정 정보(비번 등)가 바뀌었을 수 있으니, 지금 로그인 정보가 아직 유효한지 확인
+      try {
+        await loadHome();
+        toast("선생님 " + r.count + "명을 저장했어요");
+      } catch (e) {
+        toast("내 로그인 정보가 바뀌었어요. 다시 로그인해 주세요.");
+        doLogout();
+      }
+    })());
+  }
+
   // ── 교사: 설정 ──
   function openSettings() {
     $("set-classname").value = HOME.className || "";
@@ -1134,6 +1212,7 @@ window.IB = (() => {
     openMsgs, msgTab, sendMsg, ackPopup,
     newBoard, editBoard, saveBoard, deleteBoard,
     openStudents, addStudentRow, saveStudents,
+    openTeachers, addTeacherRow, saveTeachers,
     openSettings, saveSettings,
     hide,
   };
@@ -1150,16 +1229,27 @@ function defaultState() {
     settings: {
       classCode: "6-1",
       className: "우리 반 아이디어 보드",
-      teacherId: "teacher",
-      teacherPw: "0000",
     },
+    // 선생님 계정(여러 명 가능). 각자 아이디·비밀번호·이름으로 로그인해 글·쪽지가 구분됨
+    teachers: [{ id: 1, loginId: "teacher", pw: "0000", name: "선생님" }],
     students: [],  // {id, number, name, pin, active}
     boards: [],    // {id, title, desc, createdAt}
     posts: [],     // {id, boardId, author:{type,id,name}, text, files:[{id,name,mime,isImage}], isNotice, createdAt}
     comments: [],  // {id, postId, author:{type,id,name}, text, createdAt}
-    likes: [],     // {postId, key}   key = "t" | "s<학생id>"
+    likes: [],     // {postId, key}   key = "t<교사id>" | "s<학생id>"
     messages: [],  // {id, from:{type,id,name}, toType:"student"|"teacher", toId, text, createdAt, read}
   };
+}
+
+// 예전(교사 1명) 데이터를 새 구조(teachers 배열)로 맞춰 줌
+function migrate(st) {
+  if (!Array.isArray(st.teachers) || st.teachers.length === 0) {
+    const s = st.settings || {};
+    st.teachers = [{ id: 1, loginId: s.teacherId || "teacher", pw: s.teacherPw || "0000", name: "선생님" }];
+  }
+  if (st.settings) { delete st.settings.teacherId; delete st.settings.teacherPw; }
+  if ((st.seq | 0) < 100) st.seq = 100;
+  return st;
 }
 
 // ── 한국 시간 (Worker 는 UTC 로 돌므로 반드시 서울 기준으로 변환) ──
@@ -1180,10 +1270,10 @@ function randId() {
   for (const b of a) s += b.toString(16).padStart(2, "0");
   return s;
 }
-function testTeacher(st, auth) {
-  if (!auth) return false;
-  const s = st.settings;
-  return String(auth.id) === String(s.teacherId) && String(auth.pw) === String(s.teacherPw);
+function findTeacher(st, auth) {
+  if (!auth) return null;
+  return (st.teachers || []).find(t =>
+    String(t.loginId) === String(auth.id) && String(t.pw) === String(auth.pw)) || null;
 }
 function authStudent(st, auth) {
   if (!auth) return null;
@@ -1194,12 +1284,14 @@ function authStudent(st, auth) {
 // 요청의 auth 로 행위자(교사/학생)를 판별
 function getActor(st, auth) {
   if (!auth) return null;
-  if (auth.role === "teacher")
-    return testTeacher(st, auth) ? { type: "teacher", id: 0, name: "선생님" } : null;
+  if (auth.role === "teacher") {
+    const t = findTeacher(st, auth);
+    return t ? { type: "teacher", id: t.id, name: t.name } : null;
+  }
   const s = authStudent(st, auth);
   return s ? { type: "student", id: s.id, name: s.name, number: s.number } : null;
 }
-function likeKey(actor) { return actor.type === "teacher" ? "t" : "s" + actor.id; }
+function likeKey(actor) { return (actor.type === "teacher" ? "t" : "s") + actor.id; }
 function sameAuthor(actor, author) {
   return author && author.type === actor.type && Number(author.id) === Number(actor.id);
 }
@@ -1249,7 +1341,8 @@ function ok(obj) { return { status: 200, body: Object.assign({ ok: true }, obj) 
 
 function unreadOf(st, actor) {
   return st.messages.filter(m => !m.read &&
-    (actor.type === "teacher" ? m.toType === "teacher"
+    (actor.type === "teacher"
+      ? (m.toType === "teacher" && Number(m.toId) === Number(actor.id))
       : (m.toType === "student" && Number(m.toId) === Number(actor.id))));
 }
 
@@ -1271,7 +1364,8 @@ function handleApi(st, path, method, d) {
   // ══════════ 로그인 ══════════
   if (path === "/api/login") {
     if (d.role === "teacher") {
-      if (testTeacher(st, { id: d.id, pw: d.pw })) return ok({ name: "선생님" });
+      const t = findTeacher(st, { id: d.id, pw: d.pw });
+      if (t) return ok({ id: t.id, name: t.name });
       return fail("아이디 또는 비밀번호가 맞지 않습니다.", 401);
     }
     const stu = authStudent(st, { classCode: d.classCode, number: d.number, pin: d.pin });
@@ -1293,12 +1387,16 @@ function handleApi(st, path, method, d) {
       className: st.settings.className,
       me: { type: actor.type, id: actor.id, name: actor.name },
       boards, unread: unreadOf(st, actor).length,
+      // 이름·id만 (비밀번호 제외) — 학생이 쪽지 받을 선생님을 고를 때 사용
+      teacherList: st.teachers.map(t => ({ id: t.id, name: t.name })),
     };
     if (isTeacher) {
       res.students = st.students.filter(s => s.active)
         .map(s => ({ id: s.id, number: s.number, name: s.name, pin: s.pin }))
         .sort((a, b) => a.number - b.number);
       res.classCode = st.settings.classCode;
+      // 선생님 계정 관리용 (교사에게만 비밀번호 포함)
+      res.teachers = st.teachers.map(t => ({ id: t.id, loginId: t.loginId, name: t.name, pw: t.pw }));
     }
     return ok(res);
   }
@@ -1413,24 +1511,31 @@ function handleApi(st, path, method, d) {
         st.messages.push({ id: nextId(st), from, toType: "student", toId: s.id, text, createdAt: now, read: false });
       }
     } else {
-      st.messages.push({ id: nextId(st), from, toType: "teacher", toId: 0, text, createdAt: now, read: false });
+      // 학생 → 선생님. 받는 사람은 반드시 선생님(학생끼리 쪽지 불가).
+      // 선생님이 여러 명이면 고른 선생님, 지정이 없거나 잘못됐고 선생님이 한 명뿐이면 그 선생님에게 자동 전송
+      let target = null;
+      if (d.to) target = st.teachers.find(t => t.id === Number(d.to));
+      if (!target && st.teachers.length === 1) target = st.teachers[0];
+      if (!target) return fail("쪽지를 보낼 선생님을 골라 주세요.", 400);
+      st.messages.push({ id: nextId(st), from, toType: "teacher", toId: target.id, text, createdAt: now, read: false });
     }
     return Object.assign(ok({}), { mutated: true });
   }
   if (path === "/api/msg/list") {
-    const toName = m => m.toType === "teacher" ? "선생님"
+    const teacherName = id => (st.teachers.find(t => t.id === Number(id)) || { name: "선생님" }).name;
+    const toName = m => m.toType === "teacher" ? teacherName(m.toId)
       : (st.students.find(s => s.id === Number(m.toId)) || { name: "?" }).name;
-    const mine = st.messages.filter(m =>
-      (actor.type === "teacher" ? (m.toType === "teacher" || m.from.type === "teacher")
-        : (m.from.type === "student" && Number(m.from.id) === Number(actor.id)) ||
-          (m.toType === "student" && Number(m.toId) === Number(actor.id))))
+    const receivedBy = m => actor.type === "teacher"
+      ? (m.toType === "teacher" && Number(m.toId) === Number(actor.id))
+      : (m.toType === "student" && Number(m.toId) === Number(actor.id));
+    const sentBy = m => m.from.type === actor.type && Number(m.from.id) === Number(actor.id);
+    const mine = st.messages.filter(m => receivedBy(m) || sentBy(m))
       .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1) || (b.id - a.id))
       .slice(0, 200)
       .map(m => ({
         id: m.id, from: m.from, toType: m.toType, toId: m.toId, toName: toName(m),
         text: m.text, createdAt: m.createdAt, read: !!m.read,
-        received: actor.type === "teacher" ? m.toType === "teacher"
-          : m.toType === "student" && Number(m.toId) === Number(actor.id),
+        received: receivedBy(m),
       }));
     return ok({ messages: mine });
   }
@@ -1438,8 +1543,9 @@ function handleApi(st, path, method, d) {
     const ids = Array.isArray(d.ids) ? d.ids.map(Number) : [];
     let changed = false;
     for (const m of st.messages) {
-      const isMine = actor.type === "teacher" ? m.toType === "teacher"
-        : m.toType === "student" && Number(m.toId) === Number(actor.id);
+      const isMine = actor.type === "teacher"
+        ? (m.toType === "teacher" && Number(m.toId) === Number(actor.id))
+        : (m.toType === "student" && Number(m.toId) === Number(actor.id));
       if (isMine && !m.read && ids.includes(m.id)) { m.read = true; changed = true; }
     }
     if (!changed) return ok({});
@@ -1507,6 +1613,26 @@ function handleApi(st, path, method, d) {
       return Object.assign(ok({ count: next.length }), { mutated: true });
     }
 
+    // 선생님 계정 명단 일괄 저장 (여러 명 등록 가능)
+    if (path === "/api/teacher/teachers/save") {
+      if (!Array.isArray(d.teachers)) return fail("목록이 올바르지 않아요.");
+      const seen = new Set();
+      const next = [];
+      for (const t of d.teachers) {
+        const loginId = String(t.loginId || "").trim().slice(0, 30);
+        const name = String(t.name || "").trim().slice(0, 20);
+        const pw = String(t.pw || "").trim();
+        if (!loginId || !name) return fail("아이디와 이름을 모두 채워 주세요.");
+        if (pw.length < 4) return fail(name + " 선생님: 비밀번호는 4자 이상이어야 해요.");
+        if (seen.has(loginId)) return fail("아이디 '" + loginId + "'가 겹쳐요.");
+        seen.add(loginId);
+        next.push({ id: t.id ? Number(t.id) : nextId(st), loginId, pw, name });
+      }
+      if (next.length === 0) return fail("선생님은 최소 한 명은 있어야 해요.");
+      st.teachers = next;
+      return Object.assign(ok({ count: next.length }), { mutated: true });
+    }
+
     if (path === "/api/teacher/settings/save") {
       const classCode = String(d.classCode || "").trim().slice(0, 20);
       const className = String(d.className || "").trim().slice(0, 40);
@@ -1516,7 +1642,8 @@ function handleApi(st, path, method, d) {
       if (d.newPw) {
         const pw = String(d.newPw).trim();
         if (pw.length < 4) return fail("새 비밀번호는 4자 이상이어야 해요.");
-        st.settings.teacherPw = pw;
+        const me = st.teachers.find(t => t.id === actor.id);  // 지금 로그인한 선생님 본인 비밀번호
+        if (me) me.pw = pw;
       }
       return Object.assign(ok({}), { mutated: true });
     }
@@ -1536,7 +1663,7 @@ async function ensureSchema(db) {
 async function loadState(db) {
   const row = await db.prepare("SELECT version, data FROM board_state WHERE id = 1").first();
   if (!row) return { version: 0, state: defaultState() };
-  return { version: row.version, state: JSON.parse(row.data) };
+  return { version: row.version, state: migrate(JSON.parse(row.data)) };
 }
 async function saveState(db, version, state) {
   prune(state);
