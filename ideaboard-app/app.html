@@ -117,10 +117,15 @@
   .board-head h2 { font-size: 21px; }
   .board-head .desc { color: #778; font-size: 13px; width: 100%; }
   .btn-back { font-size: 20px; background: #fff; border-radius: 10px; padding: 6px 11px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+  .board-head-actions { margin-left: auto; display: flex; gap: 8px; }
+  .btn-pdf {
+    background: #fff; color: var(--accent); font-weight: 800; padding: 10px 16px;
+    border-radius: 12px; font-size: 15px; box-shadow: 0 2px 8px rgba(0,0,0,.08); white-space: nowrap;
+  }
   .btn-write {
-    margin-left: auto; background: linear-gradient(135deg, var(--action-1), var(--action-2)); color: #fff;
+    background: linear-gradient(135deg, var(--action-1), var(--action-2)); color: #fff;
     font-weight: 800; padding: 10px 18px; border-radius: 12px; font-size: 15px;
-    box-shadow: 0 4px 12px rgba(255, 100, 100, .35);
+    box-shadow: 0 4px 12px rgba(255, 100, 100, .35); white-space: nowrap;
   }
   .posts { columns: 300px; column-gap: 14px; }
   .post {
@@ -364,7 +369,10 @@
     <div class="board-head">
       <button class="btn-back" onclick="IB.goHome()">←</button>
       <h2 id="bd-title"></h2>
-      <button class="btn-write" onclick="IB.openComposer()">✏️ 아이디어 올리기</button>
+      <div class="board-head-actions">
+        <button class="btn-pdf" onclick="IB.printBoard()">📄 PDF 저장</button>
+        <button class="btn-write" onclick="IB.openComposer()">✏️ 아이디어 올리기</button>
+      </div>
       <div class="desc" id="bd-desc"></div>
     </div>
     <div class="posts" id="post-list"></div>
@@ -636,6 +644,10 @@ window.IB = (() => {
     // "2026-07-13 14:22:33" → "7/13 14:22"
     const mo = Number(s.slice(5, 7)), da = Number(s.slice(8, 10));
     return mo + "/" + da + " " + s.slice(11, 16);
+  }
+  function nowStr() {
+    const d = new Date(), pad = n => String(n).padStart(2, "0");
+    return (d.getMonth() + 1) + "/" + d.getDate() + " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
   }
   function toast(msg) {
     const t = $("toast");
@@ -1490,6 +1502,50 @@ window.IB = (() => {
     setTimeout(() => window.print(), 150);
   }
 
+  // ── 게시판 통째로 PDF 저장 ──
+  function boardPrintHtml(b) {
+    const posts = b.posts;
+    const subParts = [];
+    if (b.board.desc) subParts.push(b.board.desc);
+    if (HOME && HOME.className) subParts.push(HOME.className);
+    subParts.push("출력일 " + nowStr());
+    let h = '<div class="pf-print-head"><h1>' + esc(b.board.title) + "</h1>" +
+      '<div class="sub">' + esc(subParts.join(" · ")) + "</div></div>";
+    h += '<div class="pf-stats">' +
+      '<div class="pf-stat"><b>' + posts.length + '</b><span>올라온 글</span></div>' +
+      '<div class="pf-stat"><b>' + posts.reduce((n, p) => n + p.files.length, 0) + '</b><span>사진·파일</span></div>' +
+      '<div class="pf-stat"><b>' + posts.reduce((n, p) => n + p.likeCount, 0) + '</b><span>좋아요 합계</span></div>' +
+      '<div class="pf-stat"><b>' + posts.reduce((n, p) => n + p.comments.length, 0) + '</b><span>댓글 합계</span></div></div>';
+    if (posts.length === 0) h += '<div class="pf-empty">아직 올라온 아이디어가 없어요.</div>';
+    for (const p of posts) {
+      const authorName = p.author.name + (p.author.type === "teacher" ? " 선생님" : "");
+      h += '<div class="pf-item"><div class="pf-meta"><b>' + esc(authorName) + "</b> · " + fmtTime(p.createdAt) +
+        (p.isNotice ? " · 📌공지" : "") + (p.editedAt ? " · (수정됨)" : "") +
+        (b.board.allowLikes !== false ? " · ❤️ " + p.likeCount : "") + "</div>";
+      if (p.text) h += '<div class="pf-text">' + esc(p.text) + "</div>";
+      for (const f of p.files) {
+        if (f.isImage) h += '<img loading="lazy" src="/api/file/' + f.id + '" alt="' + esc(f.name) + '">';
+        else h += '<a class="pf-file" href="/api/file/' + f.id + '">📎 ' + esc(f.name) + "</a>";
+      }
+      if (p.comments.length) {
+        h += '<div class="pf-cmts">';
+        for (const c of p.comments) {
+          const cn = c.author.name + (c.author.type === "teacher" ? " 선생님" : "");
+          h += '<div class="pf-c"><b>' + esc(cn) + ":</b> " + esc(c.text) + "</div>";
+        }
+        h += "</div>";
+      }
+      h += "</div>";
+    }
+    return h;
+  }
+  function printBoard() {
+    if (!BOARD) return;
+    $("print-area").innerHTML = boardPrintHtml(BOARD);
+    // 인쇄 대화상자에서 "PDF로 저장"을 고르면 파일로 저장됩니다
+    setTimeout(() => window.print(), 150);
+  }
+
   // ── 교사: 선생님 계정 관리 ──
   function openTeachers() {
     const rows = (HOME.teachers || []).map(t =>
@@ -1587,7 +1643,7 @@ window.IB = (() => {
   document.addEventListener("DOMContentLoaded", boot);
 
   return {
-    setRole, login, logout, goHome, openBoard,
+    setRole, login, logout, goHome, openBoard, printBoard,
     openRegister, regSetMode, submitRegister,
     toggleComments, toggleLike, adjustLike, addComment, deleteComment, deletePost, editPost, toggleNotice, zoom,
     openComposer, closeComposer, removeAttach, submitPost,
