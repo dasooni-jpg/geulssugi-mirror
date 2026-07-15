@@ -402,6 +402,73 @@ try {
   r = await post("/api/home", { auth: K });
   check("다른 선생님 비번은 그대로 유효", r.ok && r.me.name === "김쌤");
 
+  // 15. 여러 반(공간) 분리 — 선생님을 새로 만들면 완전히 독립된 반이 생겨야 함
+  T.pw = "abcd"; // 14번에서 T(교사)의 비밀번호를 바꿨으므로 이후 요청에 반영
+  const spaceStudentsBefore = (await post("/api/home", { auth: T })).students.length;
+
+  r = await post("/api/teacher/register", { name: "박선생", loginId: "park", pw: "park1", mode: "new", className: "9반 아이디어 보드", classCode: "9-9" });
+  check("새 반 만들기 등록", r.ok && r.classCode === "9-9" && !!r.inviteCode);
+  const X = { role: "teacher", id: "park", pw: "park1" };
+  const inviteX = r.inviteCode;
+
+  r = await post("/api/teacher/register", { name: "다른사람", loginId: "park", pw: "xxxx", mode: "new", classCode: "1-1" });
+  check("아이디 전체 중복 거부", !r.ok);
+  r = await post("/api/teacher/register", { name: "또다른", loginId: "park2", pw: "yyyy", mode: "new", classCode: "9-9" });
+  check("학급 코드 전체 중복 거부", !r.ok);
+  r = await post("/api/teacher/register", { name: "짧은비번", loginId: "shortpw", pw: "12", mode: "new", classCode: "5-5" });
+  check("비번 4자 미만 거부", !r.ok);
+
+  r = await post("/api/home", { auth: X });
+  check("새 반은 게시판 0개(분리됨)", r.ok && r.boards.length === 0);
+  check("새 반은 학생 0명(분리됨)", r.students.length === 0);
+  check("새 반 이름 반영", r.className === "9반 아이디어 보드");
+
+  r = await post("/api/teacher/board/create", { auth: X, title: "9반 게시판" });
+  const BX = r.board.id;
+  r = await post("/api/teacher/students/save", { auth: X, students: [{ number: 1, name: "하늘", pin: "9191" }] });
+  check("새 반 학생 등록", r.ok && r.count === 1);
+  const SXhome = await post("/api/home", { auth: X });
+  const idHaneul = SXhome.students[0].id;
+
+  r = await post("/api/home", { auth: T });
+  check("원래 반은 새 반 게시판이 안 보임", !r.boards.some(b => b.id === BX));
+  check("원래 반 학생 수는 그대로", r.students.length === spaceStudentsBefore);
+  r = await post("/api/board", { auth: T, boardId: BX });
+  check("원래 반 교사가 남의 반 게시판 접근 차단", !r.ok);
+  r = await post("/api/board", { auth: X, boardId: B1 });
+  check("새 반 교사가 원래 반 게시판 접근 차단", !r.ok);
+  r = await post("/api/teacher/portfolio", { auth: T, studentId: idHaneul });
+  check("다른 반 학생 포트폴리오 조회 차단", !r.ok);
+  r = await post("/api/teacher/portfolio", { auth: X, studentId: idMinjun });
+  check("다른 반(원래 반) 학생도 마찬가지로 차단", !r.ok);
+
+  r = await post("/api/login", { role: "student", classCode: "9-9", number: 1, pin: "9191" });
+  check("새 반 학생 로그인", r.ok && r.name === "하늘");
+  const HX = { role: "student", classCode: "9-9", number: 1, pin: "9191" };
+  r = await post("/api/post/create", { auth: HX, boardId: B1, text: "몰래 원래 반에 쓰기 시도" });
+  check("다른 반 게시판엔 글 못 씀", !r.ok);
+  r = await post("/api/post/create", { auth: HX, boardId: BX, text: "우리반 글" });
+  check("자기 반 게시판엔 정상적으로 씀", r.ok);
+
+  r = await post("/api/msg/send", { auth: X, to: "all", text: "9반 공지" });
+  check("새 반 전체쪽지 발송", r.ok);
+  r = await post("/api/poll", { auth: T });
+  check("다른 반 교사는 못 받음", !r.messages.some(m => m.text.includes("9반 공지")));
+  r = await post("/api/msg/send", { auth: T, to: String(idHaneul), text: "다른 반 학생에게 몰래" });
+  check("다른 반 학생에게 쪽지 발송 차단", !r.ok);
+
+  // 참여 코드로 같은 반에 합류(담임+전담처럼 협업하고 싶을 때)
+  r = await post("/api/teacher/register", { name: "이전담", loginId: "lee", pw: "lee12", mode: "join", inviteCode: "nope0000" });
+  check("잘못된 참여 코드 거부", !r.ok);
+  r = await post("/api/teacher/register", { name: "이전담", loginId: "lee", pw: "lee12", mode: "join", inviteCode: inviteX.toLowerCase() });
+  check("참여 코드로 합류(소문자 입력도 허용)", r.ok);
+  const L = { role: "teacher", id: "lee", pw: "lee12" };
+  r = await post("/api/home", { auth: L });
+  check("합류한 선생님은 같은 반 게시판을 봄", r.boards.some(b => b.id === BX));
+  check("합류한 선생님 명단에 둘 다 표시", r.teachers.length === 2 && r.teachers.some(t => t.loginId === "park") && r.teachers.some(t => t.loginId === "lee"));
+  r = await post("/api/home", { auth: T });
+  check("원래 반 선생님 명단엔 영향 없음", r.teachers.every(t => t.loginId !== "park" && t.loginId !== "lee"));
+
   document.getElementById("summary").textContent =
     `완료: ${pass} PASS / ${fail} FAIL` + (fail === 0 ? " 🎉" : " ⚠️");
 } catch (e) {

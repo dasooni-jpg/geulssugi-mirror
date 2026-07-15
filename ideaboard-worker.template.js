@@ -30,31 +30,47 @@ const APP_HTML = __APP_HTML__;
 const MASCOT_PNG_B64 = "__MASCOT_B64__";
 
 // ── 기본 데이터 ──
+// "공간(space)" = 독립된 반 하나(학급 코드·이름·참여코드 + 그 반의 학생·게시판).
+// 선생님을 새로 만들면 기본적으로 자기만의 새 공간이 생기고, 참여 코드를 입력하면
+// 기존 공간(담임+전담처럼 같은 반을 같이 보는 경우)에 합류할 수도 있다.
 function defaultState() {
   return {
     seq: 100,
-    settings: {
-      classCode: "6-1",
-      className: "우리 반 아이디어 보드",
-    },
+    spaces: [{ id: 1, classCode: "6-1", className: "우리 반 아이디어 보드", inviteCode: "DEMO0001" }],
     // 선생님 계정(여러 명 가능). 각자 아이디·비밀번호·이름으로 로그인해 글·쪽지가 구분됨
-    teachers: [{ id: 1, loginId: "teacher", pw: "0000", name: "선생님" }],
-    students: [],  // {id, number, name, pin, active}
-    boards: [],    // {id, title, desc, allowLikes, allowComments, createdAt}
+    teachers: [{ id: 1, spaceId: 1, loginId: "teacher", pw: "0000", name: "선생님" }],
+    students: [],  // {id, spaceId, number, name, pin, active}
+    boards: [],    // {id, spaceId, title, desc, allowLikes, allowComments, createdAt}
     posts: [],     // {id, boardId, author:{type,id,name}, text, files:[{id,name,mime,isImage}], isNotice, likeAdjust, createdAt, editedAt}
     comments: [],  // {id, postId, author:{type,id,name}, text, createdAt}
     likes: [],     // {postId, key}   key = "t<교사id>" | "s<학생id>"
     messages: [],  // {id, from:{type,id,name}, toType:"student"|"teacher", toId, text, createdAt, read}
   };
 }
+function genCode(len) {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // 헷갈리는 글자(0,O,1,I) 제외
+  const a = new Uint8Array(len);
+  crypto.getRandomValues(a);
+  let s = "";
+  for (const b of a) s += chars[b % chars.length];
+  return s;
+}
 
-// 예전(교사 1명) 데이터를 새 구조(teachers 배열)로 맞춰 줌
+// 예전(공간 분리 이전) 데이터를 새 구조(spaces 배열)로 맞춰 줌
 function migrate(st) {
   if (!Array.isArray(st.teachers) || st.teachers.length === 0) {
     const s = st.settings || {};
     st.teachers = [{ id: 1, loginId: s.teacherId || "teacher", pw: s.teacherPw || "0000", name: "선생님" }];
   }
-  if (st.settings) { delete st.settings.teacherId; delete st.settings.teacherPw; }
+  if (!Array.isArray(st.spaces) || st.spaces.length === 0) {
+    const s = st.settings || {};
+    st.spaces = [{ id: 1, classCode: s.classCode || "6-1", className: s.className || "우리 반 아이디어 보드", inviteCode: genCode(8) }];
+  }
+  const legacySpaceId = st.spaces[0].id;
+  for (const t of st.teachers) if (t.spaceId === undefined) t.spaceId = legacySpaceId;
+  for (const s of st.students || []) if (s.spaceId === undefined) s.spaceId = legacySpaceId;
+  for (const b of st.boards || []) if (b.spaceId === undefined) b.spaceId = legacySpaceId;
+  delete st.settings;
   if ((st.seq | 0) < 100) st.seq = 100;
   // 게시판 기능 플래그 기본값(예전 데이터 보정)
   for (const b of st.boards || []) {
@@ -90,25 +106,44 @@ function findTeacher(st, auth) {
   return (st.teachers || []).find(t =>
     String(t.loginId) === String(auth.id) && String(t.pw) === String(auth.pw)) || null;
 }
+function getSpace(st, spaceId) {
+  return st.spaces.find(s => s.id === Number(spaceId)) || null;
+}
+function findSpaceByClassCode(st, classCode) {
+  return st.spaces.find(s => String(s.classCode) === String(classCode)) || null;
+}
 function authStudent(st, auth) {
   if (!auth) return null;
-  if (String(auth.classCode) !== String(st.settings.classCode)) return null;
+  const sp = findSpaceByClassCode(st, auth.classCode);
+  if (!sp) return null;
   return st.students.find(s =>
-    Number(s.number) === Number(auth.number) && String(s.pin) === String(auth.pin) && s.active) || null;
+    s.spaceId === sp.id && Number(s.number) === Number(auth.number) && String(s.pin) === String(auth.pin) && s.active) || null;
 }
-// 요청의 auth 로 행위자(교사/학생)를 판별
+// 요청의 auth 로 행위자(교사/학생)를 판별. spaceId 를 붙여 돌려주고, 이후 모든 API 가 이걸로 접근 범위를 가른다.
 function getActor(st, auth) {
   if (!auth) return null;
   if (auth.role === "teacher") {
     const t = findTeacher(st, auth);
-    return t ? { type: "teacher", id: t.id, name: t.name } : null;
+    return t ? { type: "teacher", id: t.id, name: t.name, spaceId: t.spaceId } : null;
   }
   const s = authStudent(st, auth);
-  return s ? { type: "student", id: s.id, name: s.name, number: s.number } : null;
+  return s ? { type: "student", id: s.id, name: s.name, number: s.number, spaceId: s.spaceId } : null;
 }
 function likeKey(actor) { return (actor.type === "teacher" ? "t" : "s") + actor.id; }
 function sameAuthor(actor, author) {
   return author && author.type === actor.type && Number(author.id) === Number(actor.id);
+}
+// 글이 실제로 이 사람의 반(공간) 소속인지 확인 (다른 반 글 id 를 추측해 접근하는 것 방지)
+function findOwnPost(st, actor, postId) {
+  const p = st.posts.find(x => x.id === Number(postId));
+  if (!p) return null;
+  const b = st.boards.find(x => x.id === p.boardId);
+  if (!b || b.spaceId !== actor.spaceId) return null;
+  return p;
+}
+function findOwnBoard(st, actor, boardId) {
+  const b = st.boards.find(x => x.id === Number(boardId));
+  return (b && b.spaceId === actor.spaceId) ? b : null;
 }
 
 // ── 첨부 파일 검사 (data URL → {id,name,mime,isImage,dataB64}) ──
@@ -193,31 +228,63 @@ function handleApi(st, path, method, d) {
     return fail("학급 코드, 번호, PIN을 다시 확인하세요.", 401);
   }
 
+  // ══════════ 선생님 계정 만들기 (아직 로그인 전 — 새 반 만들기 또는 참여 코드로 합류) ══════════
+  if (path === "/api/teacher/register") {
+    const loginId = String(d.loginId || "").trim().slice(0, 30);
+    const name = String(d.name || "").trim().slice(0, 20);
+    const pw = String(d.pw || "").trim();
+    if (!loginId || !name) return fail("아이디와 이름을 모두 채워 주세요.");
+    if (pw.length < 4) return fail("비밀번호는 4자 이상이어야 해요.");
+    if (st.teachers.some(t => t.loginId === loginId)) return fail("이미 쓰고 있는 아이디예요.", 409);
+
+    let space;
+    if (d.mode === "join") {
+      const code = String(d.inviteCode || "").trim().toUpperCase();
+      space = st.spaces.find(s => s.inviteCode === code);
+      if (!space) return fail("참여 코드를 다시 확인해 주세요.", 404);
+    } else {
+      const className = String(d.className || "").trim().slice(0, 40) || "우리 반 아이디어 보드";
+      const classCode = String(d.classCode || "").trim().slice(0, 20);
+      if (!classCode) return fail("학급 코드를 정해 주세요.");
+      if (st.spaces.some(s => String(s.classCode) === classCode)) return fail("이 학급 코드는 이미 쓰고 있어요. 다른 코드로 정해 주세요.", 409);
+      space = { id: nextId(st), classCode, className, inviteCode: genCode(8) };
+      st.spaces.push(space);
+    }
+    const teacher = { id: nextId(st), spaceId: space.id, loginId, pw, name };
+    st.teachers.push(teacher);
+    return Object.assign(ok({ id: teacher.id, name: teacher.name, classCode: space.classCode, inviteCode: space.inviteCode }),
+      { mutated: true });
+  }
+
   const actor = getActor(st, d.auth);
   if (!actor) return fail("로그인이 필요합니다.", 401);
   const isTeacher = actor.type === "teacher";
 
   // ══════════ 홈 (게시판 목록) ══════════
   if (path === "/api/home") {
-    const boards = st.boards.map(b => ({
+    const space = getSpace(st, actor.spaceId);
+    if (!space) return fail("소속된 반을 찾을 수 없어요.", 404);
+    const boards = st.boards.filter(b => b.spaceId === actor.spaceId).map(b => ({
       id: b.id, title: b.title, desc: b.desc, createdAt: b.createdAt,
       allowLikes: b.allowLikes !== false, allowComments: b.allowComments !== false,
       postCount: st.posts.filter(p => p.boardId === b.id).length,
     }));
+    const spaceTeachers = st.teachers.filter(t => t.spaceId === actor.spaceId);
     const res = {
-      className: st.settings.className,
+      className: space.className,
       me: { type: actor.type, id: actor.id, name: actor.name },
       boards, unread: unreadOf(st, actor).length,
       // 이름·id만 (비밀번호 제외) — 학생이 쪽지 받을 선생님을 고를 때 사용
-      teacherList: st.teachers.map(t => ({ id: t.id, name: t.name })),
+      teacherList: spaceTeachers.map(t => ({ id: t.id, name: t.name })),
     };
     if (isTeacher) {
-      res.students = st.students.filter(s => s.active)
+      res.students = st.students.filter(s => s.spaceId === actor.spaceId && s.active)
         .map(s => ({ id: s.id, number: s.number, name: s.name, pin: s.pin }))
         .sort((a, b) => a.number - b.number);
-      res.classCode = st.settings.classCode;
-      // 선생님 계정 관리용 (교사에게만 비밀번호 포함)
-      res.teachers = st.teachers.map(t => ({ id: t.id, loginId: t.loginId, name: t.name, pw: t.pw }));
+      res.classCode = space.classCode;
+      res.inviteCode = space.inviteCode; // 다른 선생님을 같은 반에 초대할 때 공유하는 코드
+      // 선생님 계정 관리용 (교사에게만 비밀번호 포함) — 내 반 소속 선생님만
+      res.teachers = spaceTeachers.map(t => ({ id: t.id, loginId: t.loginId, name: t.name, pw: t.pw }));
     }
     return ok(res);
   }
@@ -225,7 +292,7 @@ function handleApi(st, path, method, d) {
   // ══════════ 게시판 글 목록 ══════════
   if (path === "/api/board") {
     const b = st.boards.find(x => x.id === Number(d.boardId));
-    if (!b) return fail("없는 게시판입니다.", 404);
+    if (!b || b.spaceId !== actor.spaceId) return fail("없는 게시판입니다.", 404);
     const posts = st.posts.filter(p => p.boardId === b.id)
       .sort((a, x) => (!!x.isNotice - !!a.isNotice) || (a.createdAt < x.createdAt ? 1 : -1) || (x.id - a.id))
       .map(p => postView(st, p, actor));
@@ -238,7 +305,7 @@ function handleApi(st, path, method, d) {
 
   // ══════════ 글 쓰기 ══════════
   if (path === "/api/post/create") {
-    const b = st.boards.find(x => x.id === Number(d.boardId));
+    const b = findOwnBoard(st, actor, d.boardId);
     if (!b) return fail("없는 게시판입니다.", 404);
     const text = String(d.text || "").trim().slice(0, 3000);
     const pf = parseFiles(d.files);
@@ -260,7 +327,7 @@ function handleApi(st, path, method, d) {
 
   // ══════════ 글 수정 (본인 또는 교사) ══════════
   if (path === "/api/post/update") {
-    const p = st.posts.find(x => x.id === Number(d.postId));
+    const p = findOwnPost(st, actor, d.postId);
     if (!p) return fail("없는 글입니다.", 404);
     if (!isTeacher && !sameAuthor(actor, p.author)) return fail("자기가 쓴 글만 고칠 수 있어요.", 403);
     const text = String(d.text || "").trim().slice(0, 3000);
@@ -282,7 +349,7 @@ function handleApi(st, path, method, d) {
 
   // ══════════ 글 지우기 (본인 또는 교사) ══════════
   if (path === "/api/post/delete") {
-    const p = st.posts.find(x => x.id === Number(d.postId));
+    const p = findOwnPost(st, actor, d.postId);
     if (!p) return fail("없는 글입니다.", 404);
     if (!isTeacher && !sameAuthor(actor, p.author)) return fail("자기가 쓴 글만 지울 수 있어요.", 403);
     const fileIds = p.files.map(f => f.id);
@@ -295,7 +362,7 @@ function handleApi(st, path, method, d) {
   // ══════════ 공지 고정 (교사) ══════════
   if (path === "/api/post/notice") {
     if (!isTeacher) return fail("선생님만 할 수 있어요.", 403);
-    const p = st.posts.find(x => x.id === Number(d.postId));
+    const p = findOwnPost(st, actor, d.postId);
     if (!p) return fail("없는 글입니다.", 404);
     p.isNotice = !!d.isNotice;
     return Object.assign(ok({ isNotice: p.isNotice }), { mutated: true });
@@ -303,7 +370,7 @@ function handleApi(st, path, method, d) {
 
   // ══════════ 댓글 ══════════
   if (path === "/api/comment/create") {
-    const p = st.posts.find(x => x.id === Number(d.postId));
+    const p = findOwnPost(st, actor, d.postId);
     if (!p) return fail("없는 글입니다.", 404);
     const cb = st.boards.find(x => x.id === p.boardId);
     if (cb && cb.allowComments === false) return fail("이 게시판은 댓글을 쓸 수 없어요.", 403);
@@ -319,7 +386,7 @@ function handleApi(st, path, method, d) {
   }
   if (path === "/api/comment/delete") {
     const c = st.comments.find(x => x.id === Number(d.commentId));
-    if (!c) return fail("없는 댓글입니다.", 404);
+    if (!c || !findOwnPost(st, actor, c.postId)) return fail("없는 댓글입니다.", 404);
     if (!isTeacher && !sameAuthor(actor, c.author)) return fail("자기가 쓴 댓글만 지울 수 있어요.", 403);
     st.comments = st.comments.filter(x => x.id !== c.id);
     return Object.assign(ok({}), { mutated: true });
@@ -327,7 +394,7 @@ function handleApi(st, path, method, d) {
 
   // ══════════ 좋아요 ══════════
   if (path === "/api/like/toggle") {
-    const p = st.posts.find(x => x.id === Number(d.postId));
+    const p = findOwnPost(st, actor, d.postId);
     if (!p) return fail("없는 글입니다.", 404);
     const lb = st.boards.find(x => x.id === p.boardId);
     if (lb && lb.allowLikes === false) return fail("이 게시판은 좋아요를 쓸 수 없어요.", 403);
@@ -344,7 +411,7 @@ function handleApi(st, path, method, d) {
   // 교사 전용: 좋아요 수를 직접 올리거나 내림 (delta = +1 / -1)
   if (path === "/api/like/adjust") {
     if (!isTeacher) return fail("선생님만 할 수 있어요.", 403);
-    const p = st.posts.find(x => x.id === Number(d.postId));
+    const p = findOwnPost(st, actor, d.postId);
     if (!p) return fail("없는 글입니다.", 404);
     const lb = st.boards.find(x => x.id === p.boardId);
     if (lb && lb.allowLikes === false) return fail("이 게시판은 좋아요를 쓸 수 없어요.", 403);
@@ -363,21 +430,22 @@ function handleApi(st, path, method, d) {
     const now = kst().datetime;
     if (isTeacher) {
       if (d.to === "all") {
-        const targets = st.students.filter(s => s.active);
+        const targets = st.students.filter(s => s.spaceId === actor.spaceId && s.active);
         if (targets.length === 0) return fail("등록된 학생이 없어요.");
         for (const s of targets)
           st.messages.push({ id: nextId(st), from, toType: "student", toId: s.id, text, createdAt: now, read: false });
       } else {
-        const s = st.students.find(x => x.id === Number(d.to) && x.active);
+        const s = st.students.find(x => x.id === Number(d.to) && x.spaceId === actor.spaceId && x.active);
         if (!s) return fail("받을 학생을 찾을 수 없어요.", 404);
         st.messages.push({ id: nextId(st), from, toType: "student", toId: s.id, text, createdAt: now, read: false });
       }
     } else {
-      // 학생 → 선생님. 받는 사람은 반드시 선생님(학생끼리 쪽지 불가).
+      // 학생 → 선생님. 받는 사람은 반드시 같은 반 선생님(학생끼리, 다른 반 선생님에게 쪽지 불가).
       // 선생님이 여러 명이면 고른 선생님, 지정이 없거나 잘못됐고 선생님이 한 명뿐이면 그 선생님에게 자동 전송
+      const spaceTeachers = st.teachers.filter(t => t.spaceId === actor.spaceId);
       let target = null;
-      if (d.to) target = st.teachers.find(t => t.id === Number(d.to));
-      if (!target && st.teachers.length === 1) target = st.teachers[0];
+      if (d.to) target = spaceTeachers.find(t => t.id === Number(d.to));
+      if (!target && spaceTeachers.length === 1) target = spaceTeachers[0];
       if (!target) return fail("쪽지를 보낼 선생님을 골라 주세요.", 400);
       st.messages.push({ id: nextId(st), from, toType: "teacher", toId: target.id, text, createdAt: now, read: false });
     }
@@ -430,7 +498,7 @@ function handleApi(st, path, method, d) {
       const title = String(d.title || "").trim().slice(0, 60);
       if (!title) return fail("게시판 이름을 써 주세요.");
       const b = {
-        id: nextId(st), title, desc: String(d.desc || "").trim().slice(0, 200),
+        id: nextId(st), spaceId: actor.spaceId, title, desc: String(d.desc || "").trim().slice(0, 200),
         allowLikes: d.allowLikes !== false, allowComments: d.allowComments !== false,
         createdAt: kst().datetime,
       };
@@ -438,7 +506,7 @@ function handleApi(st, path, method, d) {
       return Object.assign(ok({ board: b }), { mutated: true });
     }
     if (path === "/api/teacher/board/update") {
-      const b = st.boards.find(x => x.id === Number(d.boardId));
+      const b = findOwnBoard(st, actor, d.boardId);
       if (!b) return fail("없는 게시판입니다.", 404);
       const title = String(d.title || "").trim().slice(0, 60);
       if (!title) return fail("게시판 이름을 써 주세요.");
@@ -449,7 +517,7 @@ function handleApi(st, path, method, d) {
       return Object.assign(ok({}), { mutated: true });
     }
     if (path === "/api/teacher/board/delete") {
-      const b = st.boards.find(x => x.id === Number(d.boardId));
+      const b = findOwnBoard(st, actor, d.boardId);
       if (!b) return fail("없는 게시판입니다.", 404);
       const posts = st.posts.filter(p => p.boardId === b.id);
       const fileIds = [];
@@ -462,7 +530,7 @@ function handleApi(st, path, method, d) {
       return Object.assign(ok({}), { mutated: true, deleteFiles: fileIds });
     }
 
-    // 학생 명단 일괄 저장 (전달된 목록으로 교체)
+    // 학생 명단 일괄 저장 (내 반 학생만 전달된 목록으로 교체, 다른 반 학생은 그대로 둠)
     if (path === "/api/teacher/students/save") {
       if (!Array.isArray(d.students)) return fail("목록이 올바르지 않아요.");
       const seen = new Set();
@@ -475,16 +543,24 @@ function handleApi(st, path, method, d) {
         if (!/^\d{4}$/.test(pin)) return fail(number + "번 " + name + ": PIN은 숫자 4자리여야 해요.");
         if (seen.has(number)) return fail("번호 " + number + "가 겹쳐요.");
         seen.add(number);
-        next.push({ id: s.id ? Number(s.id) : nextId(st), number, name, pin, active: true });
+        // 기존 학생의 id 가 들어오면 반드시 내 반 소속인지 확인(다른 반 학생 id 도용 방지)
+        let id = null;
+        if (s.id) {
+          const existing = st.students.find(x => x.id === Number(s.id));
+          if (!existing || existing.spaceId !== actor.spaceId) return fail("잘못된 학생 정보예요.", 403);
+          id = existing.id;
+        }
+        next.push({ id: id || nextId(st), spaceId: actor.spaceId, number, name, pin, active: true });
       }
-      st.students = next.sort((a, b) => a.number - b.number);
+      st.students = st.students.filter(x => x.spaceId !== actor.spaceId)
+        .concat(next.sort((a, b) => a.number - b.number));
       return Object.assign(ok({ count: next.length }), { mutated: true });
     }
 
     // 학생 포트폴리오: 한 학생이 올린 글·자료·댓글을 모두 모아서 반환
     if (path === "/api/teacher/portfolio") {
       const stu = st.students.find(s => s.id === Number(d.studentId));
-      if (!stu) return fail("학생을 찾을 수 없어요.", 404);
+      if (!stu || stu.spaceId !== actor.spaceId) return fail("학생을 찾을 수 없어요.", 404);
       const boardTitle = id => (st.boards.find(b => b.id === Number(id)) || { title: "(지워진 게시판)" }).title;
       const isMe = a => a && a.type === "student" && Number(a.id) === Number(stu.id);
       // 이 학생이 쓴 글 (오래된 → 최신)
@@ -511,7 +587,7 @@ function handleApi(st, path, method, d) {
       const fileCount = posts.reduce((n, p) => n + p.files.length, 0);
       const likeTotal = posts.reduce((n, p) => n + p.likeCount, 0);
       return ok({
-        className: st.settings.className,
+        className: getSpace(st, actor.spaceId).className,
         student: { id: stu.id, number: stu.number, name: stu.name },
         posts, comments,
         stats: { postCount: posts.length, fileCount, likeTotal, commentCount: comments.length },
@@ -519,10 +595,11 @@ function handleApi(st, path, method, d) {
       });
     }
 
-    // 선생님 계정 명단 일괄 저장 (여러 명 등록 가능)
+    // 선생님 계정 명단 일괄 저장 — 내 반 소속 선생님만 교체(다른 반 선생님은 안 건드림)
     if (path === "/api/teacher/teachers/save") {
       if (!Array.isArray(d.teachers)) return fail("목록이 올바르지 않아요.");
-      const seen = new Set();
+      const others = st.teachers.filter(t => t.spaceId !== actor.spaceId);
+      const seenIds = new Set();
       const next = [];
       for (const t of d.teachers) {
         const loginId = String(t.loginId || "").trim().slice(0, 30);
@@ -530,21 +607,30 @@ function handleApi(st, path, method, d) {
         const pw = String(t.pw || "").trim();
         if (!loginId || !name) return fail("아이디와 이름을 모두 채워 주세요.");
         if (pw.length < 4) return fail(name + " 선생님: 비밀번호는 4자 이상이어야 해요.");
-        if (seen.has(loginId)) return fail("아이디 '" + loginId + "'가 겹쳐요.");
-        seen.add(loginId);
-        next.push({ id: t.id ? Number(t.id) : nextId(st), loginId, pw, name });
+        // 아이디는 전체 서비스에서 유일해야 함(로그인할 때 반 구분 없이 아이디+비번만 확인하므로)
+        const dup = others.find(o => o.loginId === loginId) ||
+          next.find(o => o.loginId === loginId);
+        if (dup) return fail("아이디 '" + loginId + "'는 이미 다른 곳에서 쓰고 있어요.", 409);
+        const id = t.id ? Number(t.id) : nextId(st);
+        seenIds.add(id);
+        next.push({ id, spaceId: actor.spaceId, loginId, pw, name });
       }
       if (next.length === 0) return fail("선생님은 최소 한 명은 있어야 해요.");
-      st.teachers = next;
+      if (!seenIds.has(actor.id)) return fail("본인 계정은 목록에서 지울 수 없어요.", 400);
+      st.teachers = others.concat(next);
       return Object.assign(ok({ count: next.length }), { mutated: true });
     }
 
+    // 우리 반 만들기: 참여 코드를 발급해 다른 선생님을 초대할 수 있음
     if (path === "/api/teacher/settings/save") {
       const classCode = String(d.classCode || "").trim().slice(0, 20);
       const className = String(d.className || "").trim().slice(0, 40);
       if (!classCode || !className) return fail("학급 코드와 이름을 채워 주세요.");
-      st.settings.classCode = classCode;
-      st.settings.className = className;
+      const dup = st.spaces.find(s => s.id !== actor.spaceId && String(s.classCode) === classCode);
+      if (dup) return fail("이 학급 코드는 다른 반에서 이미 쓰고 있어요.", 409);
+      const space = getSpace(st, actor.spaceId);
+      space.classCode = classCode;
+      space.className = className;
       if (d.newPw) {
         const pw = String(d.newPw).trim();
         if (pw.length < 4) return fail("새 비밀번호는 4자 이상이어야 해요.");

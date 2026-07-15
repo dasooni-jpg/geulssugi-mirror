@@ -61,6 +61,14 @@
     padding: 13px; border-radius: 12px; width: 100%; font-size: 16px;
   }
   .login-err { color: #e74c3c; font-size: 13px; min-height: 18px; margin-bottom: 8px; }
+  .link-btn { display: block; width: 100%; margin-top: 12px; font-size: 13px; color: #778; text-decoration: underline; }
+  .link-btn:hover { color: var(--accent); }
+  .reg-tabs { display: flex; gap: 6px; background: #eef0f6; border-radius: 12px; padding: 5px; margin: 10px 0 14px; }
+  .reg-tabs button { flex: 1; padding: 9px 0; border-radius: 9px; font-weight: 700; color: #777; font-size: 13px; }
+  .reg-tabs button.on { background: #fff; color: var(--accent); box-shadow: 0 2px 6px rgba(0,0,0,.12); }
+  .invite-box { background: #f2f4fb; border-radius: 12px; padding: 14px; text-align: center; margin-top: 8px; }
+  .invite-box .code { font-size: 22px; font-weight: 800; letter-spacing: 3px; color: var(--accent); margin: 6px 0; }
+  .invite-box .hint { font-size: 12px; color: #889; }
 
   /* ── 상단바 ── */
   header {
@@ -328,6 +336,7 @@
     </div>
     <div class="login-err" id="login-err"></div>
     <button class="btn-primary" onclick="IB.login()">들어가기</button>
+    <button class="link-btn" id="btn-register" onclick="IB.openRegister()" hidden>선생님이 처음이신가요? 계정 만들기</button>
   </div>
 </div>
 
@@ -510,8 +519,8 @@
     <div class="m-head">🧑‍🏫 선생님 계정 관리 <button class="x" onclick="IB.hide('md-teachers')">✕</button></div>
     <div class="m-body">
       <div style="font-size:13px;color:#889;margin-bottom:8px">
-        여러 선생님이 <b>각자 아이디·비밀번호</b>로 로그인해요. 글·쪽지에 이름이 따로 표시됩니다.<br>
-        (옆 반·전담·보결 선생님을 추가해 보세요. 비밀번호는 4자 이상)
+        <b>우리 반을 같이 보는</b> 선생님 계정만 여기서 관리해요(같은 반의 학생·게시판을 공유).<br>
+        완전히 다른 반을 새로 만들 선생님은 로그인 화면의 "계정 만들기"를 이용해 주세요.
       </div>
       <table class="stu-table">
         <thead><tr><th>이름</th><th>아이디</th><th style="width:90px">비밀번호</th><th style="width:36px"></th></tr></thead>
@@ -536,8 +545,46 @@
       <input type="text" id="set-classcode">
       <label>내 비밀번호 바꾸기 (바꾸지 않으려면 비워 두세요)</label>
       <input type="password" id="set-newpw" placeholder="4자 이상 — 지금 로그인한 선생님 계정">
+      <div class="invite-box">
+        <div class="hint">다른 선생님이 우리 반에 함께 들어오려면 이 코드로 초대하세요</div>
+        <div class="code" id="set-invite">------</div>
+        <div class="hint">계정 만들기 화면 → "참여 코드로 합류"에 입력</div>
+      </div>
       <div class="m-actions">
         <button class="btn-primary grow" onclick="IB.saveSettings()">저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 선생님 계정 만들기 (로그인 전) ═══════════ -->
+<div class="overlay" id="md-register" hidden>
+  <div class="modal">
+    <div class="m-head">🧑‍🏫 선생님 계정 만들기 <button class="x" onclick="IB.hide('md-register')">✕</button></div>
+    <div class="m-body">
+      <div class="reg-tabs">
+        <button id="reg-tab-new" class="on" onclick="IB.regSetMode('new')">🌱 새 반 만들기</button>
+        <button id="reg-tab-join" onclick="IB.regSetMode('join')">🤝 참여 코드로 합류</button>
+      </div>
+      <label>이름</label>
+      <input type="text" id="reg-name" placeholder="예: 김다솜">
+      <label>아이디</label>
+      <input type="text" id="reg-id" placeholder="로그인에 쓸 아이디" autocomplete="off">
+      <label>비밀번호</label>
+      <input type="password" id="reg-pw" placeholder="4자 이상">
+      <div id="reg-new-fields">
+        <label>우리 반 이름</label>
+        <input type="text" id="reg-classname" placeholder="예: 6학년 1반 아이디어 보드">
+        <label>학급 코드 (학생 로그인용, 다른 반과 겹치면 안 돼요)</label>
+        <input type="text" id="reg-classcode" placeholder="예: 6-1">
+      </div>
+      <div id="reg-join-fields" hidden>
+        <label>참여 코드 (초대한 선생님에게 받은 코드)</label>
+        <input type="text" id="reg-invitecode" placeholder="예: AB12CD34" style="text-transform:uppercase">
+      </div>
+      <div class="login-err" id="reg-err"></div>
+      <div class="m-actions">
+        <button class="btn-primary grow" id="reg-submit" onclick="IB.submitRegister()">계정 만들고 시작하기</button>
       </div>
     </div>
   </div>
@@ -636,6 +683,7 @@ window.IB = (() => {
     $("tab-teacher").classList.toggle("on", r === "teacher");
     $("login-student").hidden = r !== "student";
     $("login-teacher").hidden = r !== "teacher";
+    $("btn-register").hidden = r !== "teacher";
     $("login-err").textContent = "";
   }
   async function login() {
@@ -669,6 +717,59 @@ window.IB = (() => {
     await loadHome();
     startPoll();
   }
+
+  // ── 선생님 계정 만들기 (새 반 / 참여 코드로 합류) ──
+  let regMode = "new";
+  function openRegister() {
+    regMode = "new";
+    regSetMode("new");
+    $("reg-name").value = ""; $("reg-id").value = ""; $("reg-pw").value = "";
+    $("reg-classname").value = ""; $("reg-classcode").value = ""; $("reg-invitecode").value = "";
+    $("reg-err").textContent = "";
+    show("md-register");
+  }
+  function regSetMode(m) {
+    regMode = m;
+    $("reg-tab-new").classList.toggle("on", m === "new");
+    $("reg-tab-join").classList.toggle("on", m === "join");
+    $("reg-new-fields").hidden = m !== "new";
+    $("reg-join-fields").hidden = m !== "join";
+  }
+  function submitRegister() {
+    $("reg-err").textContent = "";
+    const body = {
+      name: $("reg-name").value.trim(),
+      loginId: $("reg-id").value.trim(),
+      pw: $("reg-pw").value,
+      mode: regMode,
+    };
+    if (regMode === "new") {
+      body.className = $("reg-classname").value.trim();
+      body.classCode = $("reg-classcode").value.trim();
+    } else {
+      body.inviteCode = $("reg-invitecode").value.trim();
+    }
+    const btn = $("reg-submit");
+    btn.disabled = true; btn.textContent = "만드는 중...";
+    guard((async () => {
+      try {
+        const r = await api("/api/teacher/register", body);
+        AUTH = { role: "teacher", id: body.loginId, pw: body.pw };
+        localStorage.setItem(LS_KEY, JSON.stringify(AUTH));
+        hide("md-register");
+        await enterApp();
+        if (regMode === "new")
+          toast("반이 만들어졌어요! 참여 코드(설정에서 확인): " + r.inviteCode);
+        else
+          toast(r.classCode + "반에 합류했어요! 🎉");
+      } catch (e) {
+        $("reg-err").textContent = e.message;
+      } finally {
+        btn.disabled = false; btn.textContent = "계정 만들고 시작하기";
+      }
+    })());
+  }
+
   function doLogout() {
     AUTH = null; ME = null; HOME = null; BOARD = null;
     localStorage.removeItem(LS_KEY);
@@ -1437,6 +1538,7 @@ window.IB = (() => {
     $("set-classname").value = HOME.className || "";
     $("set-classcode").value = HOME.classCode || "";
     $("set-newpw").value = "";
+    $("set-invite").textContent = HOME.inviteCode || "------";
     show("md-settings");
   }
   function saveSettings() {
@@ -1486,6 +1588,7 @@ window.IB = (() => {
 
   return {
     setRole, login, logout, goHome, openBoard,
+    openRegister, regSetMode, submitRegister,
     toggleComments, toggleLike, adjustLike, addComment, deleteComment, deletePost, editPost, toggleNotice, zoom,
     openComposer, closeComposer, removeAttach, submitPost,
     openDraw, closeDraw, drawColor: drawColorPick, drawSize, drawEraser, drawUndo, drawClear, finishDraw,
