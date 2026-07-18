@@ -4,16 +4,20 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>글쓰기 거울 — 선생님 대시보드</title>
+<link rel="stylesheet" href="fonts/gowunbatang.css" />
 <style>
+  /* ═══ 공책 아날로그 테마 (학생 앱과 통일) ═══ */
   :root{
-    --bg:#f5f3ff; --card:#fff; --ink:#2d2a45; --muted:#7b7894;
-    --brand:#7c6cf0; --brand-d:#5b49d6;
-    --green:#3fae72; --green-bg:#e7f7ee; --yellow:#e0a52e; --yellow-bg:#fdf4e0;
-    --blue:#3d8fe0; --blue-bg:#e7f1fc; --line:#eceaf6; --radius:20px; --shadow:0 8px 28px rgba(91,73,214,.10);
+    --bg:#f3efe3; --card:#fffef7; --ink:#2e3947; --muted:#8d8878;
+    --brand:#1f4e8c; --brand-d:#173b6b;
+    --accent:#c2483b;
+    --green:#3e7d5c; --green-bg:#ecf3ee; --yellow:#b3822d; --yellow-bg:#f8f1df;
+    --blue:#2f6ba8; --blue-bg:#e9f0f7; --line:#ddd5bf; --radius:10px; --shadow:0 2px 0 rgba(46,57,71,.06);
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);
-    font-family:"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;line-height:1.6}
+    background-image:repeating-linear-gradient(0deg,transparent 0 34px,rgba(46,57,71,.025) 34px 35px);
+    font-family:"Gowun Batang","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",serif;line-height:1.6}
   .wrap{max-width:1000px;margin:0 auto;padding:20px 16px 80px}
   header{display:flex;align-items:center;gap:12px;margin-bottom:18px}
   header .logo{font-size:30px}
@@ -97,6 +101,22 @@
     .print-date{display:block;font-size:12px;color:var(--muted);margin-bottom:14px}
     .doc{border-color:#ccc}
   }
+
+  /* ═══ 공책 아날로그 테마 — 구성요소 다듬기 ═══ */
+  .stat,.progress-card,.student,.empty{border:1.5px solid var(--line)}
+  .btn{border-radius:8px}
+  .btn.primary{background:var(--brand)}
+  .btn.ghost{background:#efe9d8;color:var(--brand-d)}
+  .fchip{border-radius:6px;border:1.5px solid var(--line)}
+  .fchip.on{border-color:var(--brand);background:#e9f0f7;color:var(--brand-d)}
+  .bar{background:#efe9d8}
+  .bar > span{background:var(--brand)}
+  .planbox{background:#f4efe0;border:1px dashed #cfc6a8}
+  .planbox b{color:var(--accent)}
+  .doc{background:#fffef7;border-radius:8px}
+  .note,.reflect,.fbbox,.mini{border-radius:8px}
+  .fbbox .tag.ai{background:var(--brand)}
+  .work{border-top:1.5px dashed #cfc6a8}
 </style>
 </head>
 <body>

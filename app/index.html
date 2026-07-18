@@ -3,22 +3,27 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<meta name="theme-color" content="#7c6cf0" />
+<meta name="theme-color" content="#1f4e8c" />
 <title>글쓰기 거울 — 6학년 글쓰기 도우미</title>
+<link rel="stylesheet" href="fonts/gowunbatang.css" />
 <style>
+  /* ═══ 공책 아날로그 테마 ═══
+     종이 질감 바탕 + 만년필 남색·빨간 색연필 포인트, 고운바탕 글꼴(앱에 내장, 외부 요청 없음) */
   :root{
-    --bg:#f5f3ff; --card:#ffffff; --ink:#2d2a45; --muted:#7b7894;
-    --brand:#7c6cf0; --brand-d:#5b49d6;
-    --green:#3fae72; --green-bg:#e7f7ee;
-    --yellow:#e0a52e; --yellow-bg:#fdf4e0;
-    --blue:#3d8fe0; --blue-bg:#e7f1fc;
-    --line:#eceaf6; --radius:22px; --shadow:0 8px 28px rgba(91,73,214,.10);
+    --bg:#f3efe3; --card:#fffef7; --ink:#2e3947; --muted:#8d8878;
+    --brand:#1f4e8c; --brand-d:#173b6b;
+    --accent:#c2483b; /* 빨간 색연필 */
+    --green:#3e7d5c; --green-bg:#ecf3ee;
+    --yellow:#b3822d; --yellow-bg:#f8f1df;
+    --blue:#2f6ba8; --blue-bg:#e9f0f7;
+    --line:#ddd5bf; --radius:10px; --shadow:0 2px 0 rgba(46,57,71,.06);
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;height:100%}
   body{
-    font-family:"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;
+    font-family:"Gowun Batang","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",serif;
     background:var(--bg); color:var(--ink); line-height:1.6;
+    background-image:repeating-linear-gradient(0deg,transparent 0 34px,rgba(46,57,71,.025) 34px 35px);
     -webkit-font-smoothing:antialiased;
   }
   .app{max-width:920px;margin:0 auto;padding:18px 16px 120px;}
@@ -184,6 +189,56 @@
   .sc-check{font-size:15px;margin:4px 0}
   .sc-badge{display:inline-block;background:#f1eeff;color:var(--brand-d);font-weight:700;
     border-radius:12px;padding:6px 12px;font-size:13px;margin:0 6px 6px 0}
+
+  /* ═══ 공책 아날로그 테마 — 구성요소 다듬기 ═══ */
+  .card{border:1.5px solid var(--line)}
+  .journey{border:1.5px solid var(--line)}
+  .step{border-radius:8px}
+  .step.active{background:var(--brand);color:#fff}
+  .step.done .ico::after{color:var(--accent)}
+
+  .btn{border-radius:8px;font-weight:700}
+  .btn.primary{background:var(--brand);box-shadow:0 2px 0 rgba(23,59,107,.35)}
+  .btn.ghost{background:#efe9d8;color:var(--brand-d)}
+
+  input.line, textarea, select{border:1.5px solid var(--line);border-radius:8px;background:#fffef7}
+  input.line:focus,textarea:focus,select:focus{border-color:var(--brand)}
+  .who input{border:1.5px solid var(--line);border-radius:8px}
+
+  /* 글쓰기 칸 = 줄공책 */
+  textarea.big{
+    line-height:32px;padding-top:14px;
+    background-image:repeating-linear-gradient(0deg,transparent 0 31px,#e3dcc6 31px 32px);
+    background-attachment:local;
+  }
+
+  .selfq,.fixedinfo{background:#f4efe0;border-radius:8px;border:1px dashed #cfc6a8}
+  .selfq b{color:var(--accent)}
+  .fixedinfo b{color:var(--accent)}
+  .chip{border-radius:6px}
+  .chip.on{border-color:var(--brand);background:#e9f0f7;color:var(--brand-d)}
+  .ideabank{background:#fffef7;border:1.5px solid var(--line);border-radius:8px}
+
+  .fbcard{border-radius:8px;border-left-width:5px}
+  .doc{border:1.5px solid var(--line);border-radius:8px;background:#fffef7}
+  .check{border-bottom:1px dashed #d8d0b6}
+  .check input{accent-color:var(--brand)}
+
+  .genrecard{border:1.5px solid var(--line);border-radius:8px;background:#fffef7}
+  .genrecard:hover{border-color:var(--brand);box-shadow:0 3px 0 rgba(31,78,140,.15)}
+  .workitem{border:1.5px solid var(--line);border-radius:8px;background:#fffef7}
+  .workitem:hover{border-color:var(--brand)}
+  .workitem .wstage{background:#e9f0f7;color:var(--brand-d);border-radius:6px}
+  .workbar .gtag{background:#e9f0f7;color:var(--brand-d);border-radius:6px}
+  .stamp{border-radius:8px;border:1.5px dashed #cfc6a8}
+  .stamp.got{background:#fdeeec;border:1.5px solid var(--accent)}
+  .badge{border-radius:8px;border:1.5px dashed #cfc6a8}
+  .badge.earned{border:1.5px solid var(--brand)}
+
+  .navbar{background:rgba(255,254,247,.96);border-top:1.5px solid var(--line)}
+  .modal,.showcase{border-radius:12px;border:1.5px solid var(--line)}
+  .sc-close{background:#efe9d8;color:var(--brand-d);border-radius:6px}
+  .sc-badge{background:#e9f0f7;color:var(--brand-d);border-radius:6px}
 </style>
 </head>
 <body>
@@ -1406,14 +1461,14 @@ async function saveShowcaseAsImage(){
     const g=genreOf(w.genre);
     const W=760, PAD=28, LH=26, BOX_PAD=14, BOX_GAP=10;
     const contentW=W-PAD*2;
-    const FONT_BODY='15px "Malgun Gothic","Apple SD Gothic Neo",sans-serif';
-    const FONT_BOLD='bold 15px "Malgun Gothic","Apple SD Gothic Neo",sans-serif';
-    const FONT_H1='bold 22px "Malgun Gothic","Apple SD Gothic Neo",sans-serif';
-    const FONT_H2='bold 15px "Malgun Gothic","Apple SD Gothic Neo",sans-serif';
-    const FONT_SMALL='13px "Malgun Gothic","Apple SD Gothic Neo",sans-serif';
-    const C={ink:'#2d2a45',muted:'#7b7894',brand:'#5b49d6',
-      green:'#3fae72',greenBg:'#e7f7ee',yellow:'#e0a52e',yellowBg:'#fdf4e0',
-      blue:'#3d8fe0',blueBg:'#e7f1fc'};
+    const FONT_BODY='15px "Gowun Batang","Malgun Gothic","Apple SD Gothic Neo",serif';
+    const FONT_BOLD='bold 15px "Gowun Batang","Malgun Gothic","Apple SD Gothic Neo",serif';
+    const FONT_H1='bold 22px "Gowun Batang","Malgun Gothic","Apple SD Gothic Neo",serif';
+    const FONT_H2='bold 15px "Gowun Batang","Malgun Gothic","Apple SD Gothic Neo",serif';
+    const FONT_SMALL='13px "Gowun Batang","Malgun Gothic","Apple SD Gothic Neo",serif';
+    const C={ink:'#2e3947',muted:'#8d8878',brand:'#1f4e8c',
+      green:'#3e7d5c',greenBg:'#ecf3ee',yellow:'#b3822d',yellowBg:'#f8f1df',
+      blue:'#2f6ba8',blueBg:'#e9f0f7'};
 
     const meas=document.createElement('canvas').getContext('2d');
     function wrapPlain(text,font,maxWidth){
