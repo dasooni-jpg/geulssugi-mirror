@@ -30,11 +30,14 @@ export default {
     }
 
     try {
-      const { text, reader } = await request.json();
+      const { text, reader, genre, guide } = await request.json();
       if (!text || text.trim().length < 10) {
         return Response.json({ ok: false, reason: "too_short" }, { headers: cors });
       }
       const readerTxt = reader && reader.trim() ? reader : "이 글을 읽을 사람";
+      // 갈래(글 종류)와 갈래별 안내는 새 버전 앱이 함께 보냄. 없으면(구버전) 일반 피드백.
+      const genreTxt = genre && genre.trim() ? genre : "";
+      const guideTxt = guide && guide.trim() ? guide.slice(0, 300) : "";
 
       const system =
         "너는 초등학교 6학년의 글쓰기를 돕는 다정한 글쓰기 친구야.\n" +
@@ -43,11 +46,14 @@ export default {
         "(3) yellow 에는 더 생각해 볼 점을 '질문'으로만 쉽게 안내해. 답은 알려주지 마.\n" +
         "(4) blue 에는 읽는 사람을 떠올리게 하는 메타인지 질문을 1가지 써.\n" +
         "(5) 6학년이 이해할 쉬운 말을 쓰고, 각 항목은 한두 문장으로 짧게.\n" +
-        "(6) 반드시 JSON만 출력해. 다른 텍스트는 절대 쓰지 마.\n" +
+        (guideTxt ? "(6) " + guideTxt + "\n" : "") +
+        "(마지막) 반드시 JSON만 출력해. 다른 텍스트는 절대 쓰지 마.\n" +
         '출력 형식: {"green":"...","yellow":"...","blue":"..."}';
 
       const userMsg =
-        '학생이 쓴 글:\n"""' + text + '"""\n읽는 사람: ' + readerTxt +
+        '학생이 쓴 글:\n"""' + text + '"""\n' +
+        (genreTxt ? "글의 갈래(종류): " + genreTxt + "\n" : "") +
+        "읽는 사람: " + readerTxt +
         '\n위 글에 대해 피드백을 JSON으로 만들어 줘. 반드시 {"green":"...","yellow":"...","blue":"..."} 형식으로만 답해.';
 
       const result = await env.AI.run("@cf/meta/llama-4-scout-17b-16e-instruct", {

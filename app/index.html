@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <meta name="theme-color" content="#7c6cf0" />
-<title>글쓰기 거울 — 나의 글쓰기 과정을 비춰봐요</title>
+<title>글쓰기 거울 — 6학년 글쓰기 도우미</title>
 <style>
   :root{
     --bg:#f5f3ff; --card:#ffffff; --ink:#2d2a45; --muted:#7b7894;
@@ -35,7 +35,7 @@
   /* 여정 지도 */
   .journey{display:flex;gap:8px;background:var(--card);border-radius:var(--radius);
     padding:12px;box-shadow:var(--shadow);margin-bottom:18px;overflow-x:auto}
-  .step{flex:1;min-width:140px;border:none;background:transparent;cursor:pointer;
+  .step{flex:1;min-width:110px;border:none;background:transparent;cursor:pointer;
     text-align:center;padding:12px 8px;border-radius:16px;font-family:inherit;transition:.15s}
   .step .ico{font-size:26px;display:block}
   .step .nm{font-weight:700;font-size:14px;margin-top:4px}
@@ -58,6 +58,7 @@
   input.line:focus,textarea:focus,select:focus{outline:none;border-color:var(--brand)}
   textarea{resize:vertical;min-height:120px}
   textarea.big{min-height:300px;line-height:1.8}
+  textarea.mid{min-height:90px}
 
   .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
   .chip{border:2px solid var(--line);background:#fff;border-radius:20px;padding:8px 14px;
@@ -72,6 +73,7 @@
     box-shadow:0 6px 16px rgba(124,108,240,.35)}
   .btn.ghost{background:#f1eeff;color:var(--brand-d)}
   .btn.wide{width:100%}
+  .btn.sm{padding:8px 14px;font-size:13px;border-radius:12px}
   .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
   .savetag{font-size:12px;color:var(--green);font-weight:700}
 
@@ -83,16 +85,9 @@
   .selfq ul{margin:6px 0 0;padding-left:18px;font-size:14px}
   .selfq li{margin:3px 0}
 
-  /* 이번 과제 고정 정보 안내 */
+  /* 이번 글 정보 안내 */
   .fixedinfo{background:#f1eeff;border-radius:14px;padding:12px 16px;font-size:14px;margin:10px 0 18px}
   .fixedinfo b{color:var(--brand-d)}
-
-  /* 주제 아이디어 탐색 */
-  .ideahelp{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 4px}
-  .ideabank{background:#faf9ff;border:2px solid var(--line);border-radius:16px;padding:14px 16px;margin:6px 0 14px}
-  .topic-cat{margin-bottom:14px}
-  .topic-cat:last-child{margin-bottom:0}
-  .topic-cat b{display:block;font-size:13px;color:var(--brand-d);margin-bottom:6px}
 
   /* AI 피드백 카드 */
   .fbcard{border-radius:18px;padding:16px 18px;margin-bottom:12px;border-left:8px solid}
@@ -129,11 +124,47 @@
 
   .empty{color:var(--muted);text-align:center;padding:30px 10px;font-size:15px}
 
+  /* ─── 보관함(홈) ─── */
+  .worklist{display:flex;flex-direction:column;gap:10px}
+  .workitem{display:flex;align-items:center;gap:12px;background:#faf9ff;border:2px solid var(--line);
+    border-radius:16px;padding:14px 16px;cursor:pointer;transition:.15s}
+  .workitem:hover{border-color:var(--brand)}
+  .workitem .we{font-size:28px}
+  .workitem .wt{flex:1;min-width:0}
+  .workitem .wt .t1{font-weight:800;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .workitem .wt .t2{font-size:12px;color:var(--muted)}
+  .workitem .wstage{font-size:12px;font-weight:700;color:var(--brand-d);background:#f1eeff;
+    border-radius:10px;padding:4px 10px;white-space:nowrap}
+  .workitem .wdel{border:none;background:transparent;color:var(--muted);font-size:16px;cursor:pointer;padding:4px}
+
+  /* 갈래 고르기 */
+  .genregrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin-top:8px}
+  .genrecard{border:2px solid var(--line);background:#fff;border-radius:16px;padding:14px;
+    cursor:pointer;font-family:inherit;text-align:left;transition:.15s}
+  .genrecard:hover{border-color:var(--brand);box-shadow:var(--shadow)}
+  .genrecard .ge{font-size:26px}
+  .genrecard .gn{font-weight:800;font-size:15px;margin-top:2px}
+  .genrecard .gd{font-size:12px;color:var(--muted);line-height:1.5;margin-top:2px}
+  .genrecard .stampmark{float:right;font-size:18px}
+
+  /* 갈래 도장판 */
+  .stampboard{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:8px;margin-top:6px}
+  .stamp{text-align:center;border:2px dashed var(--line);border-radius:14px;padding:10px 4px;opacity:.35}
+  .stamp.got{opacity:1;border-style:solid;border-color:var(--brand);background:#f1eeff}
+  .stamp .se{font-size:24px}
+  .stamp .sn{font-size:11px;font-weight:700;margin-top:2px}
+
+  /* 작품 상단바 */
+  .workbar{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+  .workbar .gtag{font-size:14px;font-weight:800;color:var(--brand-d);background:#f1eeff;
+    border-radius:12px;padding:6px 12px}
+
   /* 하단 이동 바 */
   .navbar{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.92);
     backdrop-filter:blur(8px);border-top:1px solid var(--line);padding:12px 16px;
     display:flex;gap:10px;max-width:920px;margin:0 auto}
   .navbar .btn{flex:1}
+  .navbar.hidden{display:none}
 
   .modal-bg{position:fixed;inset:0;background:rgba(45,42,69,.45);display:none;
     align-items:center;justify-content:center;padding:20px;z-index:50}
@@ -162,120 +193,179 @@
     <img src="mascot.png" alt="다람쌤" class="mascot" />
     <div class="title">
       <h1>다람쌤의 글쓰기 거울</h1>
-      <p>나의 글쓰기 과정을 비춰봐요 · 6학년 1학기 5단원</p>
+      <p>6학년 국어 글쓰기 도우미 · 모든 갈래의 글쓰기를 함께해요</p>
     </div>
     <div class="who">
       <input id="nick" placeholder="내 별명" />
     </div>
   </header>
 
-  <!-- 여정 지도 -->
-  <nav class="journey" id="journey">
-    <button class="step active" data-step="1"><span class="ico">✏️</span><span class="nm">초고 쓰기</span><span class="sub">일단 써보자</span></button>
-    <button class="step" data-step="2"><span class="ico">🪞</span><span class="nm">거울 피드백</span><span class="sub">거울에 비춰보기</span></button>
-    <button class="step" data-step="3"><span class="ico">🌱</span><span class="nm">돌아보기</span><span class="sub">얼마나 자랐나</span></button>
-  </nav>
-
-  <!-- 1. 초고 -->
-  <section class="panel show" data-panel="1">
+  <!-- ═══════════ 보관함(홈) 화면 ═══════════ -->
+  <div id="homeView">
     <div class="card">
-      <h2>✏️ 초고 쓰기</h2>
-      <p class="hint">활동지 1~5번에서 정리한 주장·이유·근거를 바탕으로, 서론·본론·결론 짜임에 맞게 써 봐요.</p>
-
-      <div class="fixedinfo">
-        📌 이번 글은 <b>주장하는 글</b>이에요 · 읽는 사람은 <b>우리 반 친구들</b> · 읽는 사람을 <b>설득하는 것</b>이 목적이에요.
-      </div>
-
-      <label class="fld">📝 제목</label>
-      <input class="line" id="title" placeholder="예) 학교 급식을 채식 위주로 바꾸자" />
-
-      <textarea class="big" id="draft" placeholder="여기에 첫 번째 글을 써보세요. 자동으로 저장돼요."></textarea>
-      <div class="counter" id="draftCount">0자 · 0문장</div>
-
-      <div class="selfq">
-        <b>🤔 스스로 점검해요</b>
-        처음·가운데·끝이 있나요? 읽는 사람이 궁금해할 내용을 빠뜨리지 않았나요?
-      </div>
-      <div class="row">
-        <button class="btn primary" onclick="goStep(2)">다 썼어요! 거울에 비춰보기 🪞</button>
-        <span class="savetag" id="save1"></span>
-      </div>
-    </div>
-  </section>
-
-  <!-- 2. AI 피드백 -->
-  <section class="panel" data-panel="2">
-    <div class="card">
-      <h2>🪞 거울 피드백 받기</h2>
-      <p class="hint">거울은 글을 대신 고쳐 주지 않아요. <b>잘한 점</b>과 <b>스스로 생각할 질문</b>을 비춰줄 뿐이에요.</p>
-      <button class="btn primary wide" onclick="runFeedback()">내 글을 거울에 비춰보기</button>
-      <div id="fbResult" style="margin-top:16px"></div>
-    </div>
-
-    <div class="card" id="mirrorCheckCard">
-      <h2>📋 꼼꼼 점검표 <span id="mcProgress" style="font-size:14px;color:var(--muted);font-weight:400"></span></h2>
-      <p class="hint">활동지 7번과 같은 점검표예요. 거울 피드백과 함께 항목별로 점검하고, 부족한 부분은 아래 고쳐쓰기에서 스스로 보완해요.</p>
-      <div id="mirrorChecks"></div>
-    </div>
-
-    <div class="card" id="reviseCard" style="display:none">
-      <h2>✍️ 고쳐쓰기</h2>
-      <p class="hint">피드백을 보고 고치고 싶은 곳을 직접 바꿔보세요. (초고는 그대로 보관돼요)</p>
-      <textarea class="big" id="revised" placeholder="여기서 글을 고쳐 써요."></textarea>
-      <div class="counter" id="revCount">0자 · 0문장</div>
-
-      <div class="row">
-        <button class="btn primary" onclick="runFeedback('revised')">🪞 고친 글 다시 비춰보기</button>
-        <button class="btn ghost" onclick="saveStep(2)">고친 글 저장하기</button>
-        <button class="btn ghost" onclick="goStep(3)">돌아보기로 →</button>
-        <button class="btn ghost" onclick="refillFromDraft()">↺ 초고 내용으로 다시 채우기</button>
-        <span class="savetag" id="save2"></span>
-      </div>
-    </div>
-  </section>
-
-  <!-- 3. 돌아보기 -->
-  <section class="panel" data-panel="3">
-    <div class="card">
-      <h2>🌱 나의 글쓰기 과정 돌아보기</h2>
-      <p class="hint">초고와 고친 글이 어떻게 달라졌는지 비교해 봐요.
-        <span style="color:var(--muted);text-decoration:line-through">지운 낱말</span> ·
-        <span style="color:var(--blue);font-weight:700">새로 쓴 낱말</span>
-      </p>
-      <div id="titleShow" style="font-weight:800;font-size:16px;margin-bottom:10px"></div>
-      <div class="compare">
-        <div class="col"><h3>📄 처음 쓴 글(초고)</h3><div class="doc" id="docDraft"></div></div>
-        <div class="col"><h3>✨ 고쳐 쓴 글</h3><div class="doc" id="docRevised"></div></div>
-      </div>
+      <h2>🆕 새 글 쓰기</h2>
+      <p class="hint">어떤 갈래의 글을 쓸까요? 갈래마다 계획 질문과 점검표가 달라져요.</p>
+      <div class="genregrid" id="genreGrid"></div>
     </div>
 
     <div class="card">
-      <h2>✅ 스스로 평가하기</h2>
-      <div id="selfChecks"></div>
-      <label class="fld">✍️ 다음 글에도 꼭 다시 쓸 나만의 글쓰기 비법 1가지는?</label>
-      <textarea id="reflect" placeholder="예) 다 쓴 뒤 소리 내어 읽어 보면 어색한 문장이 들린다!"></textarea>
-      <div class="row">
-        <button class="btn primary" onclick="finishReflect()">돌아보기 완성!</button>
-        <button class="btn ghost" onclick="showcase()">👩‍🏫 선생님께 보여주기</button>
-        <button class="btn ghost" onclick="exportFile()">⬇ 파일로 내보내기</button>
-        <span class="savetag" id="save3"></span>
-      </div>
+      <h2>📚 내 글 보관함</h2>
+      <p class="hint">지금까지 쓴 글이에요. 눌러서 이어 쓰거나 다시 볼 수 있어요.</p>
+      <div class="worklist" id="workList"></div>
+    </div>
+
+    <div class="card">
+      <h2>🎖 갈래 도장판</h2>
+      <p class="hint">한 갈래의 글을 끝까지 완성하면 도장이 쾅! 여덟 갈래를 모두 모아 봐요.</p>
+      <div class="stampboard" id="stampBoard"></div>
     </div>
 
     <div class="card">
       <h2>🏅 내가 모은 배지</h2>
-      <div class="badges" id="badges"></div>
+      <div class="badges" id="badgesHome"></div>
+      <div class="row">
+        <button class="btn ghost" onclick="exportFile()">⬇ 내 글 전체를 파일로 내보내기</button>
+        <span class="savetag" id="saveHome"></span>
+      </div>
     </div>
-  </section>
+  </div>
+
+  <!-- ═══════════ 작품(글쓰기) 화면 ═══════════ -->
+  <div id="workView" style="display:none">
+
+    <div class="workbar">
+      <button class="btn ghost sm" onclick="goHome()">← 내 글 보관함</button>
+      <span class="gtag" id="workGenreTag"></span>
+    </div>
+
+    <!-- 여정 지도 -->
+    <nav class="journey" id="journey">
+      <button class="step active" data-step="1"><span class="ico">🧭</span><span class="nm">계획하기</span><span class="sub">생각 모으기</span></button>
+      <button class="step" data-step="2"><span class="ico">✏️</span><span class="nm">초고 쓰기</span><span class="sub">일단 써보자</span></button>
+      <button class="step" data-step="3"><span class="ico">🪞</span><span class="nm">거울 피드백</span><span class="sub">비춰보고 고치기</span></button>
+      <button class="step" data-step="4"><span class="ico">🌱</span><span class="nm">돌아보기</span><span class="sub">얼마나 자랐나</span></button>
+    </nav>
+
+    <!-- 1. 계획하기 -->
+    <section class="panel show" data-panel="1">
+      <div class="card">
+        <h2>🧭 계획하기</h2>
+        <p class="hint">쓰기 전에 생각을 모아요. 여기 쓴 내용이 초고 쓰기의 재료가 돼요.</p>
+        <div class="fixedinfo" id="genreInfo"></div>
+
+        <label class="fld">👀 이 글을 읽을 사람</label>
+        <input class="line" id="reader" />
+        <label class="fld">🎯 글을 쓰는 목적</label>
+        <input class="line" id="purpose" />
+
+        <div id="planFields"></div>
+
+        <div class="selfq" id="planSelfq"></div>
+        <div class="row">
+          <button class="btn primary" onclick="goStep(2)">계획 끝! 초고 쓰러 가기 ✏️</button>
+          <span class="savetag" id="savePlan"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. 초고 -->
+    <section class="panel" data-panel="2">
+      <div class="card">
+        <h2>✏️ 초고 쓰기</h2>
+        <p class="hint" id="draftHint"></p>
+
+        <div class="fixedinfo" id="draftInfo"></div>
+
+        <div id="planRecall" class="selfq" style="margin:0 0 14px"></div>
+
+        <label class="fld">📝 제목</label>
+        <input class="line" id="title" />
+
+        <textarea class="big" id="draft" placeholder="여기에 첫 번째 글을 써보세요. 자동으로 저장돼요."></textarea>
+        <div class="counter" id="draftCount">0자 · 0문장</div>
+
+        <div class="selfq" id="draftSelfq"></div>
+        <div class="row">
+          <button class="btn primary" onclick="goStep(3)">다 썼어요! 거울에 비춰보기 🪞</button>
+          <span class="savetag" id="saveDraft"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. 거울 피드백 -->
+    <section class="panel" data-panel="3">
+      <div class="card">
+        <h2>🪞 거울 피드백 받기</h2>
+        <p class="hint">거울은 글을 대신 고쳐 주지 않아요. <b>잘한 점</b>과 <b>스스로 생각할 질문</b>을 비춰줄 뿐이에요.</p>
+        <button class="btn primary wide" onclick="runFeedback()">내 글을 거울에 비춰보기</button>
+        <div id="fbResult" style="margin-top:16px"></div>
+      </div>
+
+      <div class="card" id="mirrorCheckCard">
+        <h2>📋 꼼꼼 점검표 <span id="mcProgress" style="font-size:14px;color:var(--muted);font-weight:400"></span></h2>
+        <p class="hint" id="mcHint">이 갈래에 꼭 맞는 점검표예요. 항목별로 점검하고, 부족한 부분은 아래 고쳐쓰기에서 스스로 보완해요.</p>
+        <div id="mirrorChecks"></div>
+      </div>
+
+      <div class="card" id="reviseCard" style="display:none">
+        <h2>✍️ 고쳐쓰기</h2>
+        <p class="hint">피드백을 보고 고치고 싶은 곳을 직접 바꿔보세요. (초고는 그대로 보관돼요)</p>
+        <textarea class="big" id="revised" placeholder="여기서 글을 고쳐 써요."></textarea>
+        <div class="counter" id="revCount">0자 · 0문장</div>
+
+        <div class="row">
+          <button class="btn primary" onclick="runFeedback('revised')">🪞 고친 글 다시 비춰보기</button>
+          <button class="btn ghost" onclick="saveWork('saveRevise')">고친 글 저장하기</button>
+          <button class="btn ghost" onclick="goStep(4)">돌아보기로 →</button>
+          <button class="btn ghost" onclick="refillFromDraft()">↺ 초고 내용으로 다시 채우기</button>
+          <span class="savetag" id="saveRevise"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. 돌아보기 -->
+    <section class="panel" data-panel="4">
+      <div class="card">
+        <h2>🌱 나의 글쓰기 과정 돌아보기</h2>
+        <p class="hint">초고와 고친 글이 어떻게 달라졌는지 비교해 봐요.
+          <span style="color:var(--muted);text-decoration:line-through">지운 낱말</span> ·
+          <span style="color:var(--blue);font-weight:700">새로 쓴 낱말</span>
+        </p>
+        <div id="titleShow" style="font-weight:800;font-size:16px;margin-bottom:10px"></div>
+        <div class="compare">
+          <div class="col"><h3>📄 처음 쓴 글(초고)</h3><div class="doc" id="docDraft"></div></div>
+          <div class="col"><h3>✨ 고쳐 쓴 글</h3><div class="doc" id="docRevised"></div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>✅ 스스로 평가하기</h2>
+        <div id="selfChecks"></div>
+        <label class="fld">✍️ 다음 글에도 꼭 다시 쓸 나만의 글쓰기 비법 1가지는?</label>
+        <textarea id="reflect" placeholder="예) 다 쓴 뒤 소리 내어 읽어 보면 어색한 문장이 들린다!"></textarea>
+        <div class="row">
+          <button class="btn primary" onclick="finishReflect()">돌아보기 완성!</button>
+          <button class="btn ghost" onclick="showcase()">👩‍🏫 선생님께 보여주기</button>
+          <button class="btn ghost" onclick="exportFile()">⬇ 파일로 내보내기</button>
+          <span class="savetag" id="saveReflect"></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>🏅 내가 모은 배지</h2>
+        <div class="badges" id="badges"></div>
+      </div>
+    </section>
+  </div>
 
   <div style="text-align:center;color:var(--muted);font-size:12px;margin-top:10px">
-    프로토타입 v0.3 · 내 글은 <b>이 기기에만</b> 저장돼요 (서버로 전송 안 함)<br>
+    글쓰기 거울 v1.0 · 내 글은 <b>이 기기에만</b> 저장돼요 (서버로 전송 안 함)<br>
     선생님께는 <b>화면으로 보여주거나</b> 파일로 전달해요
   </div>
 </div>
 
 <!-- 하단 이동 바 -->
-<div class="navbar">
+<div class="navbar hidden" id="navbar">
   <button class="btn ghost" onclick="prevStep()">← 이전</button>
   <button class="btn primary" onclick="nextStep()">다음 →</button>
 </div>
@@ -310,40 +400,460 @@
 const AI_PROXY = "https://daramssam-ai.dasooni.workers.dev";
 
 /* ---------- 외부 AI 사용 여부 ----------
-   만 14세 미만 학생 보호를 위해 기본값은 false 입니다.
    false: 글을 인터넷으로 전송하지 않고, 기기 안에서만 규칙 기반 피드백을 만듭니다. (외부 전송 0건)
    true : AI_PROXY(Cloudflare)로 글을 보내 실제 생성형 AI 피드백을 받습니다.
-          ※ 만 14세 미만이라면 법정대리인(부모) 동의 후에만 켜는 것을 권장합니다. */
-const USE_AI = false;
+   ※ 현재 true — 학교운영위원회 승인 + 학부모(법정대리인) 동의 절차를 마친 뒤 수업에서 사용하세요.
+      승인 전 수업에 쓰려면 false로 바꾸면 됩니다(규칙 기반으로만 동작, 외부 전송 0건).
+   ※ 갈래별 맞춤 AI 피드백을 받으려면 cloudflare-worker.js 최신 버전을 Cloudflare에 재배포하세요.
+      (구버전 워커여도 일반 AI 피드백은 동작합니다) */
+const USE_AI = true;
 
-/* ---------- 이번 과제 설정 (고정값) ----------
-   이번 논술형 평가는 모두 '주장하는 글'을 쓰므로, 글의 종류·읽는 사람·목적을 미리 정해둡니다.
-   다른 수업에서 자유 주제로 쓰게 하려면 이 값들을 빈 문자열("")로 바꾸고,
-   계획하기 카드도 직접 입력하는 형태로 되돌리세요. */
-const FIXED_GENRE = "주장하는 글";
-const FIXED_READER = "우리 반 친구들";
-const FIXED_PURPOSE = "읽는 사람을 설득하기 위해서";
+/* ---------- 갈래 고정 (선택) ----------
+   특정 단원 수업에서 한 갈래만 쓰게 하려면 갈래 이름을 넣으세요. 예: "주장하는 글"
+   비워두면("") 학생이 보관함에서 갈래를 직접 골라요. */
+const FIXED_GENRE = "";
 
-/* ---------- 상태 저장 (localStorage) ---------- */
-const KEY = "geulssugi-mirror-v1";
-let state = load() || {
-  nick:"", genre:"", reader:"", purpose:"", ideas:"", title:"",
-  draft:"", revised:"", changeNote:"", reflect:"",
-  feedbackDone:false, checks:{}, badges:{}, revisedTouched:false
-};
-if(FIXED_GENRE) state.genre=FIXED_GENRE;
-if(FIXED_READER) state.reader=FIXED_READER;
-if(FIXED_PURPOSE) state.purpose=FIXED_PURPOSE;
-// 이전 버전 데이터 호환: revisedTouched 값이 없으면 false로 시작
-// (revised가 draft와 다른 것만으로는 '직접 수정함'인지 '예전 버그로 남은 값'인지 구분할 수 없음)
-if(state.revisedTouched===undefined) state.revisedTouched=false;
-if(!state.mirrorChecks) state.mirrorChecks={};
-let cur = 1;
+/* ═══════════════════════════════════════════════════
+   갈래 정의 — 2022 개정 교육과정 6학년 국어 쓰기·문학
+   각 갈래: 계획 질문, 초고 안내, 꼼꼼 점검표, 피드백 규칙
+   ═══════════════════════════════════════════════════ */
+const GENRES = [
+  {
+    id:'argue', name:'주장하는 글', e:'🗣️',
+    desc:'문제 상황에 대한 내 주장을 이유·근거와 함께 펼치는 글 (근거와 출처 밝히기)',
+    reader:'우리 반 친구들', purpose:'읽는 사람을 설득하기 위해서',
+    titlePh:'예) 학교 급식을 채식 위주로 바꾸자',
+    plan:[
+      {k:'p1', label:'📌 어떤 문제 상황인가요?', ph:'예) 급식 시간에 음식이 너무 많이 버려진다'},
+      {k:'p2', label:'💬 나의 주장', ph:'예) 먹을 만큼만 받는 자율 배식을 하자'},
+      {k:'p3', label:'🧱 주장을 뒷받침하는 이유와 근거 (2~3가지)', ph:'예) ① 음식물 쓰레기가 줄어든다 — 근거: 환경부 통계에 따르면…', ta:true},
+      {k:'p4', label:'🔍 근거 자료는 어디에서 가져왔나요? (출처)', ph:'예) ○○뉴스 기사, 환경부 누리집, 학급 설문 조사'}
+    ],
+    planSelfq:'내 주장이 한 문장으로 분명한가요? 이유마다 뒷받침하는 근거가 있나요?',
+    draftHint:'계획에서 정리한 주장·이유·근거를 서론(문제 상황+주장) → 본론(이유+근거) → 결론(요약+강조) 짜임에 맞게 써 봐요. 근거를 가져온 곳(출처)도 글 안에서 밝혀요.',
+    draftSelfq:'서론·본론·결론이 있나요? 근거의 출처를 밝혔나요? 읽는 사람이 반대할 내용도 생각해 봤나요?',
+    checks:[
+      { cat:"① 글의 구조 점검하기", items:[
+        "[서론] 읽는 사람의 관심을 끌 만한 생생한 문제 상황이 잘 나타나 있는가?",
+        "[서론] 글을 통해 말하고자 하는 주장이 명확하게 드러나 있는가?",
+        "[본론] 주장을 뒷받침하는 이유 3가지가 서로 겹치지 않고 다양하게 제시되었는가?",
+        "[본론] 각 이유를 뒷받침하는 구체적인 근거가 들어있는가?",
+        "[결론] 본론의 내용을 요약하고, 주장을 다시 한번 강조했는가?"
+      ]},
+      { cat:"② 내용의 타당성 점검하기", items:[
+        "내 주장이 학급, 학교, 사회의 문제를 해결하는 데 꼭 필요한 내용인가?",
+        "본론의 이유들이 내 주장과 직접적으로 관련이 있는가?",
+        "내가 가져온 근거(자료)가 믿을 수 있는 출처(뉴스, 연구, 통계 등)에서 나온 것인가?",
+        "근거 자료를 어디에서 가져왔는지 출처를 글에서 밝혔는가?",
+        "문제 상황과 이유, 그리고 근거가 서로 어색함 없이 자연스럽게 연결되는가?",
+        "내 글을 읽는 사람이 충분히 공감하고 설득당할 만한 내용인가?"
+      ]},
+      { cat:"③ 표현과 문장 점검하기", items:[
+        "내 의견을 확실하게 전하기 위해 명확한 표현(~해야 합니다, ~가 필요합니다)을 썼는가?",
+        "주관적이고 모호한 표현(~인 것 같습니다, ~라고 생각할 수도 있습니다)을 쓰지 않았는가?",
+        "읽는 사람을 무시하거나 기분 나쁘게 만드는 지나치게 감정적인 표현은 없는가?",
+        "문장이 너무 길어서 무슨 뜻인지 이해하기 어렵지 않은가? (문장을 알맞게 끊어 썼는가?)",
+        "왜냐하면 ~하기 때문입니다, 예를 들어 ~ 등 문장과 문장을 이어주는 말이 알맞게 쓰였는가?"
+      ]},
+      { cat:"④ 맞춤법과 형식 점검하기", items:[
+        "글의 전체 내용을 대표하는 명확한 제목을 붙였는가?",
+        "문단이 바뀔 때 첫 칸을 비우고 시작했는가?",
+        "헷갈리는 맞춤법이나 띄어쓰기가 없는지 점검하고 고쳐썼는가?",
+        "다른 사람이 읽기 쉽도록 문단과 줄을 깔끔하게 정리했는가?"
+      ]}
+    ],
+    blue:'{reader}이 이 글을 읽고 내 주장에 고개를 끄덕이게 될까요? 반대하는 사람은 뭐라고 말할지, 거기에 어떻게 답할지도 생각해 봐요.',
+    ai:'이 글은 주장하는 글이야. 주장이 분명한지, 이유와 근거가 알맞은지, 근거의 출처를 밝혔는지를 중심으로 봐 줘.'
+  },
+  {
+    id:'explain', name:'설명하는 글', e:'📖',
+    desc:'알맞은 내용을 골라 대상의 특성이 잘 드러나게 설명하는 글',
+    reader:'설명 대상을 잘 모르는 친구들', purpose:'대상을 잘 알 수 있도록 설명하기 위해서',
+    titlePh:'예) 우리나라 전통 악기, 가야금의 모든 것',
+    plan:[
+      {k:'p1', label:'🔎 설명할 대상은 무엇인가요?', ph:'예) 가야금, 우리 지역 축제, 반려동물 기르는 법'},
+      {k:'p2', label:'✨ 알려 주고 싶은 대상의 특성 2~3가지', ph:'예) ① 생김새와 구조 ② 소리의 특징 ③ 역사', ta:true},
+      {k:'p3', label:'🧰 어떤 설명 방법을 쓸까요? (정의·예시·비교·대조·분류)', ph:'예) 가야금이란 ~이다(정의), 거문고와 비교(비교·대조)'},
+      {k:'p4', label:'📚 내용은 어디에서 조사했나요? (출처)', ph:'예) 백과사전, 도서관 책, 박물관 누리집'}
+    ],
+    planSelfq:'읽는 사람이 가장 궁금해할 특성을 골랐나요? 짐작이 아니라 조사한 사실인가요?',
+    draftHint:'처음(무엇을 왜 설명하는지) → 가운데(특성을 문단별로 하나씩) → 끝(정리) 짜임으로 써 봐요. 정의·예시·비교 같은 설명 방법을 쓰면 이해가 쉬워져요.',
+    draftSelfq:'특성마다 문단을 나눴나요? 어려운 낱말은 뜻을 풀어 줬나요? 사실만 썼나요?',
+    checks:[
+      { cat:"① 짜임 점검하기", items:[
+        "[처음] 무엇을 설명하는지, 왜 소개하는지 밝혔는가?",
+        "[가운데] 대상의 특성을 문단별로 하나씩 설명했는가?",
+        "[가운데] 정의·예시·비교·대조·분류 같은 설명 방법을 알맞게 사용했는가?",
+        "[끝] 설명한 내용을 간단히 정리하며 마무리했는가?"
+      ]},
+      { cat:"② 내용 점검하기", items:[
+        "읽는 사람이 궁금해할 알맞은 내용을 골라 썼는가?",
+        "설명한 내용이 정확한 사실인가? (짐작이나 내 생각을 사실처럼 쓰지 않았는가?)",
+        "어려운 낱말은 뜻을 풀어 주거나 예를 들어 주었는가?",
+        "자료를 가져온 곳(출처)을 밝혔는가?"
+      ]},
+      { cat:"③ 표현과 형식 점검하기", items:[
+        "뜻이 분명한 객관적인 표현을 썼는가? ('~인 것 같다' 같은 짐작 표현을 쓰지 않았는가?)",
+        "문장이 이해하기 쉬운 알맞은 길이인가?",
+        "제목이 설명하는 대상을 잘 나타내는가?",
+        "맞춤법과 띄어쓰기를 점검했는가?"
+      ]}
+    ],
+    blue:'{reader}이 이 글만 읽고도 설명 대상을 머릿속에 그릴 수 있을까요? 빠진 정보는 없는지 살펴봐요.',
+    ai:'이 글은 설명하는 글이야. 대상의 특성이 잘 드러나는지, 정의·예시·비교 같은 설명 방법을 썼는지, 사실 중심으로 객관적으로 썼는지를 중심으로 봐 줘.'
+  },
+  {
+    id:'experience', name:'체험 감상 글', e:'🚌',
+    desc:'현장 체험 학습·여행 등 겪은 일과 그때의 생각·느낌(감상)을 나타내는 글',
+    reader:'우리 반 친구들', purpose:'내가 겪은 일과 느낌을 생생하게 전하기 위해서',
+    titlePh:'예) 경주에서 만난 천 년의 시간',
+    plan:[
+      {k:'p1', label:'📅 언제, 어디에서 한 체험인가요?', ph:'예) 5월 12일, 국립중앙박물관 현장 체험 학습'},
+      {k:'p2', label:'👀 보고 듣고 한 일(견문)을 떠올려 봐요', ph:'예) 반가사유상을 봤다, 해설사 선생님 설명을 들었다', ta:true},
+      {k:'p3', label:'💖 가장 기억에 남는 순간은 언제였나요?', ph:'예) 어두운 방에 반가사유상 하나만 있던 순간'},
+      {k:'p4', label:'💭 그때 어떤 생각과 느낌이 들었나요? (감상)', ph:'예) 천 년 전 사람과 마주 본 것 같아 가슴이 두근거렸다', ta:true}
+    ],
+    planSelfq:'한 일만 나열하지 않았나요? 그때의 생각과 느낌이 함께 있나요?',
+    draftHint:'처음(언제·어디에·왜 갔는지) → 가운데(시간과 장소의 흐름에 따라 보고 듣고 한 일 + 그때의 느낌) → 끝(전체 감상, 새로 알게 된 점) 짜임으로 써 봐요.',
+    draftSelfq:'여정(다닌 곳)·견문(보고 들은 것)·감상(느낌)이 골고루 있나요? "좋았다" 대신 왜 좋았는지 썼나요?',
+    checks:[
+      { cat:"① 짜임 점검하기", items:[
+        "[처음] 언제, 어디에, 왜 가게 되었는지 밝혔는가?",
+        "[가운데] 시간이나 장소의 흐름에 따라 겪은 일을 차례대로 썼는가?",
+        "[끝] 전체적인 감상이나 새로 알게 된 점으로 마무리했는가?"
+      ]},
+      { cat:"② 내용 점검하기", items:[
+        "여정(다닌 곳)·견문(보고 들은 것)·감상(생각과 느낌)이 골고루 들어 있는가?",
+        "가장 인상 깊은 장면을 자세히 썼는가?",
+        "'좋았다', '재미있었다'로 끝내지 않고 왜 그런 마음이 들었는지 썼는가?",
+        "겪은 일과 감상이 자연스럽게 연결되는가?"
+      ]},
+      { cat:"③ 표현과 형식 점검하기", items:[
+        "읽는 사람 눈에 장면이 그려지도록 생생한 표현을 썼는가?",
+        "시간과 장소를 나타내는 말(먼저, 그다음, ~에서)을 알맞게 썼는가?",
+        "제목이 체험의 느낌을 잘 담고 있는가?",
+        "맞춤법과 띄어쓰기를 점검했는가?"
+      ]}
+    ],
+    blue:'이 글을 읽는 사람도 내가 겪은 것처럼 생생하게 느낄 수 있을까요? 가장 전하고 싶은 순간이 충분히 자세한지 살펴봐요.',
+    ai:'이 글은 체험한 일에 대한 감상을 나타내는 글이야. 여정·견문·감상이 골고루 있는지, 느낌을 구체적으로 표현했는지를 중심으로 봐 줘.'
+  },
+  {
+    id:'media', name:'매체로 표현하는 글', e:'💻',
+    desc:'학급 게시판·블로그 등 매체와 읽을 사람을 생각하며 쓰는 글 (예의·출처·개인정보)',
+    reader:'게시판을 보는 여러 사람', purpose:'매체에 어울리게 내용을 알리고 나누기 위해서',
+    titlePh:'예) [우리 반 소식] 운동회 하이라이트 5장면',
+    plan:[
+      {k:'p1', label:'📱 어떤 매체에 올리는 글인가요?', ph:'예) 학급 게시판, 학교 누리집, 카드 뉴스'},
+      {k:'p2', label:'👥 누가 읽게 되나요? 그 사람들은 무엇을 궁금해할까요?', ph:'예) 다른 반 친구들과 부모님 — 운동회에서 무슨 일이 있었는지'},
+      {k:'p3', label:'🖼 매체의 특징을 어떻게 살릴까요? (제목·사진·짧은 문단 등)', ph:'예) 눈길 끄는 제목, 장면마다 사진 한 장 + 짧은 설명', ta:true},
+      {k:'p4', label:'🛡 지켜야 할 것을 확인해요 (예의·출처·개인정보)', ph:'예) 친구 얼굴 사진은 허락받기, 가져온 자료 출처 쓰기'}
+    ],
+    planSelfq:'화면으로 읽는 사람을 생각했나요? 올리기 전에 확인할 약속(예의·출처·개인정보)을 정했나요?',
+    draftHint:'화면으로 읽는 글은 제목이 절반이에요. 눈길을 끄는 제목, 짧은 문단, 쉬운 문장으로 써 봐요. 다른 사람의 자료를 쓰면 출처를 밝히고, 개인정보는 올리지 않아요.',
+    draftSelfq:'문단이 화면으로 읽기 좋게 짧은가요? 예의 바른 표현인가요? 출처와 개인정보를 확인했나요?',
+    checks:[
+      { cat:"① 독자와 매체 점검하기", items:[
+        "어떤 매체에 올리는 글인지 생각하며 그에 어울리게 썼는가?",
+        "읽는 사람이 누구인지, 무엇을 궁금해할지 생각하며 썼는가?",
+        "제목이 읽는 사람의 눈길을 끄는가?",
+        "화면으로 읽기 쉽게 문단을 짧게 나누었는가?"
+      ]},
+      { cat:"② 책임 있는 글쓰기 점검하기", items:[
+        "읽는 사람이 기분 나쁘지 않도록 예의 바른 표현을 썼는가?",
+        "다른 사람의 글·사진·자료를 가져왔다면 출처를 밝혔는가?",
+        "나와 다른 사람의 개인정보(이름·학교·연락처·얼굴 사진)를 함부로 올리지 않았는가?",
+        "사실과 내 의견을 구별해서 썼는가?"
+      ]},
+      { cat:"③ 표현 점검하기", items:[
+        "누구나 이해할 수 있는 쉬운 낱말과 문장을 썼는가?",
+        "맞춤법과 띄어쓰기를 점검했는가?"
+      ]}
+    ],
+    blue:'이 글이 인터넷에 올라갔을 때 읽는 사람들이 어떤 댓글을 달지 상상해 봐요. 오해하거나 기분 나빠할 사람은 없을까요?',
+    ai:'이 글은 온라인 매체(게시판·블로그 등)에 올리는 글이야. 독자와 매체를 고려했는지, 예의 바른 표현인지, 출처를 밝혔는지를 중심으로 봐 줘.'
+  },
+  {
+    id:'story', name:'이야기 쓰기', e:'🏰',
+    desc:'인물·사건·배경을 상상해 짜임새 있게 꾸며 쓰는 이야기',
+    reader:'이야기를 좋아하는 친구들', purpose:'재미와 감동, 전하고 싶은 생각을 담기 위해서',
+    titlePh:'예) 사라진 급식 미스터리',
+    plan:[
+      {k:'p1', label:'🧑 누가 나오나요? 인물의 성격은 어떤가요?', ph:'예) 호기심 많은 6학년 지우, 겁 많지만 의리 있는 단짝 민호', ta:true},
+      {k:'p2', label:'🗺 언제, 어디에서 벌어지는 일인가요? (배경)', ph:'예) 어느 금요일, 우리 학교 급식실'},
+      {k:'p3', label:'⚡ 어떤 일이 벌어지고, 어떻게 해결되나요? (발단→전개→절정→결말)', ph:'예) 급식이 사라진다 → 범인을 추리한다 → 뜻밖의 진실 → 화해', ta:true},
+      {k:'p4', label:'🎁 이야기로 전하고 싶은 생각(주제)은 무엇인가요?', ph:'예) 겉모습만 보고 판단하지 말자'}
+    ],
+    planSelfq:'사건이 원인과 결과로 이어지나요? 인물의 성격이 사건에 영향을 주나요?',
+    draftHint:'발단(인물·배경 소개) → 전개(사건 시작) → 절정(갈등이 가장 커지는 곳) → 결말(해결) 흐름으로 써 봐요. 인물이 직접 말하는 대화 글("...")을 넣으면 이야기가 살아나요.',
+    draftSelfq:'인물의 성격이 말과 행동에 드러나나요? 읽는 사람이 장면을 그릴 수 있나요?',
+    checks:[
+      { cat:"① 짜임 점검하기", items:[
+        "발단(인물·배경 소개) → 전개 → 절정 → 결말의 흐름이 있는가?",
+        "사건이 원인과 결과로 자연스럽게 이어지는가?",
+        "결말에서 사건이 해결되거나 여운을 남기며 마무리되는가?"
+      ]},
+      { cat:"② 내용 점검하기", items:[
+        "인물의 성격이 말과 행동에 드러나는가?",
+        "언제·어디에서 벌어지는 일인지(배경) 나타나는가?",
+        "이야기로 전하고 싶은 생각(주제)이 담겨 있는가?"
+      ]},
+      { cat:"③ 표현 점검하기", items:[
+        "인물이 직접 말하는 대화 글(\" \")을 넣어 실감 나게 썼는가?",
+        "꾸며 주는 말, 흉내 내는 말로 장면을 생생하게 표현했는가?",
+        "읽는 사람이 머릿속에 장면을 그릴 수 있게 썼는가?",
+        "맞춤법과 띄어쓰기를 점검했는가?"
+      ]}
+    ],
+    blue:'읽는 사람이 다음 이야기가 궁금해서 계속 읽고 싶어질까요? 가장 재미있는 장면이 어디인지 스스로 골라 봐요.',
+    ai:'이 글은 창작 이야기야. 인물·사건·배경이 잘 드러나는지, 사건이 자연스럽게 이어지는지, 대화와 묘사로 실감 나게 썼는지를 중심으로 봐 줘.'
+  },
+  {
+    id:'poem', name:'시 쓰기', e:'🌸',
+    desc:'대상을 자세히 관찰하고 비유·감각적 표현으로 느낌을 노래하는 시',
+    reader:'시를 읽을 친구들', purpose:'내 마음과 느낌을 운율 있는 말로 표현하기 위해서',
+    titlePh:'예) 운동장 구름',
+    plan:[
+      {k:'p1', label:'🌷 시로 쓰고 싶은 대상이나 경험은 무엇인가요?', ph:'예) 비 온 뒤 운동장, 전학 간 친구'},
+      {k:'p2', label:'👁 떠오르는 장면·소리·냄새·촉감을 자유롭게 적어 봐요', ph:'예) 물웅덩이에 비친 하늘, 참방참방 소리, 흙냄새', ta:true},
+      {k:'p3', label:'🎭 무엇에 빗대어 표현해 볼까요? (○○처럼, ○○같이)', ph:'예) 물웅덩이는 운동장이 뜬 눈, 구름을 담은 거울'},
+      {k:'p4', label:'🎵 반복하고 싶은 말이나 리듬이 있나요?', ph:'예) "참방참방"을 연마다 반복하기'}
+    ],
+    planSelfq:'설명이 아니라 장면과 느낌으로 떠올렸나요? 나만의 빗댄 표현이 있나요?',
+    draftHint:'행(줄)과 연(묶음)을 나누어 써 봐요. 길게 설명하는 대신, 빗대는 표현과 흉내 내는 말로 장면이 눈앞에 그려지게 해요. 짧아도 괜찮아요!',
+    draftSelfq:'소리 내어 읽으면 리듬이 느껴지나요? 필요 없는 말은 없나요?',
+    checks:[
+      { cat:"① 내용 점검하기", items:[
+        "대상을 자세히 관찰한 내용이 담겨 있는가?",
+        "나만의 생각과 느낌이 솔직하게 드러나는가?",
+        "읽으면 장면이 눈앞에 그려지는가?"
+      ]},
+      { cat:"② 표현 점검하기", items:[
+        "무언가에 빗대어 표현한 부분(직유·은유)이 있는가?",
+        "흉내 내는 말이나 감각적 표현(보이고 들리고 만져지는 표현)을 썼는가?",
+        "반복되는 말이나 글자 수로 운율(리듬)이 느껴지는가?",
+        "행과 연을 알맞게 나누었는가?"
+      ]},
+      { cat:"③ 다듬기", items:[
+        "없어도 되는 말을 빼서 간결하게 다듬었는가?",
+        "제목이 시의 느낌과 어울리는가?"
+      ]}
+    ],
+    blue:'이 시를 소리 내어 읽어 봐요. 어떤 느낌이 드나요? 장면이 눈앞에 그려지나요?',
+    ai:'이 글은 시야. 비유와 감각적 표현이 있는지, 행과 연이 나뉘어 있는지, 운율이 느껴지는지를 중심으로 봐 줘. 짧다고 지적하지 마.'
+  },
+  {
+    id:'bookreport', name:'독서 감상문', e:'📚',
+    desc:'책을 읽고 인상 깊은 장면과 나의 생각·느낌을 쓰는 글',
+    reader:'이 책을 아직 읽지 않은 친구들', purpose:'책을 읽고 얻은 생각과 느낌을 나누기 위해서',
+    titlePh:'예) 『몽실 언니』를 읽고 — 흔들려도 다시 서는 힘',
+    plan:[
+      {k:'p1', label:'📕 책 제목과 글쓴이는? 읽게 된 까닭은?', ph:'예) 『몽실 언니』(권정생) — 선생님 추천으로'},
+      {k:'p2', label:'⭐ 가장 인상 깊은 장면이나 구절은 무엇인가요?', ph:'예) 몽실이가 동생을 업고 걷던 장면', ta:true},
+      {k:'p3', label:'💭 그 장면에서 어떤 생각과 느낌이 들었나요?', ph:'예) 나라면 저렇게 할 수 있었을까? 마음이 먹먹했다', ta:true},
+      {k:'p4', label:'🔗 내 경험과 연결해 봐요 (나라면? 나도 비슷한 적이?)', ph:'예) 동생을 돌보다 힘들었던 내 경험이 떠올랐다'}
+    ],
+    planSelfq:'줄거리보다 내 생각과 느낌이 중심인가요? 내 경험과 연결했나요?',
+    draftHint:'처음(책 소개와 읽게 된 까닭) → 가운데(인상 깊은 장면 + 그때의 생각·느낌 + 내 경험과 연결) → 끝(책을 읽고 달라진 점, 추천하고 싶은 까닭) 짜임으로 써 봐요. 줄거리는 짧게!',
+    draftSelfq:'줄거리만 길게 쓰지 않았나요? 인상 깊은 까닭을 썼나요?',
+    checks:[
+      { cat:"① 짜임 점검하기", items:[
+        "[처음] 책 제목과 글쓴이, 읽게 된 까닭을 밝혔는가?",
+        "[가운데] 인상 깊은 장면과 그때의 생각·느낌을 함께 썼는가?",
+        "[끝] 책을 읽고 달라진 생각이나 추천하고 싶은 까닭으로 마무리했는가?"
+      ]},
+      { cat:"② 내용 점검하기", items:[
+        "줄거리만 길게 쓰지 않고 내 생각과 느낌이 중심인가?",
+        "인상 깊었던 까닭을 구체적으로 썼는가?",
+        "책 내용을 내 경험과 연결해 보았는가?",
+        "'나라면 어떻게 했을까?' 하고 인물 입장에서 생각해 보았는가?"
+      ]},
+      { cat:"③ 표현과 형식 점검하기", items:[
+        "책 제목을 『 』 같은 표시로 정확하게 썼는가?",
+        "솔직한 나만의 감상을 썼는가? (남들이 다 하는 말이 아니라)",
+        "맞춤법과 띄어쓰기를 점검했는가?"
+      ]}
+    ],
+    blue:'이 글을 읽은 친구가 그 책을 읽고 싶어질까요? 내 감상 중에 나만 쓸 수 있는 문장은 무엇인지 찾아봐요.',
+    ai:'이 글은 독서 감상문이야. 줄거리 요약보다 학생 자신의 생각·느낌·경험 연결이 중심인지, 인상 깊은 까닭이 구체적인지를 중심으로 봐 줘.'
+  },
+  {
+    id:'summary', name:'요약하는 글', e:'✂️',
+    desc:'글의 중심 내용을 찾아 짧게 간추리는 글 (내 생각은 넣지 않기)',
+    reader:'원래 글을 읽지 않은 친구들', purpose:'글의 중요한 내용을 짧게 전하기 위해서',
+    titlePh:'예) 「꿀벌이 사라지면 생기는 일」 요약',
+    plan:[
+      {k:'p1', label:'📄 어떤 글을 요약하나요? (글 제목, 어디에 실린 글인지)', ph:'예) 국어 교과서 148쪽 「꿀벌이 사라지면 생기는 일」'},
+      {k:'p2', label:'🎯 문단마다 중심 내용을 한 줄씩 찾아 적어 봐요', ph:'예) 1문단: 꿀벌 수가 줄고 있다 / 2문단: 꿀벌이 하는 일 …', ta:true},
+      {k:'p3', label:'✅ 꼭 남겨야 할 중요한 내용은 무엇인가요?', ph:'예) 꿀벌이 줄어드는 원인과 우리가 할 일'},
+      {k:'p4', label:'✂️ 빼도 되는 내용은 무엇인가요? (자세한 예시, 반복되는 말)', ph:'예) 여러 나라의 세부 통계 수치'}
+    ],
+    planSelfq:'문단마다 중심 문장을 찾았나요? 중요한 것과 덜 중요한 것을 나눴나요?',
+    draftHint:'문단별 중심 내용을 원래 글의 순서대로 이어서 써 봐요. 문장은 그대로 베끼지 말고 내 말로 바꾸고, 내 생각이나 느낌은 넣지 않아요.',
+    draftSelfq:'원래 글보다 훨씬 짧은가요? 내 생각을 넣지 않았나요? 그대로 베낀 문장은 없나요?',
+    checks:[
+      { cat:"① 내용 고르기 점검하기", items:[
+        "문단마다 중심 내용을 찾아 담았는가?",
+        "중요하지 않은 자세한 예시나 반복되는 내용은 뺐는가?",
+        "글쓴이가 말하려는 중요한 내용을 빠뜨리지 않았는가?"
+      ]},
+      { cat:"② 간추리기 점검하기", items:[
+        "원래 글의 문장을 그대로 베끼지 않고 내 말로 바꾸어 썼는가?",
+        "내 생각이나 느낌을 넣지 않고 글의 내용만 간추렸는가?",
+        "원래 글의 순서와 짜임을 살려서 정리했는가?"
+      ]},
+      { cat:"③ 표현 점검하기", items:[
+        "문장이 짧고 간결한가?",
+        "문장과 문장이 자연스럽게 이어지는가?",
+        "맞춤법과 띄어쓰기를 점검했는가?"
+      ]}
+    ],
+    blue:'원래 글을 읽지 않은 친구가 이 요약만 읽고도 중요한 내용을 알 수 있을까요?',
+    ai:'이 글은 다른 글을 요약한 글이야. 중심 내용이 잘 간추려졌는지, 학생 자신의 의견이 섞이지 않았는지, 간결한지를 중심으로 봐 줘.'
+  }
+];
+function genreOf(name){ return GENRES.find(g=>g.name===name) || GENRES[0]; }
 
-function load(){ try{ return JSON.parse(localStorage.getItem(KEY)); }catch(e){ return null; } }
+/* ---------- 상태 저장 (localStorage) ----------
+   v2: 여러 작품(works)을 가진 포트폴리오 구조.
+   v1(단일 글) 데이터가 있으면 자동으로 작품 1개로 이관합니다. */
+const KEY = "geulssugi-mirror-v2";
+const OLD_KEY = "geulssugi-mirror-v1";
+
+function loadKey(k){ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } }
 function persist(){ localStorage.setItem(KEY, JSON.stringify(state)); }
 
-/* ---------- 화면 이동 ---------- */
+function newWorkObj(genreName){
+  const g=genreOf(genreName);
+  return {
+    id: Date.now(), genre:g.name,
+    reader:g.reader, purpose:g.purpose, plan:{}, title:"",
+    draft:"", revised:"", changeNote:"", reflect:"",
+    feedback:null, feedbackDone:false,
+    checks:{}, mirrorChecks:{}, revisedTouched:false,
+    createdAt: new Date().toISOString().slice(0,10)
+  };
+}
+function migrateV1(old){
+  const s={ version:2, nick:old.nick||"", badges:old.badges||{}, stamps:{}, works:[], curWorkId:null };
+  const hasContent=(old.draft&&old.draft.trim())||(old.title&&old.title.trim());
+  if(hasContent){
+    const w=newWorkObj(old.genre||'주장하는 글');
+    w.reader=old.reader||w.reader; w.purpose=old.purpose||w.purpose;
+    w.title=old.title||""; w.draft=old.draft||""; w.revised=old.revised||"";
+    w.changeNote=old.changeNote||""; w.reflect=old.reflect||"";
+    w.feedback=old.feedback||null; w.feedbackDone=!!old.feedbackDone;
+    w.checks=old.checks||{}; w.mirrorChecks=old.mirrorChecks||{};
+    w.revisedTouched=!!old.revisedTouched;
+    s.works.push(w);
+  }
+  return s;
+}
+let state = loadKey(KEY);
+if(!state){
+  const old=loadKey(OLD_KEY);
+  state = old ? migrateV1(old) : { version:2, nick:"", badges:{}, stamps:{}, works:[], curWorkId:null };
+  persist();
+}
+if(!state.stamps) state.stamps={};
+if(!state.badges) state.badges={};
+if(!Array.isArray(state.works)) state.works=[];
+
+let cur = 1;
+function curWork(){ return state.works.find(w=>w.id===state.curWorkId) || null; }
+
+/* ---------- 유틸 ---------- */
+const $ = id=>document.getElementById(id);
+function esc(t){ return (t==null?'':String(t)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function flash(id){ const e=$(id); if(!e) return; e.textContent="저장됨 ✓"; setTimeout(()=>e.textContent="",1500); }
+
+/* ---------- 화면 전환 (보관함 ↔ 작품) ---------- */
+function goHome(){
+  state.curWorkId=null; persist();
+  $('homeView').style.display='block';
+  $('workView').style.display='none';
+  $('navbar').classList.add('hidden');
+  renderHome();
+  window.scrollTo({top:0});
+}
+function openWork(id, step){
+  state.curWorkId=id; persist();
+  $('homeView').style.display='none';
+  $('workView').style.display='block';
+  $('navbar').classList.remove('hidden');
+  renderWork();
+  goStep(step||1);
+}
+function startWork(genreName){
+  const w=newWorkObj(genreName);
+  state.works.unshift(w);
+  openWork(w.id, 1);
+}
+function deleteWork(id, ev){
+  ev.stopPropagation();
+  const w=state.works.find(x=>x.id===id);
+  if(!w) return;
+  const label=w.title||w.genre;
+  if(!confirm('"'+label+'" 글을 정말 삭제할까요? 되돌릴 수 없어요.')) return;
+  state.works=state.works.filter(x=>x.id!==id);
+  if(state.curWorkId===id) state.curWorkId=null;
+  persist(); renderHome();
+}
+
+/* ---------- 보관함(홈) 렌더 ---------- */
+function workStage(w){
+  if(w.reflect && w.reflect.trim()) return {n:'완성',emoji:'🌱'};
+  if(w.revised && w.revised.trim() && w.revised!==w.draft) return {n:'고쳐쓰기',emoji:'✍️'};
+  if(w.feedbackDone) return {n:'피드백',emoji:'🪞'};
+  if(w.draft && w.draft.trim().length>10) return {n:'초고',emoji:'✏️'};
+  return {n:'계획 중',emoji:'🧭'};
+}
+function renderHome(){
+  // 갈래 고르기
+  const grid=$('genreGrid'); grid.innerHTML='';
+  const list = FIXED_GENRE ? GENRES.filter(g=>g.name===FIXED_GENRE) : GENRES;
+  list.forEach(g=>{
+    const b=document.createElement('button'); b.className='genrecard';
+    b.innerHTML=`<span class="stampmark">${state.stamps[g.id]?'🎖':''}</span>
+      <div class="ge">${g.e}</div><div class="gn">${esc(g.name)}</div><div class="gd">${esc(g.desc)}</div>`;
+    b.addEventListener('click',()=>startWork(g.name));
+    grid.appendChild(b);
+  });
+
+  // 작품 목록
+  const wl=$('workList'); wl.innerHTML='';
+  if(state.works.length===0){
+    wl.innerHTML='<div class="empty">아직 쓴 글이 없어요.<br>위에서 갈래를 골라 첫 글을 시작해 봐요! ✏️</div>';
+  } else {
+    state.works.forEach(w=>{
+      const g=genreOf(w.genre), st=workStage(w);
+      const d=document.createElement('div'); d.className='workitem';
+      d.innerHTML=`<span class="we">${g.e}</span>
+        <div class="wt">
+          <div class="t1">${esc(w.title)||'(제목 없음)'}</div>
+          <div class="t2">${esc(w.genre)} · ${esc(w.createdAt||'')} · ${(w.draft||'').length}자</div>
+        </div>
+        <span class="wstage">${st.emoji} ${st.n}</span>
+        <button class="wdel" title="삭제">🗑</button>`;
+      d.addEventListener('click',()=>openWork(w.id, w.reflect?4:(w.feedbackDone?3:(w.draft&&w.draft.length>10?2:1))));
+      d.querySelector('.wdel').addEventListener('click',ev=>deleteWork(w.id,ev));
+      wl.appendChild(d);
+    });
+  }
+
+  // 갈래 도장판
+  const sb=$('stampBoard'); sb.innerHTML='';
+  GENRES.forEach(g=>{
+    const d=document.createElement('div');
+    d.className='stamp'+(state.stamps[g.id]?' got':'');
+    d.innerHTML=`<div class="se">${state.stamps[g.id]?'🎖':g.e}</div><div class="sn">${esc(g.name)}</div>`;
+    sb.appendChild(d);
+  });
+
+  renderBadges();
+}
+
+/* ---------- 여정(단계) 이동 ---------- */
 function goStep(n){
   cur = n;
   document.querySelectorAll('.step').forEach(s=>{
@@ -352,74 +862,141 @@ function goStep(n){
   document.querySelectorAll('.panel').forEach(p=>{
     p.classList.toggle('show', +p.dataset.panel===n);
   });
-  if(n===3) renderReflect();
+  if(n===2) renderPlanRecall();
+  if(n===4) renderReflect();
   window.scrollTo({top:0,behavior:'smooth'});
 }
-function nextStep(){ if(cur<3) goStep(cur+1); }
+function nextStep(){ if(cur<4) goStep(cur+1); }
 function prevStep(){ if(cur>1) goStep(cur-1); }
 document.querySelectorAll('.step').forEach(s=>{
   s.addEventListener('click',()=>goStep(+s.dataset.step));
 });
 
 /* ---------- 입력 바인딩 ---------- */
-const $ = id=>document.getElementById(id);
-function bind(id, field, after){
-  const el=$(id);
-  el.value = state[field]||"";
-  el.addEventListener('input',()=>{ state[field]=el.value; persist(); if(after) after(); });
-}
-bind('nick','nick'); bind('title','title');
-bind('reflect','reflect');
-bind('draft','draft', ()=>updateCount('draft','draftCount'));
-bind('revised','revised', ()=>{ state.revisedTouched=true; updateCount('revised','revCount'); });
+// 별명(전체 공통)
+$('nick').value = state.nick||"";
+$('nick').addEventListener('input',()=>{ state.nick=$('nick').value; persist(); });
 
-/* ---------- 꼼꼼 점검표 (활동지 7번과 동일) ---------- */
-const MIRROR_CHECKS=[
-  { cat:"① 글의 구조 점검하기", items:[
-    "[서론] 읽는 사람의 관심을 끌 만한 생생한 문제 상황이 잘 나타나 있는가?",
-    "[서론] 글을 통해 말하고자 하는 주장이 명확하게 드러나 있는가?",
-    "[본론] 주장을 뒷받침하는 이유 3가지가 서로 겹치지 않고 다양하게 제시되었는가?",
-    "[본론] 각 이유를 뒷받침하는 구체적인 근거가 들어있는가?",
-    "[결론] 본론의 내용을 요약하고, 주장을 다시 한번 강조했는가?"
-  ]},
-  { cat:"② 내용의 타당성 점검하기", items:[
-    "내 주장이 학급, 학교, 사회의 문제를 해결하는 데 꼭 필요한 내용인가?",
-    "본론의 이유들이 내 주장과 직접적으로 관련이 있는가?",
-    "내가 가져온 근거(자료)가 믿을 수 있는 출처(뉴스, 연구, 통계 등)에서 나온 것인가?",
-    "문제 상황과 이유, 그리고 근거가 서로 어색함 없이 자연스럽게 연결되는가?",
-    "내 글을 읽는 사람이 충분히 공감하고 설득당할 만한 내용인가?"
-  ]},
-  { cat:"③ 표현과 문장 점검하기", items:[
-    "내 의견을 확실하게 전하기 위해 명확한 표현(~해야 합니다, ~가 필요합니다)을 썼는가?",
-    "주관적이고 모호한 표현(~인 것 같습니다, ~라고 생각할 수도 있습니다)을 쓰지 않았는가?",
-    "읽는 사람을 무시하거나 기분 나쁘게 만드는 지나치게 감정적인 표현은 없는가?",
-    "문장이 너무 길어서 무슨 뜻인지 이해하기 어렵지 않은가? (문장을 알맞게 끊어 썼는가?)",
-    "왜냐하면 ~하기 때문입니다, 예를 들어 ~ 등 문장과 문장을 이어주는 말이 알맞게 쓰였는가?"
-  ]},
-  { cat:"④ 맞춤법과 형식 점검하기", items:[
-    "글의 전체 내용을 대표하는 명확한 제목을 붙였는가?",
-    "문단이 바뀔 때 첫 칸을 비우고 시작했는가?",
-    "헷갈리는 맞춤법이나 띄어쓰기가 없는지 점검하고 고쳐썼는가?",
-    "다른 사람이 읽기 쉽도록 문단과 줄을 깔끔하게 정리했는가?"
-  ]}
-];
-function mirrorTotal(){ return MIRROR_CHECKS.reduce((a,g)=>a+g.items.length,0); }
-function mirrorDone(){ return Object.values(state.mirrorChecks||{}).filter(Boolean).length; }
+// 작품 필드: 현재 작품(curWork)에 읽고 씁니다.
+function wbind(id, field, after){
+  $(id).addEventListener('input',()=>{
+    const w=curWork(); if(!w) return;
+    w[field]=$(id).value; persist(); if(after) after();
+  });
+}
+wbind('reader','reader');
+wbind('purpose','purpose');
+wbind('title','title');
+wbind('reflect','reflect');
+wbind('draft','draft', ()=>updateCount('draft','draftCount'));
+wbind('revised','revised', ()=>{ const w=curWork(); if(w) w.revisedTouched=true; updateCount('revised','revCount'); });
+
+function updateCount(field,target){
+  const w=curWork();
+  const t=((w&&w[field])||"").trim();
+  const chars=t.length;
+  const sents=t? t.split(/[.!?。…\n]+/).filter(s=>s.trim().length>0).length:0;
+  $(target).textContent = chars+"자 · "+sents+"문장";
+}
+
+function saveWork(tagId){
+  persist(); flash(tagId);
+}
+
+/* ---------- 작품 화면 렌더 (현재 작품 내용으로 채우기) ---------- */
+function renderWork(){
+  const w=curWork(); if(!w) return goHome();
+  const g=genreOf(w.genre);
+
+  $('workGenreTag').textContent = g.e+' '+g.name;
+  $('genreInfo').innerHTML = `${g.e} 이번 글은 <b>${esc(g.name)}</b>이에요 — ${esc(g.desc)}`;
+  $('draftInfo').innerHTML = `📌 <b>${esc(g.name)}</b> · 읽는 사람 <b>${esc(w.reader)||'-'}</b> · 목적 <b>${esc(w.purpose)||'-'}</b>`;
+  $('draftHint').textContent = g.draftHint;
+  $('planSelfq').innerHTML = '<b>🤔 스스로 점검해요</b>'+esc(g.planSelfq);
+  $('draftSelfq').innerHTML = '<b>🤔 스스로 점검해요</b>'+esc(g.draftSelfq);
+
+  $('reader').value=w.reader||""; $('purpose').value=w.purpose||"";
+  $('title').value=w.title||""; $('title').placeholder=g.titlePh||"";
+  $('draft').value=w.draft||""; $('revised').value=w.revised||"";
+  $('reflect').value=w.reflect||"";
+  updateCount('draft','draftCount'); updateCount('revised','revCount');
+
+  // 계획 질문 (갈래별)
+  const pf=$('planFields'); pf.innerHTML='';
+  g.plan.forEach(p=>{
+    const lab=document.createElement('label'); lab.className='fld'; lab.textContent=p.label;
+    pf.appendChild(lab);
+    const el=document.createElement(p.ta?'textarea':'input');
+    if(p.ta) el.className='mid'; else { el.className='line'; el.type='text'; }
+    el.placeholder=p.ph||'';
+    el.value=(w.plan&&w.plan[p.k])||'';
+    el.addEventListener('input',()=>{
+      const cw=curWork(); if(!cw) return;
+      if(!cw.plan) cw.plan={};
+      cw.plan[p.k]=el.value; persist();
+    });
+    pf.appendChild(el);
+  });
+
+  // 피드백 결과·고쳐쓰기 카드 상태 복원
+  $('fbResult').innerHTML='';
+  if(w.feedback) renderCards(w.feedback, w.feedback.source, w.feedback.which);
+  $('reviseCard').style.display = (w.feedbackDone||w.revised)?'block':'none';
+
+  // 단계 완료 표시
+  document.querySelectorAll('.step').forEach(s=>s.classList.remove('done'));
+  if(Object.keys(w.plan||{}).some(k=>(w.plan[k]||'').trim())) markDone(1);
+  if(w.draft&&w.draft.trim().length>10) markDone(2);
+  if(w.feedbackDone) markDone(3);
+  if(w.reflect&&w.reflect.trim()) markDone(4);
+
+  renderMirrorChecks();
+  renderBadges();
+}
+function markDone(n){
+  const el=document.querySelector('.step[data-step="'+n+'"]');
+  if(el) el.classList.add('done');
+}
+
+/* 초고 화면에 계획 내용 다시 보여주기 */
+function renderPlanRecall(){
+  const w=curWork(); if(!w) return;
+  const g=genreOf(w.genre);
+  const filled=g.plan.filter(p=>(w.plan&&w.plan[p.k]||'').trim());
+  const box=$('planRecall');
+  if(filled.length===0){ box.style.display='none'; return; }
+  box.style.display='block';
+  box.innerHTML='<b>🧭 내가 세운 계획</b>'+filled.map(p=>
+    `<div style="font-size:14px;margin:4px 0"><span style="color:var(--brand-d);font-weight:700">${esc(p.label)}</span><br>${esc(w.plan[p.k])}</div>`).join('');
+}
+
+/* ---------- 꼼꼼 점검표 (갈래별) ---------- */
+function mirrorTotal(w){
+  const g=genreOf((w||curWork()||{}).genre);
+  return g.checks.reduce((a,grp)=>a+grp.items.length,0);
+}
+function mirrorDone(w){
+  w=w||curWork();
+  return Object.values((w&&w.mirrorChecks)||{}).filter(Boolean).length;
+}
 function updateMcProgress(){ $('mcProgress').textContent='('+mirrorDone()+'/'+mirrorTotal()+' 완료)'; }
 function renderMirrorChecks(){
+  const w=curWork(); if(!w) return;
+  const g=genreOf(w.genre);
   const wrap=$('mirrorChecks'); wrap.innerHTML='';
   let idx=0;
-  MIRROR_CHECKS.forEach(g=>{
+  g.checks.forEach(grp=>{
     const h=document.createElement('div');
     h.style.cssText='font-weight:800;font-size:14px;color:var(--brand-d);margin:14px 0 2px';
-    h.textContent=g.cat; wrap.appendChild(h);
-    g.items.forEach(q=>{
+    h.textContent=grp.cat; wrap.appendChild(h);
+    grp.items.forEach(q=>{
       const i=idx++;
       const div=document.createElement('div'); div.className='check';
-      div.innerHTML=`<input type="checkbox" id="mc${i}" ${state.mirrorChecks[i]?'checked':''}>
+      div.innerHTML=`<input type="checkbox" id="mc${i}" ${w.mirrorChecks[i]?'checked':''}>
         <label for="mc${i}">${esc(q)}</label>`;
       div.querySelector('input').addEventListener('change',e=>{
-        state.mirrorChecks[i]=e.target.checked; persist(); updateMcProgress();
+        const cw=curWork(); if(!cw) return;
+        cw.mirrorChecks[i]=e.target.checked; persist(); updateMcProgress();
       });
       wrap.appendChild(div);
     });
@@ -427,35 +1004,12 @@ function renderMirrorChecks(){
   updateMcProgress();
 }
 
-function updateCount(field,target){
-  const t=(state[field]||"").trim();
-  const chars=t.length;
-  const sents=t? t.split(/[.!?。…\n]+/).filter(s=>s.trim().length>0).length:0;
-  $(target).textContent = chars+"자 · "+sents+"문장";
-}
-updateCount('draft','draftCount'); updateCount('revised','revCount');
-
-function flash(id){ const e=$(id); e.textContent="저장됨 ✓"; setTimeout(()=>e.textContent="",1500); }
-function saveStep(n){
-  persist(); flash('save'+n);
-  document.querySelector('.step[data-step="'+n+'"]').classList.add('done');
-}
-
-/* ---------- AI 피드백 엔진 (규칙 기반) ----------
-   ※ 실제 수업 배포 시 이 함수를 Claude API 호출로 교체하세요.
-   아래 buildPrompt()가 그대로 시스템 프롬프트로 쓰입니다. */
-function buildPrompt(text){
-  return `너는 초등학교 6학년의 글쓰기를 돕는 다정한 글쓰기 친구야.
-규칙: (1) 절대 문장을 대신 고쳐 주거나 완성해 주지 마.
-(2) 먼저 잘한 점을 구체적으로 1가지 칭찬해.
-(3) 더 생각해 볼 점을 '질문'으로만 쉽게 안내해. 답은 알려주지 마.
-(4) 6학년이 이해할 쉬운 말을 써. 학생 글: """${text}"""`;
-}
-
+/* ---------- 글 분석 (규칙 기반, 기기 안에서만) ---------- */
 function analyze(text){
   const t=text.trim();
   const sents=t.split(/[.!?。…\n]+/).filter(s=>s.trim().length>0);
   const paras=t.split(/\n\s*\n/).filter(p=>p.trim().length>0);
+  const lines=t.split('\n').filter(l=>l.trim().length>0);
 
   // 문장 종결 스타일: 해라체(~다) vs 해요체(~요/~에요/~예요) 혼용 여부
   let haeraCount=0, haeyoCount=0;
@@ -465,29 +1019,48 @@ function analyze(text){
     else if(/다[.!?]?$/.test(s2)) haeraCount++;
   });
 
-  // 접속어 다양성: 여러 번 쓰면서 한 종류만 반복하는지
+  // 접속어 다양성
   const CONNECTIVES=['그리고','그래서','그러나','하지만','그런데','또한','그러므로','그렇지만'];
   const usedConnectives = CONNECTIVES.filter(c=>t.includes(c));
   const connectiveTotal = usedConnectives.reduce((sum,c)=>sum+(t.split(c).length-1),0);
 
-  // 주장-근거 구조: 주장 표현과 '왜냐하면' 류 근거 연결어가 함께 있는지
+  // 주장-근거 구조
   const hasClaim=/(생각한다|생각합니다|해야 한다|해야 합니다|주장한다|바랍니다|필요하다|필요합니다)/.test(t);
   const hasReason=/(왜냐하면|때문|이유는|까닭은|그 이유)/.test(t);
 
-  // 문장 시작 반복: 연속 3문장 이상이 같은 낱말로 시작하는지
+  // 출처·인용 표현
+  const hasSource=/(에 따르면|에 의하면|출처|기사|뉴스|통계|조사 결과|설문|연구|누리집|백과사전)/.test(t);
+
+  // 문장 시작 반복
   const starts=sents.map(s=>(s.trim().split(/\s+/)[0]||''));
   let repeatedStart=false;
   for(let i=0;i+2<starts.length;i++){
     if(starts[i] && starts[i]===starts[i+1] && starts[i]===starts[i+2]){ repeatedStart=true; break; }
   }
 
-  // 상투적 감정 표현: '재미있었다·좋았다' 류가 짧은 글에서 반복되는지
+  // 상투적 감정 표현
   const emotionWords=(t.match(/(재미있|재밌|좋았|즐거웠|행복했|슬펐|화났|힘들었|신났)/g)||[]).length;
+  // 감상(생각·느낌) 표현 전반
+  const feelingWords=(t.match(/(느꼈|느낌|마음|기분|감동|뿌듯|설레|아쉬|놀라|신기|궁금|먹먹|두근)/g)||[]).length;
+  // 의견·짐작 표현 (설명문·요약에서 주의)
+  const opinionWords=(t.match(/(것 같다|것 같습니다|생각한다|생각합니다|좋았다|재미있|~듯하다|인 듯)/g)||[]).length;
 
-  // 느낌표 과다 사용
+  // 갈래별 표현 신호
+  const hasQuote=/["“”'‘’].{2,}["“”'‘’]/.test(t);                       // 대화 글
+  const hasSimile=/(처럼|같이|듯이|마냥)/.test(t);                        // 직유
+  const hasSensory=(t.match(/(소리|냄새|향기|반짝|살랑|출렁|보드라|말랑|따뜻|차가|시원|고소|달콤|울긋불긋|파릇|사각|바스락|참방)/g)||[]).length;
+  const hasExample=/(예를 들어|예를 들면|예컨대)/.test(t);                // 예시
+  const hasDefine=/([가-힣]+(이?란)\s|라는 것은|는 무엇일까)/.test(t);     // 정의
+  const hasCompare=/(반면|와 달리|과 달리|공통점|차이점|비교하|비슷한 점)/.test(t); // 비교·대조
+  const hasOrder=/(첫째|둘째|셋째|첫 번째|두 번째|세 번째)/.test(t);       // 열거
+  const hasTimeOrder=/(먼저|그다음|다음으로|이어서|마지막으로|도착|출발|아침에|오후에)/.test(t); // 시간 순서
+  const hasBookTitle=/[『「《].+[』」》]/.test(t) || /(이라는 책|라는 책|이 책|을 읽고|를 읽고)/.test(t);
+  const hasLink=/(나라면|나도 |내 경험|나였다면|떠올랐다|생각났다)/.test(t); // 자기 연결
+
+  // 느낌표 과다
   const exclamCount=(t.match(/!/g)||[]).length;
 
-  // 매우 짧은 문장(공백 제외 12자 이하)이 3개 이상 연속되는 단문 나열
+  // 매우 짧은 문장 연속
   let shortRun=false, run=0;
   sents.forEach(s=>{
     if(s.trim().replace(/\s/g,'').length<=12){ run++; if(run>=3) shortRun=true; }
@@ -495,57 +1068,131 @@ function analyze(text){
   });
 
   return {
-    len:t.length, sentCount:sents.length, paraCount:paras.length,
+    len:t.length, sentCount:sents.length, paraCount:paras.length, lineCount:lines.length,
     longSent:sents.find(s=>s.replace(/\s/g,'').length>60),
     vague:/(그것|이것|저것|그거|이거|그런 것)/.test(t),
     hasEnd:/([다요죠]\.?|[!?])\s*$/.test(t),
     repeat:/(그리고|그래서|그러나)\s/g.test(t) && (t.match(/그리고/g)||[]).length>=3,
     endingMixed: haeraCount>=2 && haeyoCount>=2,
+    haeraCount, haeyoCount,
     usedConnectives, connectiveTotal,
     connectiveLowDiversity: connectiveTotal>=3 && usedConnectives.length===1,
-    hasClaim, hasReason,
+    hasClaim, hasReason, hasSource,
     repeatedStart,
-    emotionWords, exclamOveruse: exclamCount>=3,
+    emotionWords, feelingWords, opinionWords,
+    hasQuote, hasSimile, hasSensory, hasExample, hasDefine, hasCompare, hasOrder,
+    hasTimeOrder, hasBookTitle, hasLink,
+    exclamOveruse: exclamCount>=3,
     shortRun
   };
 }
 
+/* ---------- 갈래별 피드백 규칙 ----------
+   각 갈래에서 (1) 갈래에 딱 맞는 칭찬 후보 greens
+   (2) 갈래에 딱 맞는 질문 후보 yellows 를 만듭니다.
+   skip: 이 갈래에서 건너뛸 일반 규칙 이름들 */
+function genreRules(g, a, w){
+  const greens=[], yellows=[]; let skip=[];
+  switch(g.id){
+    case 'argue':
+      if(a.hasClaim&&a.hasReason) greens.push("생각(주장)과 그렇게 생각한 까닭(근거)을 함께 밝혀서 훨씬 설득력 있는 글이 됐어요!");
+      if(a.hasSource) greens.push("근거 자료의 출처까지 밝혀서 글이 한층 믿음직해요!");
+      if(a.hasClaim&&!a.hasReason) yellows.push("왜 그렇게 생각하는지 '왜냐하면' 같은 말로 까닭(근거)을 설명해 보면 어떨까요?");
+      if(a.hasReason&&!a.hasSource) yellows.push("근거 자료를 어디에서 가져왔는지(출처)를 글에서 밝혀 보면 어떨까요?");
+      break;
+    case 'explain':
+      if(a.hasExample) greens.push("'예를 들어'로 예시를 들어 설명해서 이해가 쏙쏙 돼요!");
+      if(a.hasOrder) greens.push("'첫째, 둘째'로 차례차례 설명해서 내용이 잘 정리돼요.");
+      if(a.hasDefine) greens.push("낱말의 뜻을 풀어 주는 정의를 사용해서 설명이 또렷해요.");
+      if(a.hasCompare) greens.push("다른 것과 비교·대조하며 설명해서 특성이 잘 드러나요.");
+      if(!a.hasExample&&!a.hasDefine&&!a.hasCompare) yellows.push("정의(~란 ~이다), 예시(예를 들어), 비교 같은 설명 방법을 한 가지 써 보면 어떨까요?");
+      if(a.opinionWords>=2) yellows.push("설명하는 글에는 '~것 같다', '좋다' 같은 짐작·의견보다 정확한 사실을 써요. 짐작으로 쓴 부분은 없나요?");
+      break;
+    case 'experience':
+      if(a.hasTimeOrder&&a.feelingWords>=1) greens.push("시간의 흐름에 따라 겪은 일과 그때의 마음을 함께 담아서 여행을 같이 간 기분이에요!");
+      else if(a.feelingWords>=2) greens.push("겪은 일에 대한 생각과 느낌(감상)이 잘 드러나 있어요.");
+      if(!a.feelingWords) yellows.push("본 것과 한 일만 있고, 그때의 생각이나 느낌(감상)이 빠지지 않았나요?");
+      if(!a.hasTimeOrder&&a.len>150) yellows.push("'먼저', '그다음' 같은 말로 시간이나 장소의 흐름을 보여 주면 어떨까요?");
+      break;
+    case 'media':
+      if(a.paraCount>=3) greens.push("문단을 짧게 나눠서 화면으로 읽기 좋아요!");
+      if(a.hasSource) greens.push("가져온 자료의 출처를 밝힌 점, 책임감 있는 글쓰기예요!");
+      if(!(w.title&&w.title.trim())) yellows.push("화면으로 읽는 글은 제목이 절반이에요. 눈길을 끄는 제목을 붙여 볼까요?");
+      if(a.paraCount<2&&a.len>200) yellows.push("화면으로 읽는 사람을 위해 문단을 더 짧게 나눠 보면 어떨까요?");
+      yellows.push("올리기 전에 확인! 예의 바른 표현인가요? 다른 사람의 자료엔 출처를, 개인정보는 뺐나요?");
+      break;
+    case 'story':
+      if(a.hasQuote) greens.push("따옴표로 인물의 말을 실감 나게 담았어요! 이야기가 살아 움직여요.");
+      if(a.hasSensory>=2) greens.push("흉내 내는 말과 생생한 표현 덕분에 장면이 그려져요.");
+      if(!a.hasQuote&&a.len>150) yellows.push("인물이 직접 말하는 대화 글(\" \")을 넣어 보면 어떨까요? 이야기가 더 실감 나요.");
+      yellows.push("사건이 원인과 결과로 자연스럽게 이어지나요? 갑자기 튀는 부분은 없는지 살펴봐요.");
+      break;
+    case 'poem':
+      skip=['para','shortRun','end','endMix','longSent','connective','emotion'];
+      if(a.hasSimile) greens.push("'~처럼' 하고 빗대어 표현한 부분이 시를 반짝이게 해요!");
+      if(a.hasSensory>=1) greens.push("감각적 표현 덕분에 장면이 눈앞에 그려져요.");
+      if(a.lineCount>=4) greens.push("행을 나누어 쓴 모습이 시답고 보기 좋아요.");
+      if(!a.hasSimile) yellows.push("시의 대상을 다른 것에 빗대어(○○처럼, ○○같이) 표현해 보면 어떨까요?");
+      if(a.lineCount<3&&a.len>30) yellows.push("줄(행)을 나누고 연을 만들어 보면 어떨까요? 소리 내어 읽으며 끊어 봐요.");
+      if(a.haeraCount>=3&&!a.hasSimile&&a.hasSensory===0) yellows.push("문장이 설명문처럼 '~다.'로 끝나고 있어요. 노래하듯 바꿔 볼 곳은 없을까요?");
+      break;
+    case 'bookreport':
+      if(a.hasBookTitle) greens.push("어떤 책을 읽었는지 분명하게 밝혀 주었어요.");
+      if(a.hasLink) greens.push("책 내용을 내 경험과 연결한 점이 훌륭해요! 감상문의 핵심이에요.");
+      if(a.feelingWords>=2) greens.push("책을 읽으며 든 생각과 느낌이 솔직하게 드러나요.");
+      if(!a.hasBookTitle) yellows.push("어떤 책을 읽었는지 제목을 『 』 표시로 밝혀 볼까요?");
+      if(a.feelingWords===0&&a.len>150) yellows.push("줄거리만 있고 내 생각이나 느낌이 적지 않나요? 인상 깊었던 까닭을 써 볼까요?");
+      if(!a.hasLink&&a.len>200) yellows.push("'나라면 어떻게 했을까?' 하고 내 경험과 연결해 보면 어떨까요?");
+      break;
+    case 'summary':
+      skip=['emotion'];
+      if(a.opinionWords===0&&a.len>80) greens.push("내 생각을 넣지 않고 글의 내용만 담백하게 간추렸어요. 요약의 기본을 지켰네요!");
+      if(a.opinionWords>=1) yellows.push("요약하는 글에는 내 생각이나 느낌을 넣지 않아요. '~것 같다', '좋았다' 같은 부분이 있는지 살펴볼까요?");
+      yellows.push("원래 글의 문장을 그대로 옮긴 곳은 없나요? 내 말로 바꿔 써 봐요.");
+      break;
+  }
+  return {greens, yellows, skip};
+}
+
 function makeCards(text){
+  const w=curWork();
+  const g=genreOf(w?w.genre:'');
   const a=analyze(text);
-  const isArgument = state.genre==='주장하는 글';
+  const gr=genreRules(g, a, w||{});
+  const skip=new Set(gr.skip);
 
-  // 🟢 잘한 점 (항상 칭찬 먼저, 특별한 강점부터 우선)
-  let green;
-  if(isArgument && a.hasClaim && a.hasReason) green="생각(주장)과 그렇게 생각한 까닭(근거)을 함께 밝혀서 훨씬 설득력 있는 글이 됐어요!";
-  else if(a.usedConnectives.length>=3) green="'그리고·그래서·하지만' 같은 여러 이음말을 골고루 써서 글의 흐름이 자연스러워요.";
-  else if(a.paraCount>=2) green="문단을 나누어 써서 읽는 사람이 내용을 따라가기 쉬워요.";
-  else if(a.len>200) green="끝까지 포기하지 않고 충분한 분량을 써냈어요. 정말 멋져요!";
-  else if(a.hasEnd) green="문장을 끝맺음까지 잘 마무리했어요.";
-  else green="글을 시작한 용기가 멋져요. 첫걸음이 가장 중요해요!";
+  // 🟢 잘한 점: 갈래 맞춤 칭찬 먼저, 없으면 일반 칭찬
+  let green = gr.greens[0];
+  if(!green){
+    if(a.usedConnectives.length>=3) green="'그리고·그래서·하지만' 같은 여러 이음말을 골고루 써서 글의 흐름이 자연스러워요.";
+    else if(a.paraCount>=2 && !skip.has('para')) green="문단을 나누어 써서 읽는 사람이 내용을 따라가기 쉬워요.";
+    else if(a.len>200) green="끝까지 포기하지 않고 충분한 분량을 써냈어요. 정말 멋져요!";
+    else if(a.hasEnd) green="문장을 끝맺음까지 잘 마무리했어요.";
+    else green="글을 시작한 용기가 멋져요. 첫걸음이 가장 중요해요!";
+  }
 
-  // 🟡 다시 볼 곳 (질문형, 가장 중요한 것부터 순서대로 최대 3개까지)
-  const yellowAll=[];
+  // 🟡 다시 볼 곳: 갈래 맞춤 질문 먼저 + 일반 질문 (갈래에 안 맞는 규칙은 건너뜀)
+  const yellowAll=[...gr.yellows];
   if(a.vague) yellowAll.push("'그것', '이것' 같은 말이 무엇을 가리키는지 읽는 사람이 알 수 있을까요?");
-  if(isArgument && a.hasClaim && !a.hasReason) yellowAll.push("왜 그렇게 생각하는지 '왜냐하면' 같은 말로 까닭(근거)을 설명해 보면 어떨까요?");
-  if(a.endingMixed) yellowAll.push("문장 끝이 '~다'체와 '~요'체가 섞여 있어요. 하나로 통일하면 더 안정적이지 않을까요?");
-  if(a.longSent){
+  if(a.endingMixed && !skip.has('endMix')) yellowAll.push("문장 끝이 '~다'체와 '~요'체가 섞여 있어요. 하나로 통일하면 더 안정적이지 않을까요?");
+  if(a.longSent && !skip.has('longSent')){
     const preview=a.longSent.trim().replace(/\s+/g,' ');
     const shown=esc(preview.length>36? preview.slice(0,36)+'…' : preview);
     yellowAll.push(`"${shown}" 이 문장이 꽤 길어요(공백 제외 ${preview.replace(/\s/g,'').length}자). 두 문장으로 나누면 더 또렷해지지 않을까요?`);
   }
-  if(a.repeat || a.connectiveLowDiversity) yellowAll.push("같은 이음말이 자주 나와요. '그런데·하지만·또한'처럼 다른 이음말로 바꿀 곳은 없을까요?");
+  if((a.repeat || a.connectiveLowDiversity) && !skip.has('connective')) yellowAll.push("같은 이음말이 자주 나와요. '그런데·하지만·또한'처럼 다른 이음말로 바꿀 곳은 없을까요?");
   if(a.repeatedStart) yellowAll.push("여러 문장이 같은 낱말로 시작하고 있어요. 문장을 다르게 시작해 보면 어떨까요?");
   if(a.exclamOveruse) yellowAll.push("느낌표를 여러 번 썼어요. 정말 강조하고 싶은 곳에만 남겨보면 어떨까요?");
-  if(a.emotionWords>=2 && a.len<150) yellowAll.push("'재미있었다', '좋았다' 같은 말 대신, 왜 그런 마음이 들었는지 더 자세히 써 볼까요?");
-  if(a.shortRun) yellowAll.push("짧은 문장이 계속 이어져요. 몇 문장을 연결해서 더 자연스럽게 써 보면 어떨까요?");
-  if(a.paraCount<2 && a.len>150) yellowAll.push("내용을 처음·가운데·끝으로 문단을 나눠보면 어떨까요?");
-  if(!a.hasEnd) yellowAll.push("마지막 문장이 잘 끝맺어졌는지 다시 읽어볼까요?");
+  if(a.emotionWords>=2 && a.len<150 && !skip.has('emotion')) yellowAll.push("'재미있었다', '좋았다' 같은 말 대신, 왜 그런 마음이 들었는지 더 자세히 써 볼까요?");
+  if(a.shortRun && !skip.has('shortRun')) yellowAll.push("짧은 문장이 계속 이어져요. 몇 문장을 연결해서 더 자연스럽게 써 보면 어떨까요?");
+  if(a.paraCount<2 && a.len>150 && !skip.has('para')) yellowAll.push("내용을 처음·가운데·끝으로 문단을 나눠보면 어떨까요?");
+  if(!a.hasEnd && !skip.has('end')) yellowAll.push("마지막 문장이 잘 끝맺어졌는지 다시 읽어볼까요?");
   if(yellowAll.length===0) yellowAll.push("읽는 사람이 가장 궁금해할 부분을 조금 더 자세히 쓸 수 있을까요?");
   const yellow=yellowAll.slice(0,3);
 
-  // 🔵 생각해 볼 질문 (메타인지)
-  const reader = state.reader? `'${state.reader}'` : "이 글을 읽을 사람";
-  const blue = `${reader}이 이 글을 읽고 어떤 마음이 들기를 바라나요? 그 마음이 글에 잘 담겼는지 살펴봐요.`;
+  // 🔵 생각해 볼 질문 (갈래별 메타인지 질문)
+  const reader = (w&&w.reader)? `'${w.reader}'` : "이 글을 읽을 사람";
+  const blue = (g.blue||'{reader}이 이 글을 읽고 어떤 마음이 들기를 바라나요?').replace('{reader}', reader);
 
   return {green,yellow,blue};
 }
@@ -566,13 +1213,14 @@ function renderCards(c, source, which){
 
 /* which: 'draft'(기본, 초고 분석) 또는 'revised'(고친 글 분석) */
 async function runFeedback(which){
+  const w=curWork(); if(!w) return;
   which = which==='revised' ? 'revised' : 'draft';
-  const text=((which==='revised'? state.revised : state.draft)||"").trim();
+  const text=((which==='revised'? w.revised : w.draft)||"").trim();
   const box=$('fbResult');
   if(text.length<10){
     box.innerHTML = which==='revised'
       ? '<div class="empty">고쳐 쓴 글을 조금 더 써주세요. ✏️</div>'
-      : '<div class="empty">먼저 1단계로 돌아가 초고를 조금 더 써주세요. ✏️</div>';
+      : '<div class="empty">먼저 초고 쓰기로 돌아가 글을 조금 더 써주세요. ✏️</div>';
     return;
   }
   box.innerHTML='<div class="empty">🪞 거울이 네 글을 비춰보는 중이에요…</div>';
@@ -581,10 +1229,11 @@ async function runFeedback(which){
   let c=null, source='rule';
   if(USE_AI){
     try{
+      const g=genreOf(w.genre);
       const endpoint = AI_PROXY || '/api/feedback';
       const r=await fetch(endpoint,{
         method:'POST', headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({text, reader: state.reader||''})
+        body:JSON.stringify({text, reader:w.reader||'', genre:g.name, guide:g.ai||''})
       });
       if(r.ok){
         const data=await r.json();
@@ -596,28 +1245,27 @@ async function runFeedback(which){
 
   renderCards(c, source, which);
   // 받은 피드백을 기록(제출 시 선생님께 함께 전달)
-  state.feedback={green:c.green, yellow:c.yellow, blue:c.blue, source, which};
+  w.feedback={green:c.green, yellow:c.yellow, blue:c.blue, source, which};
   $('reviseCard').style.display='block';
   if(which==='draft'){
-    // 고쳐쓰기 카드를 열고, 초고를 출발점으로 복사
-    // (학생이 아직 고쳐쓰기 칸을 직접 수정하지 않았다면, 매번 최신 초고로 다시 채워줌)
-    if(!state.revisedTouched){ state.revised=state.draft; $('revised').value=state.revised; updateCount('revised','revCount'); }
+    // 고쳐쓰기 칸을 열고, 초고를 출발점으로 복사
+    if(!w.revisedTouched){ w.revised=w.draft; $('revised').value=w.revised; updateCount('revised','revCount'); }
   }
-  state.feedbackDone=true; persist();
+  w.feedbackDone=true; persist(); markDone(3);
   earn('mirror','🪞','거울 탐험가','거울 피드백을 처음 받았어요!');
   if(which==='draft') $('reviseCard').scrollIntoView({behavior:'smooth'});
   else $('fbResult').scrollIntoView({behavior:'smooth'});
 }
 
-/* 고쳐쓰기 칸을 최신 초고 내용으로 강제로 다시 채움(직접 고친 내용은 사라짐, 확인 후 실행) */
+/* 고쳐쓰기 칸을 최신 초고 내용으로 강제로 다시 채움 */
 function refillFromDraft(){
-  if(state.revised && state.revised.trim() && !confirm('고쳐쓰기 칸의 지금 내용이 사라지고, 최신 초고 내용으로 바뀌어요. 계속할까요?')) return;
-  state.revised=state.draft; state.revisedTouched=false;
-  $('revised').value=state.revised; updateCount('revised','revCount'); persist();
+  const w=curWork(); if(!w) return;
+  if(w.revised && w.revised.trim() && !confirm('고쳐쓰기 칸의 지금 내용이 사라지고, 최신 초고 내용으로 바뀌어요. 계속할까요?')) return;
+  w.revised=w.draft; w.revisedTouched=false;
+  $('revised').value=w.revised; updateCount('revised','revCount'); persist();
 }
 
-/* ---------- 초고 ↔ 고친 글 단어 단위 비교(diff) ----------
-   같은 낱말은 그대로, 사라진 낱말은 취소선(회색), 새로 생긴 낱말은 파란 글씨로 표시. */
+/* ---------- 초고 ↔ 고친 글 단어 단위 비교(diff) ---------- */
 function diffTokens(a,b){
   const ta=a.split(/(\s+)/), tb=b.split(/(\s+)/);
   const n=ta.length, m=tb.length;
@@ -638,7 +1286,6 @@ function diffTokens(a,b){
   return ops;
 }
 function renderDiffHtml(ops, side){
-  // side: 'old' → equal+del 표시(취소선), 'new' → equal+ins 표시(파란 글씨)
   return ops
     .filter(op=> op.type==='equal' || (side==='old' && op.type==='del') || (side==='new' && op.type==='ins'))
     .map(op=>{
@@ -651,13 +1298,14 @@ function renderDiffHtml(ops, side){
 /* ---------- 돌아보기 ---------- */
 const CHECKS=[
   "읽는 사람과 목적을 생각하며 썼다",
-  "처음·가운데·끝이 있도록 썼다",
+  "글의 갈래에 맞는 짜임으로 썼다",
   "다시 읽고 고칠 곳을 스스로 찾았다",
   "내가 무엇을 왜 고쳤는지 설명할 수 있다"
 ];
 function renderReflect(){
-  $('titleShow').textContent = state.title? "📝 "+state.title : "";
-  const draft=state.draft||"", revised=state.revised||"";
+  const w=curWork(); if(!w) return;
+  $('titleShow').textContent = w.title? "📝 "+w.title : "";
+  const draft=w.draft||"", revised=w.revised||"";
   if(draft && revised && draft!==revised){
     const ops=diffTokens(draft, revised);
     $('docDraft').innerHTML = renderDiffHtml(ops,'old');
@@ -671,10 +1319,11 @@ function renderReflect(){
   CHECKS.forEach((q,i)=>{
     const id="chk"+i;
     const div=document.createElement('div'); div.className="check";
-    div.innerHTML=`<input type="checkbox" id="${id}" ${state.checks[i]?'checked':''}>
+    div.innerHTML=`<input type="checkbox" id="${id}" ${w.checks[i]?'checked':''}>
       <label for="${id}">${q}</label>`;
     div.querySelector('input').addEventListener('change',e=>{
-      state.checks[i]=e.target.checked; persist();
+      const cw=curWork(); if(!cw) return;
+      cw.checks[i]=e.target.checked; persist();
     });
     wrap.appendChild(div);
   });
@@ -682,28 +1331,38 @@ function renderReflect(){
 }
 
 function finishReflect(){
-  saveStep(3);
-  if(state.revised && state.revised.trim() && state.revised!==state.draft) earn('reviser','✍️','꼼꼼한 고쳐쓰기 작가','초고를 실제로 고쳐 썼어요!');
-  const allChecked = CHECKS.every((_,i)=>state.checks[i]);
+  const w=curWork(); if(!w) return;
+  persist(); flash('saveReflect'); markDone(4);
+  if(w.revised && w.revised.trim() && w.revised!==w.draft) earn('reviser','✍️','꼼꼼한 고쳐쓰기 작가','초고를 실제로 고쳐 썼어요!');
+  const allChecked = CHECKS.every((_,i)=>w.checks[i]);
   if(allChecked) earn('reviewer','🌱','성장하는 작가','스스로 점검을 모두 마쳤어요!');
-  if(state.reflect && state.reflect.trim()) earn('thinker','💡','생각하는 작가','나만의 글쓰기 비법을 찾았어요!');
+  if(w.reflect && w.reflect.trim()) earn('thinker','💡','생각하는 작가','나만의 글쓰기 비법을 찾았어요!');
+  // 갈래 도장: 초고를 충분히 쓰고 돌아보기까지 마치면 도장 쾅!
+  if((w.draft||'').trim().length>=50 && w.reflect && w.reflect.trim()){
+    const g=genreOf(w.genre);
+    if(!state.stamps[g.id]){
+      state.stamps[g.id]=true; persist();
+      $('mEmoji').textContent='🎖'; $('mTitle').textContent=g.name+' 도장 획득!';
+      $('mDesc').textContent='"'+g.name+'" 갈래의 글을 끝까지 완성했어요! 도장판을 확인해 봐요.';
+      $('modal').classList.add('show');
+    }
+    const stampCount=Object.keys(state.stamps).length;
+    if(stampCount>=3) earn('collector','📚','갈래 수집가','세 가지 갈래의 글을 완성했어요!');
+    if(stampCount>=GENRES.length) earn('master','👑','글쓰기 마스터','여덟 갈래를 모두 완성했어요!');
+  }
   renderBadges();
 }
 
 /* ---------- 선생님께 보여주기 (전송·저장 없음, 내 기기 화면만) ---------- */
-const SC_CHECKS=[
-  "읽는 사람과 목적을 생각하며 썼다",
-  "처음·가운데·끝이 있도록 썼다",
-  "다시 읽고 고칠 곳을 스스로 찾았다",
-  "내가 무엇을 왜 고쳤는지 설명할 수 있다"
-];
 function showcase(){
-  const s=state;
-  const fb=s.feedback;
-  const badgeNames={mirror:'🪞 거울 탐험가',reviser:'✍️ 고쳐쓰기 작가',reviewer:'🌱 성장하는 작가',thinker:'💡 생각하는 작가'};
-  const badges=Object.keys(s.badges||{}).map(k=>badgeNames[k]).filter(Boolean);
-  const checksHtml=SC_CHECKS.map((q,i)=>`<div class="sc-check">${s.checks&&s.checks[i]?'✅':'⬜'} ${q}</div>`).join('');
-  const sDraft=s.draft||"", sRevised=s.revised||"";
+  const w=curWork(); if(!w) return;
+  const g=genreOf(w.genre);
+  const fb=w.feedback;
+  const badges=Object.keys(state.badges||{}).map(k=>{
+    const b=BADGES.find(x=>x.id===k); return b? b.e+' '+b.t : null;
+  }).filter(Boolean);
+  const checksHtml=CHECKS.map((q,i)=>`<div class="sc-check">${w.checks&&w.checks[i]?'✅':'⬜'} ${q}</div>`).join('');
+  const sDraft=w.draft||"", sRevised=w.revised||"";
   let scDocOld, scDocNew;
   if(sDraft && sRevised && sDraft!==sRevised){
     const scOps=diffTokens(sDraft, sRevised);
@@ -711,39 +1370,40 @@ function showcase(){
   } else {
     scDocOld=esc(sDraft)||'(없음)'; scDocNew=esc(sRevised)||'(없음)';
   }
+  const planHtml=g.plan.filter(p=>(w.plan&&w.plan[p.k]||'').trim())
+    .map(p=>`<div class="sc-check">・<b>${esc(p.label.replace(/^[^\s]+\s/,''))}</b> — ${esc(w.plan[p.k])}</div>`).join('');
   $('scBody').innerHTML=`
-    <h2 style="margin:0 0 4px">🪞 ${esc(s.nick)||'학생'}의 글쓰기 과정</h2>
-    <p class="hint" style="margin:0 0 16px">종류 ${esc(s.genre)||'-'} · 읽는 사람 ${esc(s.reader)||'-'} · 목적 ${esc(s.purpose)||'-'}</p>
-    ${s.title?`<p style="font-weight:800;font-size:16px;margin:0 0 12px">📝 ${esc(s.title)}</p>`:''}
+    <h2 style="margin:0 0 4px">🪞 ${esc(state.nick)||'학생'}의 글쓰기 과정</h2>
+    <p class="hint" style="margin:0 0 16px">${g.e} ${esc(w.genre)} · 읽는 사람 ${esc(w.reader)||'-'} · 목적 ${esc(w.purpose)||'-'}</p>
+    ${w.title?`<p style="font-weight:800;font-size:16px;margin:0 0 12px">📝 ${esc(w.title)}</p>`:''}
+    ${planHtml?`<div style="margin:0 0 14px"><b style="font-size:14px">🧭 계획하기</b>${planHtml}</div>`:''}
     <div class="compare">
       <div class="col"><h3>📄 처음 쓴 글</h3><div class="doc">${scDocOld}</div></div>
       <div class="col"><h3>✨ 고쳐 쓴 글</h3><div class="doc">${scDocNew}</div></div>
     </div>
-    ${s.changeNote?`<div class="selfq" style="margin-top:14px"><b>🔧 무엇을·왜 고쳤나</b>${esc(s.changeNote)}</div>`:''}
+    ${w.changeNote?`<div class="selfq" style="margin-top:14px"><b>🔧 무엇을·왜 고쳤나</b>${esc(w.changeNote)}</div>`:''}
     ${fb?`<div style="margin-top:14px">
       <div class="fbcard fb-green"><h4>🟢 잘한 점</h4><p>${esc(fb.green)}</p></div>
       <div class="fbcard fb-yellow"><h4>🟡 다시 볼 곳</h4>${(Array.isArray(fb.yellow)?fb.yellow:[fb.yellow]).map(y=>`<p>${esc(y)}</p>`).join('')}</div>
       <div class="fbcard fb-blue"><h4>🔵 생각해 볼 질문</h4><p>${esc(fb.blue)}</p></div>
     </div>`:''}
-    ${s.reflect?`<div class="selfq" style="margin-top:14px"><b>✍️ 다음 글에도 꼭 다시 쓸 나만의 글쓰기 비법</b>${esc(s.reflect)}</div>`:''}
-    <div style="margin-top:14px"><b style="font-size:14px">📋 꼼꼼 점검표</b><div class="sc-check">${mirrorDone()}/${mirrorTotal()} 항목 점검 완료</div></div>
+    ${w.reflect?`<div class="selfq" style="margin-top:14px"><b>✍️ 다음 글에도 꼭 다시 쓸 나만의 글쓰기 비법</b>${esc(w.reflect)}</div>`:''}
+    <div style="margin-top:14px"><b style="font-size:14px">📋 꼼꼼 점검표</b><div class="sc-check">${mirrorDone(w)}/${mirrorTotal(w)} 항목 점검 완료</div></div>
     <div style="margin-top:14px"><b style="font-size:14px">✅ 스스로 평가</b>${checksHtml}</div>
     ${badges.length?`<div style="margin-top:14px"><b style="font-size:14px">🏅 모은 배지</b><div style="margin-top:6px">${badges.map(b=>`<span class="sc-badge">${b}</span>`).join('')}</div></div>`:''}
   `;
   $('showcaseBg').classList.add('show');
 }
 function closeShowcase(){ $('showcaseBg').classList.remove('show'); }
-function esc(t){ return (t==null?'':String(t)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-/* ---------- 선생님께 보여주기 내용을 이미지(PNG)로 저장 ----------
-   외부 라이브러리·이미지 로딩 없이 Canvas 2D에 직접 글자를 그려서 만듦.
-   (SVG+foreignObject 방식은 캔버스가 "오염"되어 저장이 막히므로 사용하지 않음) */
+/* ---------- 선생님께 보여주기 내용을 이미지(PNG)로 저장 ---------- */
 async function saveShowcaseAsImage(){
   const btn=$('scSaveImgBtn');
   const oldLabel=btn.textContent;
   btn.disabled=true; btn.textContent='이미지 만드는 중…';
   try{
-    const s=state;
+    const w=curWork(); if(!w) throw new Error('no_work');
+    const g=genreOf(w.genre);
     const W=760, PAD=28, LH=26, BOX_PAD=14, BOX_GAP=10;
     const contentW=W-PAD*2;
     const FONT_BODY='15px "Malgun Gothic","Apple SD Gothic Neo",sans-serif';
@@ -770,27 +1430,26 @@ async function saveShowcaseAsImage(){
       });
       return out;
     }
-    // diff 토큰(낱말 단위)을 줄바꿈하며, 색이 있는 조각(segment) 배열의 배열(줄 목록)로 반환
     function wrapColored(ops, font, maxWidth, side){
       meas.font=font;
       const filtered=ops.filter(op=> op.type==='equal' || (side==='old'&&op.type==='del') || (side==='new'&&op.type==='ins'));
       const lines=[[]]; let lineW=0;
       filtered.forEach(op=>{
-        const parts=op.text.split(/(\n)/); // 문단 구분 유지
+        const parts=op.text.split(/(\n)/);
         parts.forEach(part=>{
           if(part==='') return;
           if(part==='\n'){ lines.push([]); lineW=0; return; }
-          const w=meas.measureText(part).width;
-          if(lineW+w>maxWidth && lineW>0){ lines.push([]); lineW=0; }
+          const wpx=meas.measureText(part).width;
+          if(lineW+wpx>maxWidth && lineW>0){ lines.push([]); lineW=0; }
           const color = op.type==='del' ? C.muted : (op.type==='ins' ? C.blue : C.ink);
           lines[lines.length-1].push({text:part,color});
-          lineW+=w;
+          lineW+=wpx;
         });
       });
       return lines;
     }
 
-    const blocks=[]; // {kind:'text'|'rich'|'gap'|'box', ...}
+    const blocks=[];
     function addPlain(text,font,color,gapAfter){
       wrapPlain(text,font,contentW).forEach(l=>blocks.push({kind:'text',text:l,font,color}));
       if(gapAfter) blocks.push({kind:'gap',h:gapAfter});
@@ -799,11 +1458,20 @@ async function saveShowcaseAsImage(){
       lines.forEach(segs=>blocks.push({kind:'rich',segs,font}));
     }
 
-    addPlain('🪞 '+(s.nick||'학생')+'의 글쓰기 과정', FONT_H1, C.ink, 8);
-    addPlain('종류 '+(s.genre||'-')+' · 읽는 사람 '+(s.reader||'-')+' · 목적 '+(s.purpose||'-'), FONT_SMALL, C.muted, 12);
-    if(s.title) addPlain('📝 '+s.title, FONT_BOLD, C.ink, 16);
+    addPlain('🪞 '+(state.nick||'학생')+'의 글쓰기 과정', FONT_H1, C.ink, 8);
+    addPlain(g.e+' '+(w.genre||'-')+' · 읽는 사람 '+(w.reader||'-')+' · 목적 '+(w.purpose||'-'), FONT_SMALL, C.muted, 12);
+    if(w.title) addPlain('📝 '+w.title, FONT_BOLD, C.ink, 16);
 
-    const draft=s.draft||'', revised=s.revised||'';
+    const planFilled=g.plan.filter(p=>(w.plan&&w.plan[p.k]||'').trim());
+    if(planFilled.length){
+      addPlain('🧭 계획하기', FONT_H2, C.brand, 4);
+      planFilled.forEach(p=>{
+        addPlain('・'+p.label.replace(/^[^\s]+\s/,'')+' — '+w.plan[p.k], FONT_BODY, C.ink, 0);
+      });
+      blocks.push({kind:'gap',h:16});
+    }
+
+    const draft=w.draft||'', revised=w.revised||'';
     const hasDiff = draft && revised && draft!==revised;
     const diffOps = hasDiff ? diffTokens(draft, revised) : null;
 
@@ -817,7 +1485,7 @@ async function saveShowcaseAsImage(){
     else addPlain(revised||'(없음)', FONT_BODY, C.ink, 0);
     blocks.push({kind:'gap',h:20});
 
-    const fb=s.feedback;
+    const fb=w.feedback;
     function feedbackBox(bg, border, titleText, titleColor, bodyTexts){
       const lines=wrapPlain(titleText, FONT_BOLD, contentW-32).map(t=>({text:t,font:FONT_BOLD,color:titleColor}));
       bodyTexts.forEach(bt=>{
@@ -833,21 +1501,22 @@ async function saveShowcaseAsImage(){
       blocks.push({kind:'gap',h:8});
     }
 
-    if(s.reflect){
+    if(w.reflect){
       addPlain('✍️ 다음 글에도 꼭 다시 쓸 나만의 글쓰기 비법', FONT_BOLD, C.brand, 6);
-      addPlain(s.reflect, FONT_BODY, C.ink, 16);
+      addPlain(w.reflect, FONT_BODY, C.ink, 16);
     }
 
-    addPlain('📋 꼼꼼 점검표: '+mirrorDone()+'/'+mirrorTotal()+' 항목 점검 완료', FONT_BOLD, C.ink, 12);
+    addPlain('📋 꼼꼼 점검표: '+mirrorDone(w)+'/'+mirrorTotal(w)+' 항목 점검 완료', FONT_BOLD, C.ink, 12);
 
     addPlain('✅ 스스로 평가', FONT_BOLD, C.ink, 6);
-    SC_CHECKS.forEach((q,i)=>{
-      const mark=(s.checks&&s.checks[i])?'✅':'⬜';
+    CHECKS.forEach((q,i)=>{
+      const mark=(w.checks&&w.checks[i])?'✅':'⬜';
       addPlain(mark+' '+q, FONT_BODY, C.ink, 0);
     });
 
-    const badgeNames={mirror:'🪞 거울 탐험가',reviser:'✍️ 고쳐쓰기 작가',reviewer:'🌱 성장하는 작가',thinker:'💡 생각하는 작가'};
-    const badges=Object.keys(s.badges||{}).map(k=>badgeNames[k]).filter(Boolean);
+    const badges=Object.keys(state.badges||{}).map(k=>{
+      const b=BADGES.find(x=>x.id===k); return b? b.e+' '+b.t : null;
+    }).filter(Boolean);
     if(badges.length) addPlain('🏅 모은 배지: '+badges.join(', '), FONT_BODY, C.brand, 0);
 
     // ----- 전체 높이 계산 -----
@@ -897,7 +1566,7 @@ async function saveShowcaseAsImage(){
     const name=(state.nick||'학생').trim()||'학생';
     const a=document.createElement('a');
     a.href=URL.createObjectURL(blob);
-    a.download='글쓰기거울_'+name+'.png';
+    a.download='글쓰기거울_'+name+'_'+(w.genre||'글')+'.png';
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(a.href), 3000);
   }catch(e){
@@ -907,16 +1576,26 @@ async function saveShowcaseAsImage(){
   }
 }
 
-/* ---------- 파일로 내보내기 (선생님께 파일로 전달용) ---------- */
+/* ---------- 파일로 내보내기 (선생님께 파일로 전달용) ----------
+   보관함의 모든 글(포트폴리오 전체)을 하나의 파일로 내보냅니다. */
 function exportFile(){
   const name=(state.nick||'학생').trim()||'학생';
-  const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json;charset=utf-8'});
+  const out={
+    version:2, nick:state.nick, badges:state.badges, stamps:state.stamps,
+    submittedAt:new Date().toLocaleString('ko-KR'),
+    works: state.works.map(w=>({...w, mirrorTotal:mirrorTotal(w)}))
+  };
+  const blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json;charset=utf-8'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
   a.href=url; a.download='글쓰기거울_'+name+'.json'; document.body.appendChild(a); a.click();
   a.remove(); URL.revokeObjectURL(url);
-  const tag=$('save3'); tag.style.color='var(--green)'; tag.textContent='파일을 저장했어요! ✓';
-  setTimeout(()=>{tag.textContent='';},2500);
+  const tag=$('saveReflect')||$('saveHome');
+  ['saveReflect','saveHome'].forEach(id=>{
+    const e=$(id); if(!e) return;
+    e.textContent='파일을 저장했어요! ✓';
+    setTimeout(()=>{e.textContent='';},2500);
+  });
 }
 
 /* ---------- 배지 ---------- */
@@ -925,14 +1604,19 @@ const BADGES=[
   {id:'reviser',e:'✍️',t:'고쳐쓰기 작가'},
   {id:'reviewer',e:'🌱',t:'성장하는 작가'},
   {id:'thinker',e:'💡',t:'생각하는 작가'},
+  {id:'collector',e:'📚',t:'갈래 수집가'},
+  {id:'master',e:'👑',t:'글쓰기 마스터'},
 ];
 function renderBadges(){
-  const wrap=$('badges'); wrap.innerHTML="";
-  BADGES.forEach(b=>{
-    const d=document.createElement('div');
-    d.className="badge"+(state.badges[b.id]?' earned':'');
-    d.innerHTML=`<div class="e">${b.e}</div><div class="t">${b.t}</div>`;
-    wrap.appendChild(d);
+  ['badges','badgesHome'].forEach(wrapId=>{
+    const wrap=$(wrapId); if(!wrap) return;
+    wrap.innerHTML="";
+    BADGES.forEach(b=>{
+      const d=document.createElement('div');
+      d.className="badge"+(state.badges[b.id]?' earned':'');
+      d.innerHTML=`<div class="e">${b.e}</div><div class="t">${b.t}</div>`;
+      wrap.appendChild(d);
+    });
   });
 }
 function earn(id,emoji,title,desc){
@@ -943,8 +1627,12 @@ function earn(id,emoji,title,desc){
 }
 function closeModal(){ $('modal').classList.remove('show'); }
 
-renderBadges();
-renderMirrorChecks();
+/* ---------- 시작 ---------- */
+if(state.curWorkId && curWork()){
+  openWork(state.curWorkId, 1);
+} else {
+  goHome();
+}
 </script>
 </body>
 </html>

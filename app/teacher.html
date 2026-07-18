@@ -19,7 +19,7 @@
   header .logo{font-size:30px}
   header h1{margin:0;font-size:20px;font-weight:800}
   header p{margin:0;font-size:13px;color:var(--muted)}
-  header .actions{margin-left:auto;display:flex;gap:8px}
+  header .actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
   .btn{border:none;border-radius:14px;padding:10px 16px;font-weight:700;font-size:14px;
     cursor:pointer;font-family:inherit}
   .btn.primary{background:linear-gradient(135deg,var(--brand),var(--brand-d));color:#fff}
@@ -32,26 +32,36 @@
   .stat .n{font-size:26px;font-weight:800;color:var(--brand-d)}
   .stat .l{font-size:12px;color:var(--muted)}
 
-  /* 진행 단계 분포 */
+  /* 갈래별·단계별 분포 */
   .progress-card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;margin-bottom:18px}
   .progress-card h2{margin:0 0 12px;font-size:16px}
   .stage-row{display:flex;align-items:center;gap:10px;margin:6px 0}
-  .stage-row .name{width:90px;font-size:13px;font-weight:700}
+  .stage-row .name{width:130px;font-size:13px;font-weight:700}
   .bar{flex:1;background:#f1eeff;border-radius:10px;height:18px;overflow:hidden}
   .bar > span{display:block;height:100%;background:linear-gradient(90deg,var(--brand),var(--brand-d))}
-  .stage-row .cnt{width:40px;text-align:right;font-size:13px;color:var(--muted)}
+  .stage-row .cnt{width:44px;text-align:right;font-size:13px;color:var(--muted)}
+
+  /* 갈래 필터 */
+  .filterbar{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
+  .fchip{border:2px solid var(--line);background:#fff;border-radius:20px;padding:7px 14px;
+    font-size:13px;cursor:pointer;font-family:inherit;color:var(--muted);font-weight:700}
+  .fchip.on{border-color:var(--brand);background:#f1eeff;color:var(--brand-d)}
 
   /* 학생 카드 */
   .student{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);
     padding:18px;margin-bottom:14px}
-  .student .head{display:flex;align-items:center;gap:10px;cursor:pointer}
+  .student .head{display:flex;align-items:center;gap:10px;cursor:pointer;flex-wrap:wrap}
   .student .head .nick{font-size:17px;font-weight:800}
   .student .head .badge-mini{font-size:14px}
   .student .head .meta{margin-left:auto;font-size:12px;color:var(--muted)}
-  .student .body{display:none;margin-top:14px}
+  .student .body{display:none;margin-top:6px}
   .student.open .body{display:block}
+  .work{border-top:2px solid var(--line);margin-top:14px;padding-top:14px}
+  .work .wtitle{font-weight:800;font-size:15px;margin-bottom:4px}
   .planrow{font-size:13px;color:var(--muted);margin-bottom:10px}
   .planrow b{color:var(--ink)}
+  .planbox{background:#f1eeff;border-radius:12px;padding:10px 12px;font-size:13px;margin-bottom:10px}
+  .planbox b{color:var(--brand-d)}
   .compare{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   @media(max-width:640px){.compare{grid-template-columns:1fr}}
   .doc{background:#faf9ff;border:2px solid var(--line);border-radius:12px;padding:12px;font-size:14px;white-space:pre-wrap;min-height:80px}
@@ -75,7 +85,7 @@
   .print-date{display:none}
   @media print{
     body{background:#fff}
-    header .actions, .stats, .progress-card,
+    header .actions, .stats, .progress-card, .filterbar,
     .wrap > h2, .student .head .badge-mini, .student .head .meta{display:none !important}
     header p{display:none}
     .student{box-shadow:none;border:1px solid #ddd;border-radius:0;
@@ -109,40 +119,48 @@
 
   <div class="stats" id="stats"></div>
   <div class="progress-card">
-    <h2>📊 단계별 진행 현황</h2>
+    <h2>📊 갈래별 작품 현황</h2>
+    <div id="genreDist"></div>
+  </div>
+  <div class="progress-card">
+    <h2>📊 단계별 진행 현황 (작품 기준)</h2>
     <div id="stages"></div>
   </div>
 
   <h2 style="font-size:16px;margin:0 0 10px">🧑‍🎓 학생별 제출물</h2>
+  <div class="filterbar" id="filterBar"></div>
   <div id="students"></div>
 </div>
 
 <script>
 const STAGES=[
-  {key:'plan', name:'시작 전'},
+  {key:'plan', name:'계획 중'},
   {key:'draft', name:'초고'},
-  {key:'feedback', name:'AI 피드백'},
+  {key:'feedback', name:'피드백'},
   {key:'revise', name:'고쳐쓰기'},
-  {key:'reflect', name:'돌아보기'}
+  {key:'reflect', name:'완성(돌아보기)'}
 ];
 const CHECKS=[
-  "읽는 사람·목적 생각","처음·가운데·끝","스스로 고칠 곳 찾기","왜 고쳤는지 설명"
+  "읽는 사람·목적 생각","갈래에 맞는 짜임","스스로 고칠 곳 찾기","왜 고쳤는지 설명"
 ];
-const MIRROR_TOTAL=19; // 꼼꼼 점검표(활동지 7번) 전체 항목 수
-function mirrorCount(s){ return s.mirrorChecks? Object.values(s.mirrorChecks).filter(Boolean).length : null; }
+const GENRE_NAMES=['주장하는 글','설명하는 글','체험 감상 글','매체로 표현하는 글','이야기 쓰기','시 쓰기','독서 감상문','요약하는 글'];
+const GENRE_EMOJI={'주장하는 글':'🗣️','설명하는 글':'📖','체험 감상 글':'🚌','매체로 표현하는 글':'💻','이야기 쓰기':'🏰','시 쓰기':'🌸','독서 감상문':'📚','요약하는 글':'✂️'};
 
-function stageOf(s){
-  if(s.reflect && s.reflect.trim()) return 4;
-  if(s.changeNote && s.changeNote.trim() || (s.revised && s.revised!==s.draft)) return 3;
-  if(s.feedbackDone) return 2;
-  if(s.draft && s.draft.trim().length>10) return 1;
+function mirrorCount(w){ return w.mirrorChecks? Object.values(w.mirrorChecks).filter(Boolean).length : null; }
+function mirrorTotalOf(w){ return w.mirrorTotal || 19; } // 구버전(v1) 파일은 주장하는 글 점검표 19항목
+
+function stageOf(w){
+  if(w.reflect && w.reflect.trim()) return 4;
+  if(w.changeNote && w.changeNote.trim() || (w.revised && w.revised.trim() && w.revised!==w.draft)) return 3;
+  if(w.feedbackDone) return 2;
+  if(w.draft && w.draft.trim().length>10) return 1;
   return 0;
 }
-function esc(t){ return (t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function esc(t){ return (t==null?'':String(t)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function yellowArr(y){ return Array.isArray(y) ? y : (y? [y] : []); }
 function yellowText(y){ return Array.isArray(y) ? y.join(' / ') : (y||''); }
 
-/* 초고 ↔ 고친 글 단어 단위 비교(diff): 지운 낱말은 취소선, 새 낱말은 파란 글씨 */
+/* 초고 ↔ 고친 글 단어 단위 비교(diff) */
 function diffTokens(a,b){
   const ta=a.split(/(\s+)/), tb=b.split(/(\s+)/);
   const n=ta.length, m=tb.length;
@@ -181,6 +199,25 @@ function docPairHtml(draft, revised){
 }
 
 let allStudents=[];
+let genreFilter='전체';
+
+/* 학생 파일 형식 통일:
+   v2(새 버전) — {nick, badges, stamps, works:[...]}  ← 작품 여러 개
+   v1(구 버전) — 글 내용이 파일 최상위에 바로 있음 → 작품 1개짜리로 감싸서 처리 */
+function normalize(obj, fname){
+  if(!obj.nick){ obj.nick=fname.replace(/^글쓰기거울_/,'').replace(/\.json$/,''); }
+  if(Array.isArray(obj.works)) return obj;
+  return {
+    nick:obj.nick, badges:obj.badges||{}, stamps:{}, submittedAt:obj.submittedAt,
+    works:[{
+      genre:obj.genre||'주장하는 글', reader:obj.reader, purpose:obj.purpose, plan:{},
+      title:obj.title, draft:obj.draft, revised:obj.revised,
+      changeNote:obj.changeNote, reflect:obj.reflect,
+      feedback:obj.feedback, feedbackDone:obj.feedbackDone,
+      checks:obj.checks||{}, mirrorChecks:obj.mirrorChecks||{}, mirrorTotal:19
+    }]
+  };
+}
 
 /* 학생이 내보낸 .json 파일을 불러와 화면에만 표시 (서버·저장 없음) */
 async function importFiles(input){
@@ -188,8 +225,7 @@ async function importFiles(input){
   for(const f of files){
     try{
       const txt=await f.text();
-      const obj=JSON.parse(txt);
-      if(!obj.nick){ obj.nick=f.name.replace(/^글쓰기거울_/,'').replace(/\.json$/,''); }
+      const obj=normalize(JSON.parse(txt), f.name);
       // 같은 별명이면 교체
       const i=allStudents.findIndex(s=>s.nick===obj.nick);
       if(i>=0) allStudents[i]=obj; else allStudents.push(obj);
@@ -199,75 +235,113 @@ async function importFiles(input){
   render();
 }
 function clearAll(){ allStudents=[]; render(); }
+function setFilter(g){ genreFilter=g; render(); }
+
+function visibleWorks(s){
+  return (s.works||[]).filter(w=> genreFilter==='전체' || w.genre===genreFilter);
+}
+
+function workHtml(w){
+  const docPair=docPairHtml(w.draft, w.revised);
+  const mc=mirrorCount(w);
+  const checks=(w.checks)?Object.values(w.checks).filter(Boolean).length:0;
+  const planEntries=Object.values(w.plan||{}).filter(v=>(v||'').trim());
+  return `<div class="work">
+    <div class="wtitle">${GENRE_EMOJI[w.genre]||'📝'} ${esc(w.title)||'(제목 없음)'}
+      <span style="font-weight:400;font-size:12px;color:var(--muted)">· ${esc(w.genre)||'-'} · ${STAGES[stageOf(w)].name} 단계 · ${esc(w.createdAt||'')}</span>
+    </div>
+    <div class="planrow">
+      <b>읽는 사람</b> ${esc(w.reader)||'-'} &nbsp;·&nbsp;
+      <b>목적</b> ${esc(w.purpose)||'-'}
+    </div>
+    ${planEntries.length?`<div class="planbox"><b>🧭 계획하기</b><br>${planEntries.map(v=>'・'+esc(v)).join('<br>')}</div>`:''}
+    <div class="compare">
+      <div class="doc"><h4>📄 초고</h4>${docPair.old}</div>
+      <div class="doc"><h4>✨ 고쳐 쓴 글</h4>${docPair.new}</div>
+    </div>
+    ${w.changeNote?`<div class="note"><b>🔧 무엇을·왜 고쳤나:</b> ${esc(w.changeNote)}</div>`:''}
+    ${w.reflect?`<div class="reflect"><b>✍️ 나만의 글쓰기 비법:</b> ${esc(w.reflect)}</div>`:''}
+    ${w.feedback?`<div class="fbbox">
+      <h4>🪞 받은 피드백<span class="tag ${w.feedback.source==='ai'?'ai':'rule'}">${w.feedback.source==='ai'?'AI':'규칙 기반'}</span></h4>
+      <div class="mini g">🟢 ${esc(w.feedback.green)}</div>
+      ${yellowArr(w.feedback.yellow).map(y=>`<div class="mini y">🟡 ${esc(y)}</div>`).join('')}
+      <div class="mini b">🔵 ${esc(w.feedback.blue)}</div>
+    </div>`:''}
+    <div class="checks">✅ 자기평가 ${checks}/${CHECKS.length} 항목 체크${mc!==null?` · 📋 꼼꼼 점검표 ${mc}/${mirrorTotalOf(w)} 완료`:''}</div>
+  </div>`;
+}
 
 function render(){
   const students=allStudents;
   const stEl=document.getElementById('students');
+
+  // 갈래 필터 칩
+  const usedGenres=[...new Set(students.flatMap(s=>(s.works||[]).map(w=>w.genre)))];
+  const fb=document.getElementById('filterBar');
+  fb.innerHTML=['전체',...GENRE_NAMES.filter(g=>usedGenres.includes(g)),
+      ...usedGenres.filter(g=>!GENRE_NAMES.includes(g))]
+    .map(g=>`<button class="fchip ${genreFilter===g?'on':''}" onclick="setFilter('${esc(g)}')">${g==='전체'?'전체':(GENRE_EMOJI[g]||'')+' '+esc(g)}</button>`).join('');
+
   if(students.length===0){
     document.getElementById('stats').innerHTML='';
     document.getElementById('stages').innerHTML='';
+    document.getElementById('genreDist').innerHTML='<div style="color:var(--muted);font-size:13px">아직 불러온 파일이 없어요.</div>';
     stEl.innerHTML='<div class="empty">아직 불러온 학생이 없어요.<br>위의 <b>‘학생 파일 불러오기’</b>를 눌러, 학생이 내보낸 <b>글쓰기거울_이름.json</b> 파일을 선택하세요. (여러 개 한 번에 가능)</div>';
     return;
   }
 
+  const allWorks=students.flatMap(s=>s.works||[]);
+
   // 통계
   const total=students.length;
+  const workCount=allWorks.length;
+  const doneCount=allWorks.filter(w=>stageOf(w)===4).length;
+  const revisedCount=allWorks.filter(w=>w.revised && w.revised.trim() && w.revised!==w.draft).length;
   const badgeCount=students.reduce((a,s)=>a+Object.keys(s.badges||{}).length,0);
-  const revisedCount=students.filter(s=>s.revised && s.revised!==s.draft).length;
-  const notedCount=students.filter(s=>s.changeNote && s.changeNote.trim()).length;
-  const doneCount=students.filter(s=>stageOf(s)===4).length;
   document.getElementById('stats').innerHTML=[
     {n:total,l:'제출한 학생'},
-    {n:doneCount,l:'끝까지 완료'},
-    {n:revisedCount,l:'고쳐쓴 학생'},
-    {n:notedCount,l:'수정 메모 작성'},
+    {n:workCount,l:'전체 작품 수'},
+    {n:doneCount,l:'완성한 작품'},
+    {n:revisedCount,l:'고쳐 쓴 작품'},
     {n:badgeCount,l:'모은 배지 합계'}
   ].map(x=>`<div class="stat"><div class="n">${x.n}</div><div class="l">${x.l}</div></div>`).join('');
 
+  // 갈래별 분포
+  const gdist={};
+  allWorks.forEach(w=>{ const g=w.genre||'기타'; gdist[g]=(gdist[g]||0)+1; });
+  document.getElementById('genreDist').innerHTML=Object.entries(gdist).map(([g,c])=>{
+    const pct=workCount?Math.round(c/workCount*100):0;
+    return `<div class="stage-row"><div class="name">${GENRE_EMOJI[g]||''} ${esc(g)}</div>
+      <div class="bar"><span style="width:${pct}%"></span></div>
+      <div class="cnt">${c}편</div></div>`;
+  }).join('');
+
   // 단계 분포
   const dist=[0,0,0,0,0];
-  students.forEach(s=>{ dist[stageOf(s)]++; });
+  allWorks.forEach(w=>{ dist[stageOf(w)]++; });
   document.getElementById('stages').innerHTML=STAGES.map((st,i)=>{
-    const c=dist[i]; const pct=total?Math.round(c/total*100):0;
+    const c=dist[i]; const pct=workCount?Math.round(c/workCount*100):0;
     return `<div class="stage-row"><div class="name">${st.name}</div>
       <div class="bar"><span style="width:${pct}%"></span></div>
-      <div class="cnt">${c}명</div></div>`;
+      <div class="cnt">${c}편</div></div>`;
   }).join('');
 
   // 학생 카드
   stEl.innerHTML=students.map((s,idx)=>{
-    const stage=stageOf(s);
+    const works=visibleWorks(s);
+    if(genreFilter!=='전체' && works.length===0) return '';
     const badges=Object.keys(s.badges||{}).length;
-    const checks=(s.checks)?Object.values(s.checks).filter(Boolean).length:0;
-    const docPair=docPairHtml(s.draft, s.revised);
+    const stamps=Object.keys(s.stamps||{}).length;
     return `<div class="student" id="st${idx}">
       <div class="head" onclick="document.getElementById('st${idx}').classList.toggle('open')">
         <span class="nick">${esc(s.nick)||'이름없음'}</span>
-        <span class="badge-mini">${'🏅'.repeat(badges)||'—'}</span>
-        <span class="meta">${STAGES[stage].name} 단계 · 제출 ${esc(s.submittedAt||'')}</span>
+        <span class="badge-mini">${'🏅'.repeat(badges)||'—'}${stamps?' 🎖×'+stamps:''}</span>
+        <span class="meta">작품 ${ (s.works||[]).length }편 · 제출 ${esc(s.submittedAt||'')}</span>
       </div>
       <div class="body">
-        <div class="print-title">🪞 ${esc(s.nick)||'학생'}의 글쓰기 평가 결과</div>
+        <div class="print-title">🪞 ${esc(s.nick)||'학생'}의 글쓰기 기록</div>
         <div class="print-date">출력일 ${new Date().toLocaleDateString('ko-KR')} · 글쓰기 거울</div>
-        ${s.title?`<div style="font-weight:800;font-size:15px;margin-bottom:6px">📝 ${esc(s.title)}</div>`:''}
-        <div class="planrow">
-          <b>종류</b> ${esc(s.genre)||'-'} &nbsp;·&nbsp;
-          <b>읽는 사람</b> ${esc(s.reader)||'-'} &nbsp;·&nbsp;
-          <b>목적</b> ${esc(s.purpose)||'-'}
-        </div>
-        <div class="compare">
-          <div class="doc"><h4>📄 초고</h4>${docPair.old}</div>
-          <div class="doc"><h4>✨ 고쳐 쓴 글</h4>${docPair.new}</div>
-        </div>
-        ${s.changeNote?`<div class="note"><b>🔧 무엇을·왜 고쳤나:</b> ${esc(s.changeNote)}</div>`:''}
-        ${s.reflect?`<div class="reflect"><b>✍️ 나만의 글쓰기 비법:</b> ${esc(s.reflect)}</div>`:''}
-        ${s.feedback?`<div class="fbbox">
-          <h4>🪞 받은 AI 피드백<span class="tag ${s.feedback.source==='ai'?'ai':'rule'}">${s.feedback.source==='ai'?'Claude AI':'규칙 기반'}</span></h4>
-          <div class="mini g">🟢 ${esc(s.feedback.green)}</div>
-          ${yellowArr(s.feedback.yellow).map(y=>`<div class="mini y">🟡 ${esc(y)}</div>`).join('')}
-          <div class="mini b">🔵 ${esc(s.feedback.blue)}</div>
-        </div>`:''}
-        <div class="checks">✅ 자기평가 ${checks}/${CHECKS.length} 항목 체크${mirrorCount(s)!==null?` · 📋 꼼꼼 점검표 ${mirrorCount(s)}/${MIRROR_TOTAL} 완료`:''}</div>
+        ${works.length? works.map(workHtml).join('') : '<div style="color:var(--muted);font-size:13px;margin-top:8px">이 갈래의 작품이 없어요.</div>'}
       </div>
     </div>`;
   }).join('');
@@ -279,22 +353,25 @@ function printAll(){
   window.print();
 }
 
-/* ---------- CSV 내보내기 (엑셀에서 한글 정상) ---------- */
+/* ---------- CSV 내보내기 (작품 1편 = 1행, 엑셀에서 한글 정상) ---------- */
 function csvCell(v){ return '"'+String(v==null?'':v).replace(/"/g,'""')+'"'; }
 function exportCSV(){
   if(!allStudents.length){ alert('내보낼 제출물이 없어요.'); return; }
-  const headers=['별명','단계','제출시각','글종류','읽는사람','목적','제목','초고','고쳐쓴글',
-    '수정메모','나만의글쓰기비법','자기평가(체크수)','꼼꼼점검표(체크수)','배지수','피드백출처','AI_잘한점','AI_다시볼곳','AI_생각해볼질문'];
-  const rows=allStudents.map(s=>{
-    const fb=s.feedback||{};
-    const checks=s.checks?Object.values(s.checks).filter(Boolean).length:0;
-    const mc=mirrorCount(s);
+  const headers=['별명','갈래','단계','제출시각','읽는사람','목적','제목','초고','고쳐쓴글',
+    '수정메모','나만의글쓰기비법','자기평가(체크수)','꼼꼼점검표(체크수)','배지수','피드백출처','피드백_잘한점','피드백_다시볼곳','피드백_생각해볼질문'];
+  const rows=[];
+  allStudents.forEach(s=>{
     const badges=Object.keys(s.badges||{}).length;
-    const src=fb.source==='ai'?'Claude AI':(fb.green?'규칙 기반':'');
-    return [s.nick, STAGES[stageOf(s)].name, s.submittedAt, s.genre, s.reader, s.purpose, s.title,
-      s.draft, s.revised, s.changeNote, s.reflect, checks+'/'+CHECKS.length,
-      (mc!==null? mc+'/'+MIRROR_TOTAL : ''), badges,
-      src, fb.green, yellowText(fb.yellow), fb.blue].map(csvCell).join(',');
+    (s.works||[]).forEach(w=>{
+      const fb=w.feedback||{};
+      const checks=w.checks?Object.values(w.checks).filter(Boolean).length:0;
+      const mc=mirrorCount(w);
+      const src=fb.source==='ai'?'AI':(fb.green?'규칙 기반':'');
+      rows.push([s.nick, w.genre, STAGES[stageOf(w)].name, s.submittedAt, w.reader, w.purpose, w.title,
+        w.draft, w.revised, w.changeNote, w.reflect, checks+'/'+CHECKS.length,
+        (mc!==null? mc+'/'+mirrorTotalOf(w) : ''), badges,
+        src, fb.green, yellowText(fb.yellow), fb.blue].map(csvCell).join(','));
+    });
   });
   const csv=String.fromCharCode(0xFEFF)+headers.map(csvCell).join(',')+'\r\n'+rows.join('\r\n');
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
