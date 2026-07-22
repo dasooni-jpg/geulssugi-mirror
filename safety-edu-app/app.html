@@ -243,10 +243,14 @@ function updateOutput() {
   const item = weekData[week];
   if (!item) return;
   const withLabel = document.getElementById("labelToggle").checked;
-  const lines = CATEGORY_KEYS.map(key => {
+  const parts = CATEGORY_KEYS.map(key => {
     const val = item[key] || "";
-    return withLabel ? (key + ": " + val) : val;
+    return "□ " + (withLabel ? (key + ": " + val) : val);
   });
+  const lines = [];
+  for (let i = 0; i < parts.length; i += 2) {
+    lines.push(parts.slice(i, i + 2).join("  "));
+  }
   document.getElementById("output").value = lines.join("\n");
 }
 
