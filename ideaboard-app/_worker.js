@@ -52,12 +52,27 @@ const APP_HTML = `<!DOCTYPE html>
     --page-bg: #f1f3f8;
     --ink: #2d3436;
     --brand-grad: linear-gradient(135deg, var(--brand-1), var(--brand-2));
+    /* 반투명 유리(glass) 표면 — 카드·헤더·모달이 이 값을 함께 씀 */
+    --glass: color-mix(in srgb, #ffffff 62%, transparent);
+    --glass-strong: color-mix(in srgb, #ffffff 84%, transparent);
+    --glass-border: color-mix(in srgb, #ffffff 55%, transparent);
+    --glass-blur: blur(16px) saturate(160%);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; }
   body {
     font-family: "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
     background: var(--page-bg); color: var(--ink); -webkit-tap-highlight-color: transparent;
+    position: relative;
+  }
+  /* 반투명 카드 뒤로 은은하게 비치는 색 배경(블롭) */
+  body::before {
+    content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: .3;
+    background:
+      radial-gradient(720px circle at 6% -8%, var(--brand-1), transparent 60%),
+      radial-gradient(680px circle at 102% 8%, var(--brand-3), transparent 55%),
+      radial-gradient(620px circle at 25% 105%, var(--action-1), transparent 55%),
+      radial-gradient(560px circle at 92% 98%, var(--action-2), transparent 55%);
   }
   button { font-family: inherit; cursor: pointer; border: none; background: none; font-size: 14px; }
   input, textarea, select { font-family: inherit; font-size: 15px; }
@@ -69,7 +84,8 @@ const APP_HTML = `<!DOCTYPE html>
     background: linear-gradient(135deg, var(--brand-1) 0%, var(--brand-2) 55%, var(--brand-3) 100%); padding: 20px;
   }
   .login-card {
-    background: #fff; border-radius: 22px; padding: 34px 30px; width: 360px; max-width: 94vw;
+    background: var(--glass-strong); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border); border-radius: 22px; padding: 34px 30px; width: 360px; max-width: 94vw;
     box-shadow: 0 18px 50px rgba(20, 20, 60, .35); text-align: center;
   }
   .login-mascot { width: 104px; height: 104px; object-fit: contain; display: block; margin: -8px auto 2px; filter: drop-shadow(0 5px 10px rgba(92,46,13,.22)); }
@@ -100,9 +116,14 @@ const APP_HTML = `<!DOCTYPE html>
   /* ── 상단바 ── */
   header {
     position: sticky; top: 0; z-index: 30; color: #fff;
-    background: var(--brand-grad);
+    background: linear-gradient(135deg,
+      color-mix(in srgb, var(--brand-1) 82%, transparent),
+      color-mix(in srgb, var(--brand-2) 82%, transparent));
+    backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+    border-bottom: 1px solid color-mix(in srgb, #fff 30%, transparent);
     display: flex; align-items: center; gap: 10px; padding: 12px 16px;
     box-shadow: 0 3px 12px rgba(60, 60, 130, .25);
+    text-shadow: 0 1px 3px rgba(0,0,0,.15);
   }
   .hd-mascot { width: 36px; height: 36px; object-fit: contain; flex: none; filter: drop-shadow(0 2px 3px rgba(0,0,0,.2)); }
   header .title { font-size: 18px; font-weight: 800; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -119,10 +140,13 @@ const APP_HTML = `<!DOCTYPE html>
   /* ── 게시판 카드 그리드 ── */
   .board-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
   .board-card {
+    background: color-mix(in srgb, var(--board-tint, #fff) 45%, var(--glass) 55%);
+    backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid color-mix(in srgb, var(--board-tint, #fff) 65%, white 20%);
     border-radius: 18px; padding: 20px 18px; min-height: 130px; cursor: pointer;
     display: flex; flex-direction: column; gap: 6px; position: relative;
     box-shadow: 0 4px 14px rgba(50, 50, 100, .1); transition: transform .12s;
-    border: none; text-align: left;
+    text-align: left;
   }
   .board-card:hover { transform: translateY(-3px); }
   .board-card .b-title { font-size: 17px; font-weight: 800; word-break: keep-all; }
@@ -143,10 +167,14 @@ const APP_HTML = `<!DOCTYPE html>
   .board-head { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
   .board-head h2 { font-size: 21px; }
   .board-head .desc { color: #778; font-size: 13px; width: 100%; }
-  .btn-back { font-size: 20px; background: #fff; border-radius: 10px; padding: 6px 11px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+  .btn-back {
+    font-size: 20px; background: var(--glass-strong); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border); border-radius: 10px; padding: 6px 11px; box-shadow: 0 2px 8px rgba(0,0,0,.08);
+  }
   .board-head-actions { margin-left: auto; display: flex; gap: 8px; }
   .btn-pdf {
-    background: #fff; color: var(--accent); font-weight: 800; padding: 10px 16px;
+    background: var(--glass-strong); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border); color: var(--accent); font-weight: 800; padding: 10px 16px;
     border-radius: 12px; font-size: 15px; box-shadow: 0 2px 8px rgba(0,0,0,.08); white-space: nowrap;
   }
   .btn-write {
@@ -156,10 +184,11 @@ const APP_HTML = `<!DOCTYPE html>
   }
   .posts { columns: 300px; column-gap: 14px; }
   .post {
-    background: #fff; border-radius: 16px; padding: 15px; margin-bottom: 14px;
+    background: var(--glass); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border); border-radius: 16px; padding: 15px; margin-bottom: 14px;
     break-inside: avoid; box-shadow: 0 3px 12px rgba(50, 50, 100, .09);
   }
-  .post.notice { border: 2.5px solid #ffc93c; background: #fffcf0; }
+  .post.notice { border: 2.5px solid #ffc93c; background: color-mix(in srgb, #fffcf0 70%, transparent); }
   .chip-notice { background: #ffc93c; color: #6b4b00; font-size: 11px; font-weight: 800; padding: 3px 9px; border-radius: 99px; }
   .tag-teacher { background: #ece4ff; color: var(--accent); font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 99px; margin-left: 4px; }
   .p-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
@@ -208,7 +237,8 @@ const APP_HTML = `<!DOCTYPE html>
     display: flex; align-items: center; justify-content: center; padding: 16px;
   }
   .modal {
-    background: #fff; border-radius: 18px; width: 520px; max-width: 96vw; max-height: 92vh;
+    background: var(--glass-strong); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border); border-radius: 18px; width: 520px; max-width: 96vw; max-height: 92vh;
     display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 24px 70px rgba(10,10,40,.4);
   }
   .m-head { display: flex; align-items: center; padding: 15px 18px 12px; font-size: 17px; font-weight: 800; }
@@ -840,7 +870,7 @@ window.IB = (() => {
     let html = "";
     HOME.boards.forEach((b, i) => {
       const color = BOARD_COLORS[i % BOARD_COLORS.length];
-      html += '<div class="board-card" style="background:' + color + '" onclick="IB.openBoard(' + b.id + ')">' +
+      html += '<div class="board-card" style="--board-tint:' + color + '" onclick="IB.openBoard(' + b.id + ')">' +
         (isT ? '<span class="b-tools">' +
           '<button title="이름 고치기" onclick="event.stopPropagation();IB.editBoard(' + b.id + ')">✏️</button>' +
           '<button title="게시판 지우기" onclick="event.stopPropagation();IB.deleteBoard(' + b.id + ')">🗑</button></span>' : "") +
