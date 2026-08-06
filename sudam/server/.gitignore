@@ -1,0 +1,4 @@
+# R-21: API 키가 든 .env 는 절대 커밋하지 않음
+.env
+node_modules/
+npm-debug.log*

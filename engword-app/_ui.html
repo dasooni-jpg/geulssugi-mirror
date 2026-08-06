@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head><meta charset="UTF-8"><title>engword UI 미리보기 (가짜 서버)</title>
+<style>
+  body{margin:0;font-family:sans-serif;background:#dfe6f0}
+  .bar{padding:8px 14px;background:#23324a;color:#fff;font-size:13px;display:flex;gap:12px;align-items:center}
+  .bar button{font:inherit;padding:4px 10px;border:none;border-radius:6px;cursor:pointer}
+  iframe{display:block;width:100%;height:calc(100vh - 40px);border:none;background:#f3f6fb}
+</style>
+</head>
+<body>
+<div class="bar">
+  <b>🔬 매일 영단어 30 — 배포 없이 미리보기</b>
+  <span>가짜 D1 + 가짜 AI 위에서 실제 화면이 그대로 돌아갑니다</span>
+  <button onclick="location.reload()">처음부터</button>
+</div>
+<iframe id="frame"></iframe>
+<script type="module">
+import worker from "./_worker.js";
+
+// ── 가짜 D1 (＿test.html 과 동일) ──
+class FakeD1 {
+  constructor() { this.days = new Map(); this.students = new Map(); this.codes = new Map(); }
+  prepare(sql) {
+    const self = this;
+    return {
+      _args: [],
+      bind(...a) { this._args = a; return this; },
+      async run() {
+        if (sql.startsWith("CREATE")) return { meta: {} };
+        if (sql.includes("vocab_days")) {
+          if (sql.startsWith("INSERT")) {
+            const k = this._args[0] + "|" + this._args[1];
+            if (self.days.has(k)) throw new Error("UNIQUE constraint failed");
+            self.days.set(k, this._args[2]); return { meta: { changes: 1 } };
+          }
+        }
+        if (sql.includes("vocab_codes")) {
+          if (sql.startsWith("INSERT")) {
+            const [code, section, id] = this._args;
+            if (self.codes.has(code)) throw new Error("UNIQUE constraint failed");
+            self.codes.set(code, { section, id }); return { meta: { changes: 1 } };
+          }
+        }
+        if (sql.includes("vocab_students")) {
+          if (sql.startsWith("INSERT OR REPLACE")) { self.students.set(this._args[0] + "|" + this._args[1], this._args[2]); return { meta: { changes: 1 } }; }
+        }
+        throw new Error("unknown sql: " + sql);
+      },
+      async first() {
+        if (sql.includes("vocab_days")) { const d = self.days.get(this._args[0] + "|" + this._args[1]); return d ? { data: d } : null; }
+        if (sql.includes("vocab_codes")) { const row = self.codes.get(this._args[0]); return row ? { section: row.section, id: row.id } : null; }
+        if (sql.includes("vocab_students")) { const d = self.students.get(this._args[0] + "|" + this._args[1]); return d ? { data: d } : null; }
+        return null;
+      },
+      async all() {
+        if (sql.includes("vocab_days")) {
+          const [section, limit] = this._args;
+          const rows = [];
+          for (const [k, data] of self.days) { const [day, sec] = k.split("|"); if (sec === section) rows.push({ day, data }); }
+          rows.sort((a, b) => (a.day < b.day ? 1 : -1));
+          return { results: rows.slice(0, limit) };
+        }
+        return { results: [] };
+      },
+    };
+  }
+}
+
+// ── 가짜 Gemini AI: 실제 느낌이 나는 샘플 영단어 반환 ──
+const SAMPLE = {
+  elem: [
+    ["happy","hˈæpi","기쁜, 행복한","She felt happy when she saw her puppy.","glad","sad"],
+    ["quick","kwˈɪk","빠른","The quick fox jumped over the fence.","fast","slow"],
+    ["kind","kaɪnd","친절한","My teacher is very kind to everyone.","nice","cruel"],
+    ["strong","strɔːŋ","힘이 센, 튼튼한","He is strong enough to carry the box.","powerful","weak"],
+    ["begin","bɪɡˈɪn","시작하다","The movie will begin in five minutes.","start","end"],
+    ["small","smɔːl","작은","A mouse is a small animal.","little","big"],
+    ["clean","kliːn","깨끗한","Please keep your room clean.","tidy","dirty"],
+    ["easy","ˈiːzi","쉬운","This puzzle is easy for kids.","simple","difficult"],
+  ],
+  middle: [
+    ["achieve","əˈtʃiːv","성취하다","She worked hard to achieve her goal.","accomplish",""],
+    ["describe","dɪˈskraɪb","묘사하다, 설명하다","Can you describe your favorite book?","explain",""],
+    ["various","ˈveəriəs","다양한","The store sells various kinds of fruit.","diverse",""],
+    ["improve","ɪmˈpruːv","향상시키다","Reading books can improve your vocabulary.","enhance",""],
+  ],
+  high: [
+    ["ambiguous","æmˈbɪɡjuəs","애매모호한","His answer was ambiguous and confusing.","unclear","clear"],
+    ["inevitable","ɪnˈevɪtəbl","불가피한","Change is inevitable in a growing company.","unavoidable","avoidable"],
+    ["profound","prəˈfaʊnd","깊은, 심오한","The book had a profound effect on her thinking.","deep",""],
+    ["skeptical","ˈskeptɪkl","회의적인","He remained skeptical about the new plan.","doubtful","convinced"],
+  ],
+};
+let seq = 0;
+function fakeWords(section) {
+  const base = SAMPLE[section] || SAMPLE.elem;
+  const out = base.map(x => ({ word: x[0], pronunciation: x[1], meaning: x[2], example: x[3], synonym: x[4], antonym: x[5] }));
+  while (out.length < 34) { seq++; const w = "sample" + seq; out.push({ word: w, pronunciation: "sˈæmpəl" + seq, meaning: w + "의 뜻풀이입니다", example: "This is an example with " + w + " in it.", synonym: seq % 2 ? "syn" + seq : "", antonym: seq % 3 ? "" : "ant" + seq }); }
+  return out;
+}
+globalThis.fetch = (function (real) {
+  return async (url, opt) => {
+    if (typeof url === "string" && url.includes("generativelanguage.googleapis.com")) {
+      const body = JSON.parse(opt.body);
+      const secMatch = /대상: (1학년|2학년|3학년|4학년|5학년|6학년|중등|고등)/.exec(body.contents[0].parts[0].text);
+      const NAME_MAP = { "1학년": "elem", "2학년": "elem", "3학년": "elem", "4학년": "elem", "5학년": "elem", "6학년": "elem", "중등": "middle", "고등": "high" };
+      const section = secMatch ? NAME_MAP[secMatch[1]] : "elem";
+      await new Promise(r => setTimeout(r, 600)); // 생성 시간 흉내
+      return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify({ words: fakeWords(section) }) }] }, finishReason: "STOP" }] }), { status: 200 });
+    }
+    return real(url, opt);
+  };
+})(globalThis.fetch.bind(globalThis));
+
+const env = { DB: new FakeD1(), GEMINI_API_KEY: "fake-key" };
+window.__route = async (url, opt) => {
+  const u = new URL(url, "https://v.test");
+  return worker.fetch(new Request(u.toString(), opt), env);
+};
+
+async function open(path) {
+  const r = await worker.fetch(new Request("https://v.test" + path), env);
+  let html = await r.text();
+  // 화면의 fetch 를 워커로 연결 + localStorage 는 미리보기용으로 격리
+  const shim = `<script>
+    window.fetch = (u, o) => parent.__route(u, o);
+    navigator.sendBeacon = () => true;
+    const _ls = {};
+    Object.defineProperty(window, "localStorage", { value: {
+      getItem: k => (k in _ls ? _ls[k] : null),
+      setItem: (k, v) => { _ls[k] = String(v); },
+      removeItem: k => { delete _ls[k]; },
+    }});
+  <\/script>`;
+  html = html.replace("<script>", shim + "<script>");
+  const frame = document.getElementById("frame");
+  frame.srcdoc = html;
+}
+open("/");
+</script>
+</body>
+</html>

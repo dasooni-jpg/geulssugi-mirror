@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>선생님 도구상자 — 화면 미리보기(가짜 AI)</title>
+<style>
+  #banner{background:#254c85;color:#fff;font:13px/1.4 "Malgun Gothic",sans-serif;padding:6px 12px;text-align:center}
+</style>
+</head>
+<body>
+<div id="banner">🔧 로컬 미리보기 — 실제 AI 대신 가짜 응답을 씁니다. (배포된 워커에서만 진짜 Gemini가 동작)</div>
+<div id="mount"></div>
+
+<script type="module">
+import worker from "./_worker.js";
+
+const realFetch = globalThis.fetch.bind(globalThis);
+const env = { GEMINI_API_KEY: "fake-key-for-preview" };
+
+// 가짜 Gemini — 도구별로 그럴듯한 예시 결과를 돌려줌
+function fakeGemini(opts){
+  const b = JSON.parse(opts.body);
+  const userText = b.contents[0].parts[0].text;
+  let out = "🔧 (가짜 AI 미리보기 결과)\n\n입력을 이렇게 받았습니다:\n" + userText +
+    "\n\n실제 배포 후에는 여기에 Gemini가 만든 진짜 결과가 나옵니다.";
+  return new Response(JSON.stringify({ candidates:[{ finishReason:"STOP", content:{ parts:[{ text: out }] } }] }), { status:200 });
+}
+
+// fetch 가로채기: /api/* → 워커, google/gateway → 가짜 Gemini, 나머지 → 원본
+globalThis.fetch = async (url, opts) => {
+  const u = String(url);
+  if (u.includes("generativelanguage") || u.includes("gateway.ai.cloudflare.com"))
+    return fakeGemini(opts);
+  const path = u.startsWith("/api/") ? u : (u.includes("/api/") ? new URL(u, location.href).pathname : null);
+  if (path && path.startsWith("/api/")) {
+    const req = new Request("http://localhost" + path, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: (opts && opts.body) || "{}",
+    });
+    return worker.fetch(req, env);
+  }
+  return realFetch(url, opts);
+};
+
+// app.html 을 그대로 불러와 이 문서에 심고, 인라인 스크립트를 재실행
+(async function mount(){
+  const html = await realFetch("./app.html").then(r=>r.text());
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  // 스타일 이식
+  doc.querySelectorAll("style").forEach(s => document.head.appendChild(s.cloneNode(true)));
+  // 본문 이식 (스크립트 제외)
+  const body = doc.body.cloneNode(true);
+  const scripts = [...body.querySelectorAll("script")];
+  scripts.forEach(s => s.remove());
+  document.getElementById("mount").innerHTML = body.innerHTML;
+  // 인라인 스크립트 재실행 (가로챈 fetch 위에서 동작)
+  for (const s of scripts) {
+    const ns = document.createElement("script");
+    ns.textContent = s.textContent;
+    document.body.appendChild(ns);
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>선생님 도구상자</title>
+<style>
+  :root{
+    --bg:#f4f1ea; --panel:#fffdf7; --ink:#2b2b2b; --sub:#6b6459;
+    --line:#e3ddce; --blue:#2f5fa6; --blue-d:#254c85; --accent:#c9622f;
+    --ok:#2f7a4d; --err:#c2483b; --chip:#efe9dc; --shadow:0 1px 0 rgba(0,0,0,.04);
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic","맑은 고딕",system-ui,sans-serif;
+    line-height:1.6; -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:900px;margin:0 auto;padding:20px 16px 64px}
+  header.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:6px 2px 18px}
+  header.top img.mascot{width:44px;height:44px;object-fit:contain;flex:0 0 auto}
+  header.top .titles{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  header.top h1{font-size:22px;margin:0;letter-spacing:-.02em}
+  header.top .tag{color:var(--sub);font-size:13px}
+  .hint{color:var(--sub);font-size:13px;margin:0 2px 16px}
+
+  /* ── 메뉴(도구 목록) ── */
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  @media (max-width:620px){ .grid{grid-template-columns:1fr} }
+  .card{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px 15px;cursor:pointer;text-align:left;display:flex;gap:12px;align-items:flex-start;
+    box-shadow:var(--shadow);transition:border-color .12s,transform .06s;
+  }
+  .card:hover{border-color:var(--blue)}
+  .card:active{transform:translateY(1px)}
+  .num{
+    flex:0 0 auto;width:30px;height:30px;border-radius:9px;background:var(--blue);
+    color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:15px;
+  }
+  .card h3{margin:0 0 3px;font-size:15px;letter-spacing:-.01em}
+  .card p{margin:0;color:var(--sub);font-size:12.5px}
+
+  /* ── 도구 화면 ── */
+  .view{display:none}
+  .view.on{display:block}
+  .back{
+    display:inline-flex;align-items:center;gap:6px;
+    background:#fff;border:1px solid var(--line);border-radius:10px;
+    color:var(--blue);font-size:15px;font-weight:700;cursor:pointer;
+    padding:9px 16px;margin-bottom:14px;box-shadow:var(--shadow);
+  }
+  .back:hover{border-color:var(--blue);background:var(--chip)}
+  .back:active{transform:translateY(1px)}
+  .toolhead{display:flex;gap:12px;align-items:flex-start;margin-bottom:6px}
+  .toolhead .num{width:34px;height:34px;font-size:16px}
+  .toolhead h2{margin:0;font-size:19px;letter-spacing:-.01em}
+  .meta{background:var(--chip);border-radius:10px;padding:9px 12px;font-size:12.5px;color:var(--sub);margin:10px 0 18px}
+  .meta b{color:var(--ink);font-weight:600}
+
+  form .field{margin-bottom:14px}
+  label{display:block;font-size:13.5px;font-weight:600;margin-bottom:5px}
+  label .req{color:var(--err);margin-left:3px}
+  input[type=text],input[type=number],textarea{
+    width:100%;border:1px solid var(--line);border-radius:10px;background:#fff;
+    padding:10px 12px;font:inherit;font-size:14px;color:var(--ink);resize:vertical;
+  }
+  input:focus,textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(47,95,166,.12)}
+  textarea{min-height:88px;line-height:1.55}
+
+  .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:4px}
+  button.primary{
+    background:var(--blue);color:#fff;border:none;border-radius:10px;padding:11px 20px;
+    font:inherit;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  button.primary:hover{background:var(--blue-d)}
+  button.primary:disabled{opacity:.55;cursor:default}
+  button.ghost{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 16px;font:inherit;font-size:14px;cursor:pointer;color:var(--ink)}
+  button.ghost:hover{border-color:var(--blue);color:var(--blue)}
+
+  .msg{font-size:13.5px;margin-top:12px}
+  .msg.err{color:var(--err)}
+  .spinner{display:inline-block;width:15px;height:15px;border:2px solid rgba(255,255,255,.45);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:-2px;margin-right:7px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .result{margin-top:22px;display:none}
+  .result.on{display:block}
+  .result .rhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px}
+  .result .rhead h3{margin:0;font-size:15px}
+  .result textarea{min-height:280px;background:#fffdf7;font-size:13.5px;line-height:1.65;
+    font-family:"Pretendard","Malgun Gothic",monospace}
+  .copied{color:var(--ok);font-size:13px;font-weight:600}
+  .warn{color:var(--accent);font-size:12.5px;margin-top:8px}
+  footer{margin-top:40px;color:var(--sub);font-size:11.5px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <img class="mascot" src="/mascot.png" alt="다람쌤 마스코트">
+    <span class="titles">
+      <h1 id="appName">선생님 도구상자</h1>
+      <span class="tag">· 다람쌤과 함께하는 업무 도우미 10</span>
+    </span>
+  </header>
+
+  <!-- 메뉴 -->
+  <section id="menu">
+    <p class="hint">필요한 도구를 골라 입력칸만 채우면 AI가 결과를 만들어 드려요. 결과는 복사해서 그대로 쓰시면 됩니다.</p>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <!-- 도구 화면 -->
+  <section id="tool" class="view">
+    <button class="back" id="back">← 목록으로</button>
+    <div class="toolhead">
+      <div class="num" id="tNum">1</div>
+      <h2 id="tName"></h2>
+    </div>
+    <div class="meta">
+      <div><b>언제</b> · <span id="tTrigger"></span></div>
+      <div><b>사용법</b> · <span id="tUsage"></span></div>
+    </div>
+
+    <form id="form" autocomplete="off"></form>
+
+    <div class="actions">
+      <button type="button" class="primary" id="gen">생성하기</button>
+      <span class="msg" id="msg"></span>
+    </div>
+
+    <div class="result" id="result">
+      <div class="rhead">
+        <h3>결과</h3>
+        <div>
+          <button class="ghost" id="copy">📋 복사</button>
+          <button class="ghost" id="regen">다시 생성</button>
+          <span class="copied" id="copied" style="display:none">복사됨!</span>
+        </div>
+      </div>
+      <textarea id="out" spellcheck="false"></textarea>
+      <div class="warn" id="warn" style="display:none">⚠️ 응답이 길어 중간에 잘렸을 수 있어요. '다시 생성'을 누르거나 입력을 줄여 보세요.</div>
+    </div>
+  </section>
+
+  <footer>결과는 초안이에요. 사용 전 반드시 한 번 검토하세요 · 학생 실명 등 개인정보는 입력하지 마세요.</footer>
+</div>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+let TOOLS = [];
+let current = null;
+
+async function api(path, data){
+  const r = await fetch(path, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(data||{})});
+  return r.json();
+}
+
+function esc(s){ return String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+// ── 메뉴 그리기 ──
+function renderMenu(){
+  $("#grid").innerHTML = TOOLS.map(t=>`
+    <button class="card" data-id="${t.id}">
+      <span class="num">${t.num}</span>
+      <span>
+        <h3>${esc(t.name.replace(/ 생성기$| 변환기$| 생성기$/,''))}</h3>
+        <p>${esc(t.desc)}</p>
+      </span>
+    </button>`).join("");
+  document.querySelectorAll(".card").forEach(c=>{
+    c.onclick = ()=> openTool(c.dataset.id);
+  });
+}
+
+// ── 도구 열기 ──
+function openTool(id, fromPopstate){
+  const t = TOOLS.find(x=>x.id===id);
+  if(!t) return;
+  current = t;
+  $("#tNum").textContent = t.num;
+  $("#tName").textContent = t.name;
+  $("#tTrigger").textContent = t.trigger;
+  $("#tUsage").textContent = t.usage;
+
+  $("#form").innerHTML = t.fields.map(f=>{
+    const req = f.required ? '<span class="req">*</span>' : '';
+    const ph = f.placeholder ? ` placeholder="${esc(f.placeholder)}"` : '';
+    const val = f.default ? esc(f.default) : '';
+    if(f.type==="textarea")
+      return `<div class="field"><label>${esc(f.label)}${req}</label><textarea data-key="${f.key}"${ph}>${val}</textarea></div>`;
+    const type = f.type==="number" ? "number" : "text";
+    return `<div class="field"><label>${esc(f.label)}${req}</label><input type="${type}" data-key="${f.key}"${ph} value="${val}"></div>`;
+  }).join("");
+
+  $("#msg").textContent = "";
+  $("#result").classList.remove("on");
+  $("#out").value = "";
+  $("#menu").style.display = "none";
+  $("#tool").classList.add("on");
+  window.scrollTo(0,0);
+
+  // 뒤로가기(브라우저/모바일)를 누르면 이전 웹페이지가 아니라 목록 화면으로 오도록 기록
+  if(!fromPopstate) history.pushState({promptboxTool:id}, "", location.href);
+}
+
+function backToMenu(fromPopstate){
+  $("#tool").classList.remove("on");
+  $("#menu").style.display = "";
+  current = null;
+  window.scrollTo(0,0);
+  if(!fromPopstate) history.back();
+}
+
+window.addEventListener("popstate", (e)=>{
+  if(e.state && e.state.promptboxTool) openTool(e.state.promptboxTool, true);
+  else if(current) backToMenu(true);
+});
+
+function collectInputs(){
+  const inputs = {};
+  document.querySelectorAll("#form [data-key]").forEach(el=> inputs[el.dataset.key] = el.value.trim());
+  return inputs;
+}
+
+let busy = false;
+async function generate(){
+  if(busy || !current) return;
+  const inputs = collectInputs();
+  // 필수칸 클라이언트 확인
+  for(const f of current.fields){
+    if(f.required && !inputs[f.key]){
+      showMsg("'"+f.label+"' 칸을 채워 주세요.", true);
+      return;
+    }
+  }
+  busy = true;
+  $("#gen").disabled = true;
+  showMsg('<span class="spinner"></span>AI가 만들고 있어요… (10~30초)', false);
+  try{
+    const res = await api("/api/generate", {tool: current.id, inputs});
+    if(!res.ok){ showMsg(res.error || "생성에 실패했어요.", true); return; }
+    $("#out").value = res.text || "";
+    $("#warn").style.display = res.truncated ? "" : "none";
+    $("#result").classList.add("on");
+    showMsg("완료! 아래에서 복사하세요.", false);
+    autoGrow($("#out"));
+    $("#result").scrollIntoView({behavior:"smooth", block:"nearest"});
+  }catch(e){
+    showMsg("네트워크 오류예요. 잠시 후 다시 시도해 주세요.", true);
+  }finally{
+    busy = false;
+    $("#gen").disabled = false;
+  }
+}
+
+function showMsg(html, isErr){
+  const m = $("#msg");
+  m.innerHTML = html;
+  m.className = "msg" + (isErr ? " err" : "");
+}
+
+function autoGrow(el){
+  el.style.height = "auto";
+  el.style.height = Math.min(el.scrollHeight + 4, 720) + "px";
+}
+
+async function copyOut(){
+  const text = $("#out").value;
+  if(!text) return;
+  try{
+    await navigator.clipboard.writeText(text);
+  }catch(e){
+    $("#out").select(); document.execCommand("copy");
+  }
+  const c = $("#copied");
+  c.style.display = "";
+  setTimeout(()=> c.style.display="none", 1600);
+}
+
+// ── 시작 ──
+(async function init(){
+  $("#back").onclick = ()=>backToMenu(false);
+  $("#gen").onclick = generate;
+  $("#regen").onclick = generate;
+  $("#copy").onclick = copyOut;
+  $("#out").addEventListener("input", ()=>autoGrow($("#out")));
+  try{
+    const info = await api("/api/tools", {});
+    if(info && info.ok){
+      TOOLS = info.tools || [];
+      if(info.appName){ $("#appName").textContent = info.appName; document.title = info.appName; }
+      renderMenu();
+    }else{
+      $("#grid").innerHTML = '<p class="msg err">도구 목록을 불러오지 못했어요. 새로고침 해 주세요.</p>';
+    }
+  }catch(e){
+    $("#grid").innerHTML = '<p class="msg err">서버에 연결하지 못했어요.</p>';
+  }
+})();
+</script>
+</body>
+</html>

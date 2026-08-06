@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head><meta charset="UTF-8"><title>vocab worker test</title>
+<style>body{font-family:monospace;font-size:13px;padding:16px}.p{color:green}.f{color:red;font-weight:bold}</style>
+</head>
+<body>
+<h3 id="summary">실행 중...</h3>
+<div id="log"></div>
+<script type="module">
+import worker from "./_worker.js";
+
+// ── 가짜 D1 (vocab_days / vocab_students2 / vocab_codes 재현) ──
+class FakeD1 {
+  constructor() { this.days = new Map(); this.students = new Map(); this.codes = new Map(); }
+  prepare(sql) {
+    const self = this;
+    return {
+      _args: [],
+      bind(...a) { this._args = a; return this; },
+      async run() {
+        if (sql.startsWith("CREATE")) return { meta: {} };
+        if (sql.includes("vocab_days")) {
+          if (sql.startsWith("INSERT")) {
+            const [day, section, data] = this._args;
+            const k = day + "|" + section;
+            if (self.days.has(k)) throw new Error("UNIQUE constraint failed");
+            self.days.set(k, data);
+            return { meta: { changes: 1 } };
+          }
+          throw new Error("unknown days sql: " + sql);
+        }
+        if (sql.includes("vocab_codes")) {
+          if (sql.startsWith("INSERT")) {
+            const [code, section, id] = this._args;
+            if (self.codes.has(code)) throw new Error("UNIQUE constraint failed");
+            self.codes.set(code, { section, id });
+            return { meta: { changes: 1 } };
+          }
+          throw new Error("unknown codes sql: " + sql);
+        }
+        if (sql.includes("vocab_students")) {
+          if (sql.startsWith("INSERT OR REPLACE")) {
+            const [section, id, data] = this._args;
+            self.students.set(section + "|" + id, data);
+            return { meta: { changes: 1 } };
+          }
+          throw new Error("unknown students sql: " + sql);
+        }
+        throw new Error("unknown sql: " + sql);
+      },
+      async first() {
+        if (!sql.startsWith("SELECT")) throw new Error("unknown sql: " + sql);
+        if (sql.includes("vocab_days")) {
+          const [day, section] = this._args;
+          const d = self.days.get(day + "|" + section);
+          return d ? { data: d } : null;
+        }
+        if (sql.includes("vocab_codes")) {
+          const [code] = this._args;
+          const row = self.codes.get(code);
+          return row ? { section: row.section, id: row.id } : null;
+        }
+        if (sql.includes("vocab_students")) {
+          const [section, id] = this._args;
+          const d = self.students.get(section + "|" + id);
+          return d ? { data: d } : null;
+        }
+        throw new Error("unknown sql: " + sql);
+      },
+      async all() {
+        if (sql.includes("vocab_days")) {
+          const [section, limit] = this._args;
+          const rows = [];
+          for (const [k, data] of self.days) {
+            const [day, sec] = k.split("|");
+            if (sec === section) rows.push({ day, data });
+          }
+          rows.sort((a, b) => (a.day < b.day ? 1 : -1));
+          return { results: rows.slice(0, limit) };
+        }
+        throw new Error("unknown all sql: " + sql);
+      },
+    };
+  }
+}
+
+// ── 가짜 Gemini API (학생이 아니라 Worker 만 AI를 호출하는지도 여기서 검증됨) ──
+let aiMode = "ok";        // ok | refusal | few | badjson | http500
+let aiCalls = 0;          // 호출 횟수
+let aiLastUrl = null;     // 마지막 요청 주소(모델명 확인용)
+let aiLastBody = null;    // 마지막 요청 본문
+let aiSeq = 0;            // 겹치지 않는 가짜 단어 생성용
+function fakeWords(n) {
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    aiSeq++;
+    const w = "낱말" + aiSeq;
+    out.push({ word: w, meaning: w + "의 뜻풀이입니다", example: "이 문장에는 " + w + " 가 들어 있다.", synonym: "비슷" + aiSeq, antonym: "반대" + aiSeq });
+  }
+  return out;
+}
+const realFetch = globalThis.fetch.bind(globalThis);
+globalThis.fetch = async (url, opt) => {
+  if (typeof url === "string" && url.includes("generativelanguage.googleapis.com")) {
+    aiCalls++;
+    aiLastUrl = url;
+    aiLastBody = JSON.parse(opt.body);
+    if (aiMode === "http500")
+      return new Response(JSON.stringify({ error: { message: "boom" } }), { status: 500 });
+    if (aiMode === "refusal")
+      return new Response(JSON.stringify({ candidates: [], promptFeedback: { blockReason: "SAFETY" } }), { status: 200 });
+    if (aiMode === "badjson")
+      return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: "이건 JSON이 아님" }] }, finishReason: "STOP" }] }), { status: 200 });
+    const n = aiMode === "few" ? 10 : 24;
+    return new Response(JSON.stringify({
+      candidates: [{ content: { parts: [{ text: JSON.stringify({ words: fakeWords(n) }) }] }, finishReason: "STOP" }],
+    }), { status: 200 });
+  }
+  return realFetch(url, opt);
+};
+
+let pass = 0, fail = 0;
+const log = document.getElementById("log");
+function check(name, cond) {
+  if (cond) { pass++; log.insertAdjacentHTML("beforeend", `<div class="p">[PASS] ${name}</div>`); }
+  else { fail++; log.insertAdjacentHTML("beforeend", `<div class="f">[FAIL] ${name}</div>`); }
+}
+function makeEnv(withKey) {
+  return withKey ? { DB: new FakeD1(), GEMINI_API_KEY: "test-key" } : { DB: new FakeD1() };
+}
+let env = makeEnv(true);
+async function post(path, body, useEnv) {
+  const r = await worker.fetch(new Request("https://v.test" + path, { method: "POST", body: JSON.stringify(body || {}), headers: { "Content-Type": "application/json" } }), useEnv || env);
+  return await r.json();
+}
+async function get(path) {
+  const r = await worker.fetch(new Request("https://v.test" + path), env);
+  return { status: r.status, text: await r.text() };
+}
+
+(async () => {
+try {
+  // 0. 정적 화면
+  let g = await get("/");
+  check("앱 화면 서빙(/)", g.status === 200 && g.text.includes("매일 어휘"));
+  g = await get("/api/info");
+  check("API 를 GET 으로 부르면 405", g.status === 405);
+  g = await get("/nothing.png");
+  check("없는 정적 주소 404", g.status === 404);
+
+  // 1. 기본 정보
+  let r = await post("/api/info", {});
+  check("앱 정보(섹션 3개)", r.ok && r.appName === "매일 어휘" && r.sections.length === 3 && r.sections.some(s => s.name === "6학년"));
+
+  // 2. 학생 시작하기 (기기별 id+별명, 개인정보 제로)
+  const DEV1 = "device-uuid-0001";
+  r = await post("/api/student/join", { section: "elem", id: DEV1, nickname: "파란고래" });
+  check("학생 신규 등록", r.ok && r.data.nickname === "파란고래" && r.data.streak === 0);
+  check("등록 시 코드 자동 발급(6자리)", /^[A-Z0-9]{6}$/.test(r.data.code || ""));
+  check("하루 목표 기본값 20", r.data.dailyGoal === 20);
+  const today = r.today;
+  check("오늘 날짜 반환(YYYY-MM-DD)", /^\d{4}-\d{2}-\d{2}$/.test(today));
+  r = await post("/api/student/join", { section: "elem", id: DEV1, nickname: "아무거나(무시됨)" });
+  check("같은 기기 재접속 허용, 별명은 서버 값 유지", r.ok && r.data.nickname === "파란고래");
+  r = await post("/api/student/join", { section: "high", id: "device-uuid-0002", nickname: "파란고래" });
+  check("다른 기기는 같은 별명 써도 등록 가능(별명 유일성 없음)", r.ok);
+  r = await post("/api/student/join", { section: "elem", id: "", nickname: "가" });
+  check("기기 id 없으면 거부", !r.ok);
+  r = await post("/api/student/join", { section: "elem", id: "device-uuid-0003", nickname: "  " });
+  check("빈 별명(신규 등록)은 거부", !r.ok);
+  r = await post("/api/student/join", { section: "college", id: "device-uuid-0004", nickname: "가" });
+  check("없는 레벨 거부", !r.ok);
+  r = await post("/api/student/join", { section: "middle", id: DEV1, nickname: "중등이" });
+  check("다른 레벨에는 같은 기기 id로도 별개 등록", r.ok && r.data.nickname === "중등이");
+  r = await post("/api/student/rename", { section: "elem", id: DEV1, nickname: "노란별" });
+  check("별명 변경", r.ok && r.data.nickname === "노란별");
+  r = await post("/api/student/join", { section: "elem", id: DEV1, nickname: "안먹힘" });
+  check("변경된 별명이 재접속에도 유지", r.ok && r.data.nickname === "노란별");
+  r = await post("/api/student/rename", { section: "elem", id: "device-uuid-9999", nickname: "누구게" });
+  check("등록 안 된 기기의 별명 변경 거부", !r.ok);
+  // 이후 테스트는 "파란고래" 별명 기준으로 이어가므로 다시 되돌려 둔다.
+  r = await post("/api/student/rename", { section: "elem", id: DEV1, nickname: "파란고래" });
+  check("별명 되돌리기", r.ok && r.data.nickname === "파란고래");
+
+  // 1-1. 하루 목표(dailyGoal) 지정 등록
+  r = await post("/api/student/join", { section: "high", id: "device-uuid-goal1", nickname: "목표학생", dailyGoal: 10 });
+  check("가입 시 지정한 하루 목표(10) 반영", r.ok && r.data.dailyGoal === 10);
+  r = await post("/api/student/join", { section: "high", id: "device-uuid-goal2", nickname: "목표학생2", dailyGoal: 13 });
+  check("허용 안 된 목표값은 기본값(20)으로", r.ok && r.data.dailyGoal === 20);
+
+  // 2-1. 다른 기기에서 코드로 이어하기 / 부모 읽기전용 열람
+  r = await post("/api/student/join", { section: "elem", id: DEV1 });
+  const myCode = r.data.code;
+  r = await post("/api/student/link", { code: myCode.toLowerCase() }); // 소문자로 넣어도 되는지
+  check("코드로 이어하기(대소문자 무시)", r.ok && r.section === "elem" && r.id === DEV1 && r.data.nickname === "파란고래");
+  r = await post("/api/student/link", { code: "ZZZZZZ" });
+  check("없는 코드로 이어하기 거부", !r.ok);
+  r = await post("/api/student/link", { code: "짧음" });
+  check("형식이 이상한 코드 거부", !r.ok);
+  r = await post("/api/parent/view", { code: myCode });
+  check("부모 읽기전용 열람", r.ok && r.sectionName === "6학년" && r.data.nickname === "파란고래" && r.data.streak === 0);
+  r = await post("/api/parent/view", { code: "ZZZZZZ" });
+  check("없는 코드로 부모 열람 거부", !r.ok);
+
+  // 3. 오늘의 어휘 — AI 생성 (Worker 가 서버에서 생성, 학생은 결과만 받음)
+  aiCalls = 0;
+  r = await post("/api/today", { section: "elem" });
+  check("오늘의 어휘 AI 생성", r.ok && r.words.length === 20);
+  check("AI 는 1번만 호출됨", aiCalls === 1);
+  check("어휘 필드(word/meaning/example/synonym/antonym)", r.words.every(w => w.word && w.meaning && "example" in w && "synonym" in w && "antonym" in w));
+  check("요청 모델 확인(gemini-flash-lite-latest)", aiLastUrl.includes("gemini-flash-lite-latest"));
+  check("구조화 출력(responseSchema) 사용", aiLastBody.generationConfig && aiLastBody.generationConfig.responseMimeType === "application/json" && !!aiLastBody.generationConfig.responseSchema);
+  const firstWord = r.words[0].word;
+  r = await post("/api/today", { section: "elem" });
+  check("두 번째 요청은 저장된 세트 재사용", r.ok && r.words[0].word === firstWord);
+  check("재사용 시 AI 호출 없음", aiCalls === 1);
+  r = await post("/api/today", { section: "bad" });
+  check("레벨 없이 오늘 어휘 요청 거부", !r.ok);
+
+  // 3-1. day 파라미터 (요일 탭 미리 학습용)
+  function addDaysStr(day, n) {
+    const dd = new Date(day + "T12:00:00+09:00");
+    dd.setDate(dd.getDate() + n);
+    return new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Seoul" }).format(dd);
+  }
+  aiCalls = 0;
+  const tomorrow = addDaysStr(today, 1);
+  r = await post("/api/today", { section: "elem", day: tomorrow });
+  check("day 파라미터로 다른 날짜 미리 생성", r.ok && r.day === tomorrow && r.words.length === 20 && aiCalls === 1);
+  r = await post("/api/today", { section: "elem", day: tomorrow });
+  check("같은 미래 날짜 재요청은 캐시 재사용(AI 재호출 없음)", r.ok && aiCalls === 1);
+  r = await post("/api/today", { section: "elem", day: "2099-01-01" });
+  check("허용 범위 밖 날짜 거부", !r.ok);
+  r = await post("/api/today", { section: "elem", day: "20260101" });
+  check("형식이 이상한 날짜 거부", !r.ok);
+
+  // 4. AI 오류 처리
+  const envNoKey = makeEnv(false);
+  r = await post("/api/today", { section: "elem" }, envNoKey);
+  check("API 키 없으면 안내 메시지", !r.ok && r.error.includes("GEMINI_API_KEY"));
+  aiMode = "refusal";
+  r = await post("/api/today", { section: "middle" });
+  check("AI 거절 응답 처리", !r.ok);
+  aiMode = "badjson";
+  r = await post("/api/today", { section: "middle" });
+  check("JSON 해석 실패 처리", !r.ok);
+  aiMode = "few";
+  r = await post("/api/today", { section: "middle" });
+  check("어휘 부족(10개) 거부", !r.ok && r.error.includes("10"));
+  aiMode = "http500";
+  r = await post("/api/today", { section: "middle" });
+  check("AI 서버 오류(500) 처리", !r.ok);
+  aiMode = "ok";
+  r = await post("/api/today", { section: "middle" });
+  check("복구 후 중등 생성 성공", r.ok && r.words.length === 20);
+
+  // 5. 학생 진행 저장
+  r = await post("/api/student/join", { section: "elem", id: DEV1 });
+  const data = r.data;
+  data.days[today] = { sets: [true, true, false], quiz: { done: false, correct: 0, total: 0 }, done: false };
+  r = await post("/api/student/save", { section: "elem", id: DEV1, data });
+  check("진행 저장", r.ok);
+  r = await post("/api/student/join", { section: "elem", id: DEV1 });
+  check("저장한 진행 다시 읽기", r.ok && r.data.days[today].sets.filter(Boolean).length === 2);
+  data.nickname = "가짜별명"; // 클라이언트가 데이터 안의 별명을 조작해도
+  r = await post("/api/student/save", { section: "elem", id: DEV1, data });
+  check("저장 자체는 성공(진행 데이터는 신뢰)", r.ok);
+  r = await post("/api/student/join", { section: "elem", id: DEV1 });
+  check("별명은 rename API 를 거치지 않으면 서버 값 그대로 유지", r.ok && r.data.nickname === "파란고래");
+  r = await post("/api/student/save", { section: "elem", id: "device-uuid-9999", data });
+  check("미등록 학생 저장 거부", !r.ok);
+
+  // 6. 없는 주소
+  r = await post("/api/what", {});
+  check("없는 API 주소 404", !r.ok);
+
+} catch (e) {
+  fail++;
+  log.insertAdjacentHTML("beforeend", `<div class="f">[ERROR] ${e && e.stack || e}</div>`);
+}
+const s = document.getElementById("summary");
+s.textContent = `PASS ${pass} / FAIL ${fail}` + (fail === 0 ? " — 전부 통과 ✅" : " ❌");
+s.style.color = fail === 0 ? "green" : "red";
+})();
+</script>
+</body>
+</html>

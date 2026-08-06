@@ -1,0 +1,14 @@
+{
+  "name": "sudam-teacher-server",
+  "version": "2.0.0",
+  "description": "수담(數談) v2 교사 백엔드 — 토론방 공유 + AI 반례 카드 + 음성 받아쓰기 (외부 의존성 없음)",
+  "type": "commonjs",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {}
+}

@@ -29,6 +29,30 @@
 !/build-ideaboard-worker.ps1
 !/ideaboard-server.ps1
 
+# ↓ 매일 어휘 30 (AI 어휘 학습, Cloudflare Worker + D1 + Gemini)
+!/vocab-app/
+!/vocab-worker.template.js
+!/vocab-worker.js
+!/build-vocab-worker.ps1
+!/vocab-server.ps1
+
+# ↓ 매일 영단어 30 (AI 영단어 학습, Cloudflare Worker + D1 + Gemini)
+!/engword-app/
+!/engword-worker.template.js
+!/engword-worker.js
+!/build-engword-worker.ps1
+!/engword-server.ps1
+
+# ↓ 수담(數談) 음성 입력 (Level 0 오프라인 + Node 서버 + Cloudflare Worker)
+!/sudam/
+
+# ↓ 선생님 도구상자 (교사 업무 프롬프트 10종, Cloudflare Worker + Gemini)
+!/promptbox-app/
+!/promptbox-worker.template.js
+!/promptbox-worker.js
+!/build-promptbox.ps1
+!/promptbox-server.ps1
+
 # ───────────────────────────────────────────────
 #  안전장치: 아래는 절대 올리지 않음 (비밀·개인정보)
 # ───────────────────────────────────────────────

@@ -1,0 +1,1937 @@
+/*
+ * 수담(數談) v2 — 논쟁 지속형 수학 토론 소프트웨어 (Cloudflare Worker)
+ * ──────────────────────────────────────────────────────────
+ * 학생 화면(index.html)과 교사 백엔드 API(/api/*)를 이 워커 하나가 함께 제공합니다.
+ * 학생 기기는 생성형 AI를 직접 호출하지 않고(C3), 이 워커가 대신 Google Gemini를 호출합니다.
+ *  - 주소: https://<워커주소>/
+ *
+ * ※ 이 파일은 build-sudam-worker.ps1 이 만든 자동 생성본입니다.
+ *    화면(sudam/index.html)을 고친 뒤에는 빌드 스크립트를 다시 실행하세요.
+ *
+ * 설정 (Cloudflare 대시보드에서 1회만):
+ *  1. Workers & Pages → Create → Worker 생성 (이름 예: sudam)
+ *  2. 이 파일(sudam-worker.js) 내용을 그대로 붙여넣고 Deploy
+ *  3. Worker → Settings → Bindings → Add → D1 Database
+ *     - Variable name: DB  (반드시 이 이름 그대로!)
+ *     - D1 database: 미리 만들어 둔 데이터베이스 선택 (이름 예: sudam)
+ *     ※ D1 을 연결해야 여러 기기가 같은 토론방에 함께 들어갈 수 있습니다.
+ *       연결하지 않으면 화면은 열리지만 방 공유가 되지 않습니다.
+ *  4. Worker → Settings → Variables and Secrets → Add (Type: Secret)
+ *     - GEMINI_API_KEY = (Google AI Studio 에서 발급받은 Gemini 키)
+ *     ※ 키는 서버에만 저장되고 학생 화면으로 절대 전달되지 않습니다(C3).
+ *       키가 없어도 토론 기능은 모두 동작하며, 반례 카드만 사전 준비본을 씁니다.
+ *  5. (선택) Type: Text 로 아래 값 추가
+ *     - CLASS_CODE   = 4자리 교실 코드 (기본 0000, 외부 오남용 차단)
+ *     - GEMINI_MODEL = gemini-flash-lite-latest (기본값)
+ *     - CF_AIG_ACCOUNT_ID / CF_AIG_GATEWAY : AI Gateway 경유가 필요할 때만
+ *
+ * 개인정보: 실명·사진·연락처 필드 없음(출석번호+별명만, C2).
+ *          로그에 학생 발화 내용을 남기지 않음. 음성 원본은 저장하지 않음.
+ */
+
+const APP_HTML = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>수담(數談) — 수학 토론 소프트웨어</title>
+<style>
+  /* ── 토큰: 칠판 교실 모티프 ───────────────────────────── */
+  :root{
+    --board:#2e4638; --board-2:#39543f; --board-edge:#1c2c22;
+    --chalk:#f7f4ec; --chalk-dim:#c3cfc4;
+    --accent:#f2c14e; --accent-ink:#3a2e08;
+    --ink:#25312a; --ink-dim:#6a7566;
+    --paper:#fbfaf6; --line:#dfe4da;
+    --warn:#d06a4e; --ok:#3b7a4a; --minor:#7b61a8;
+    --r:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    background:var(--paper);color:var(--ink);min-height:100vh}
+  button{font-family:inherit;cursor:pointer;border:none}
+  button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{
+    outline:3px solid var(--accent);outline-offset:2px}
+
+  /* ── 헤더 (C6: 보고서 제목·대상학년) ─────────────────── */
+  header{background:var(--board);color:var(--chalk);border-bottom:6px solid var(--board-edge);
+    padding:14px 18px}
+  .hd-wrap{max-width:1180px;margin:0 auto;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  .hd-main{flex:1;min-width:260px}
+  .hd-report{font-size:14px;color:var(--chalk-dim);line-height:1.5}
+  .hd-title{font-size:21px;font-weight:800;margin-top:3px}
+  .hd-title .hanja{color:var(--accent)}
+  .hd-grade{display:inline-block;margin-top:5px;font-size:12.5px;
+    border:1px solid rgba(247,244,236,.4);border-radius:999px;padding:2px 11px}
+  .hd-side{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .pill{font-size:12px;font-weight:700;border-radius:999px;padding:4px 11px}
+  .pill-net{background:rgba(247,244,236,.14);color:var(--chalk)}
+  .pill-net.on{background:var(--ok);color:#fff}
+  .pill-net.off{background:var(--accent);color:var(--accent-ink)}
+  .hd-btn{background:rgba(247,244,236,.14);color:var(--chalk);border-radius:9px;
+    padding:7px 13px;font-size:13px;font-weight:700}
+
+  main{max-width:1180px;margin:0 auto;padding:18px 16px 70px}
+  .screen{display:none}
+  .screen.active{display:block}
+
+  .card{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-top:14px}
+  .card h2{font-size:14px;color:var(--ink-dim);font-weight:700;letter-spacing:.03em;margin-bottom:11px}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .grow{flex:1;min-width:0}
+  label.fl{display:block;font-size:12.5px;color:var(--ink-dim);font-weight:700;margin-bottom:5px}
+  input[type=text],input[type=number],textarea,select{
+    width:100%;border:1px solid var(--line);border-radius:10px;padding:11px 12px;
+    font-size:15.5px;font-family:inherit;background:#fff;color:var(--ink)}
+  textarea{min-height:80px;resize:vertical;line-height:1.6}
+  .hint{font-size:12.5px;color:var(--ink-dim);line-height:1.6;margin-top:6px}
+
+  .btn{border-radius:10px;padding:13px 18px;font-size:15.5px;font-weight:700}
+  .btn-main{background:var(--ink);color:#fff}
+  .btn-main:disabled{background:#c8cfc7;color:#8e968c;cursor:not-allowed}
+  .btn-accent{background:var(--accent);color:var(--accent-ink);box-shadow:0 3px 0 #c79a2e}
+  .btn-accent:active{transform:translateY(1px);box-shadow:0 2px 0 #c79a2e}
+  .btn-ghost{background:#fff;border:1.5px solid var(--line);color:var(--ink)}
+  .btn-sm{padding:8px 13px;font-size:13.5px;border-radius:9px}
+  .btn-wide{width:100%}
+
+  /* ── 시작 화면 ────────────────────────────────────── */
+  .role-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
+  @media (max-width:640px){.role-grid{grid-template-columns:1fr}}
+  .role{background:var(--board);color:var(--chalk);border-radius:var(--r);padding:22px;
+    text-align:left;border-bottom:5px solid var(--board-edge)}
+  .role h3{font-size:19px;font-weight:800;margin-bottom:7px}
+  .role p{font-size:13.5px;color:var(--chalk-dim);line-height:1.65}
+  .role:hover{background:var(--board-2)}
+
+  /* ── 발문(논제) 배너 ──────────────────────────────── */
+  .prompt-box{background:var(--board);color:var(--chalk);border-radius:var(--r);
+    padding:17px 18px;margin-top:14px;border-bottom:5px solid var(--board-edge)}
+  .prompt-meta{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:9px}
+  .chip{background:var(--accent);color:var(--accent-ink);font-size:11.5px;font-weight:800;
+    border-radius:999px;padding:3px 10px}
+  .chip-g{background:transparent;color:var(--chalk-dim);border:1px solid rgba(247,244,236,.35);font-weight:700}
+  .prompt-text{font-size:18px;font-weight:800;line-height:1.55}
+  .prompt-sub{margin-top:7px;font-size:13px;color:var(--chalk-dim);line-height:1.6}
+
+  /* ── 입장 선택 (A~D) ─────────────────────────────── */
+  .stance-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  @media (max-width:640px){.stance-grid{grid-template-columns:1fr}}
+  .stance{background:#fff;border:1.5px solid var(--line);border-radius:11px;padding:12px 13px;
+    text-align:left;font-size:14.5px;color:var(--ink);line-height:1.5}
+  .stance b{display:block;font-size:12px;color:var(--ink-dim);margin-bottom:3px}
+  .stance[aria-pressed="true"]{background:var(--board);color:var(--chalk);border-color:var(--board)}
+  .stance[aria-pressed="true"] b{color:var(--accent)}
+
+  /* ── 근거 태그 ───────────────────────────────────── */
+  .tag-row{display:flex;gap:7px;flex-wrap:wrap}
+  .tagbtn{background:#fff;border:1.5px solid var(--line);border-radius:999px;
+    padding:8px 13px;font-size:13.5px;font-weight:700;color:var(--ink)}
+  .tagbtn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+
+  /* ── 공유 칠판 (F1) ──────────────────────────────── */
+  .board-wrap{background:var(--board);border-radius:var(--r);padding:14px;margin-top:14px;
+    border-bottom:5px solid var(--board-edge)}
+  .board-head{display:flex;justify-content:space-between;align-items:center;gap:10px;
+    flex-wrap:wrap;margin-bottom:11px}
+  .board-head h3{color:var(--chalk);font-size:15px;font-weight:800}
+  .board-head .sub{color:var(--chalk-dim);font-size:12.5px}
+  .stance-group{margin-bottom:13px}
+  .sg-label{display:flex;align-items:center;gap:7px;color:var(--chalk);font-size:12.5px;
+    font-weight:700;margin-bottom:7px}
+  .sg-count{background:rgba(247,244,236,.16);border-radius:999px;padding:2px 9px;font-size:11.5px}
+  .sg-minor{background:var(--minor);color:#fff;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:800}
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:8px}
+  .rcard{background:#fdfcf8;border-radius:10px;padding:9px 10px;text-align:left;
+    border-left:4px solid var(--accent);min-height:78px;display:flex;flex-direction:column;gap:4px}
+  .rcard .nick{font-size:11.5px;color:var(--ink-dim);font-weight:700;
+    display:flex;justify-content:space-between;gap:6px;align-items:center}
+  .rcard .claim{font-size:13.5px;font-weight:700;line-height:1.4;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .rcard .reason{font-size:12px;color:var(--ink-dim);line-height:1.45;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .rcard .foot{display:flex;gap:5px;align-items:center;margin-top:auto;flex-wrap:wrap}
+  .minitag{font-size:10.5px;font-weight:800;background:#eee7d2;color:#6a5a24;
+    border-radius:999px;padding:2px 7px}
+  .react{font-size:10.5px;color:var(--ink-dim);font-weight:700}
+  .rcard.mine{border-left-color:var(--ok);background:#f4faf5}
+
+  /* 반례 카드 (F4) */
+  .counter-slot{margin-top:12px;background:#fffdf4;border:2px dashed var(--accent);
+    border-radius:12px;padding:13px 14px}
+  .counter-slot .lab{font-size:11.5px;font-weight:800;color:#8a7430;letter-spacing:.03em}
+  .counter-card{margin-top:8px;background:#fff;border-radius:10px;padding:11px 12px;
+    font-size:14.5px;line-height:1.55;border-left:4px solid var(--warn)}
+
+  /* ── 대시보드 (F6) ───────────────────────────────── */
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .stat{background:#fff;border:1px solid var(--line);border-radius:12px;padding:13px}
+  .stat .k{font-size:12px;color:var(--ink-dim);font-weight:700}
+  .stat .v{font-size:25px;font-weight:800;margin-top:3px;font-variant-numeric:tabular-nums}
+  .stat.warn{border-color:var(--warn);background:#fdf3f0}
+  .stat.warn .v{color:var(--warn)}
+  .bar{height:11px;background:#eef0ec;border-radius:999px;overflow:hidden;margin-top:6px}
+  .bar > i{display:block;height:100%;background:var(--board)}
+  .dist{display:flex;flex-direction:column;gap:8px}
+  .dist-row{display:grid;grid-template-columns:104px 1fr 44px;gap:9px;align-items:center;font-size:13px}
+  .dist-row .n{text-align:right;font-variant-numeric:tabular-nums;color:var(--ink-dim);font-weight:700}
+  .alert{background:#fdf3f0;border:1.5px solid var(--warn);color:#8c3d24;border-radius:11px;
+    padding:12px 14px;font-size:14px;line-height:1.6;margin-top:12px}
+  .alert b{color:var(--warn)}
+
+  /* ── 모달 ────────────────────────────────────────── */
+  .modal{display:none;position:fixed;inset:0;background:rgba(28,44,34,.55);z-index:40;
+    align-items:center;justify-content:center;padding:18px}
+  .modal.open{display:flex}
+  .modal-box{background:#fff;border-radius:16px;max-width:520px;width:100%;padding:20px;
+    max-height:86vh;overflow:auto}
+  .modal-box h3{font-size:17px;font-weight:800;margin-bottom:11px}
+  .modal-box .kv{font-size:12.5px;color:var(--ink-dim);font-weight:700;margin-top:12px}
+  .modal-box .tx{font-size:15px;line-height:1.65;margin-top:4px;white-space:pre-wrap}
+
+  /* ── 설정 패널 (C10) ─────────────────────────────── */
+  .panel{display:none;position:fixed;right:0;top:0;bottom:0;width:min(400px,100%);
+    background:#fff;border-left:1px solid var(--line);z-index:45;padding:20px;overflow:auto;
+    box-shadow:-8px 0 26px rgba(0,0,0,.12)}
+  .panel.open{display:block}
+  .panel h3{font-size:17px;font-weight:800;margin-bottom:5px}
+  .panel .grp{margin-top:17px;padding-top:15px;border-top:1px solid var(--line)}
+  .panel .grp:first-of-type{border-top:none;padding-top:0}
+
+  .steps{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+  .step{flex:1;min-width:88px;background:#fff;border:1.5px solid var(--line);border-radius:10px;
+    padding:9px 6px;font-size:12.5px;font-weight:700;color:var(--ink-dim);text-align:center}
+  .step[aria-current="true"]{background:var(--board);color:var(--chalk);border-color:var(--board)}
+
+  .empty{color:var(--chalk-dim);font-size:13.5px;padding:16px;text-align:center;line-height:1.6}
+  .notice-box{background:#fffdf4;border:1.5px dashed var(--accent);border-radius:var(--r);
+    padding:13px 15px;font-size:13.5px;line-height:1.7;color:#6a5a24;margin-top:14px}
+  .notice-box b{color:var(--ink)}
+  table.mini{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+  table.mini th,table.mini td{border:1px solid var(--line);padding:6px 8px;text-align:left}
+  table.mini th{background:#f3f5f1;font-weight:700;color:var(--ink-dim)}
+
+  /* 마이크 (보조 입력) */
+  .mic-line{display:flex;gap:9px;align-items:center;margin-top:8px}
+  .btn-mic{width:44px;height:44px;border-radius:50%;background:var(--accent);color:var(--accent-ink);
+    font-size:19px;flex:none;box-shadow:0 3px 0 #c79a2e}
+  .btn-mic:disabled{background:#e3e0d6;color:#a9a698;box-shadow:none;cursor:not-allowed}
+  .btn-mic.rec{background:var(--warn);color:#fff;box-shadow:0 3px 0 #a34c35}
+  .mic-hint{font-size:12px;color:var(--ink-dim);line-height:1.5}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hd-wrap">
+    <div class="hd-main">
+      <div class="hd-report" id="hdReport"></div>
+      <div class="hd-title">수담<span class="hanja">(數談)</span></div>
+      <span class="hd-grade" id="hdGrade"></span>
+    </div>
+    <div class="hd-side">
+      <span class="pill pill-net" id="netPill">연결 확인 중…</span>
+      <button class="hd-btn" id="btnSettings" type="button">⚙ 교사 설정</button>
+      <button class="hd-btn" id="btnHome" type="button">처음으로</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- ═══ 시작 화면 ═══ -->
+  <section class="screen active" id="scHome">
+    <div class="card">
+      <h2>어떤 역할로 들어갈까요?</h2>
+      <div class="role-grid">
+        <button class="role" id="goTeacher" type="button">
+          <h3>선생님</h3>
+          <p>토론방을 열고 논제를 고릅니다. 학생 응답을 실시간으로 보고, 반례 카드를 투입하며 토론을 이끕니다.</p>
+        </button>
+        <button class="role" id="goStudent" type="button">
+          <h3>학생</h3>
+          <p>방 번호를 넣고 들어갑니다. 내 주장과 그렇게 생각한 까닭을 적고, 친구들의 생각과 겨루어 봅니다.</p>
+        </button>
+      </div>
+    </div>
+    <div class="notice-box" id="offlineNote" style="display:none">
+      지금은 파일을 직접 열어 <b>교사 서버가 없는 상태</b>입니다. 이 상태에서도 모든 화면과 기능을 확인할 수 있도록
+      <b>한 화면 안에서 선생님·학생 역할을 오가며</b> 동작합니다(설정에서 시연용 응답을 채울 수 있습니다).
+      실제 수업에서는 교사 서버에 접속해 여러 기기가 같은 방에 함께 들어갑니다.
+    </div>
+  </section>
+
+  <!-- ═══ 교사: 방 개설 ═══ -->
+  <section class="screen" id="scTeacherSetup">
+    <div class="card">
+      <h2>토론방 열기</h2>
+      <div class="row">
+        <div class="grow" style="min-width:180px">
+          <label class="fl" for="selLesson">차시</label>
+          <select id="selLesson"></select>
+        </div>
+        <div class="grow" style="min-width:180px">
+          <label class="fl" for="selUnit">단원</label>
+          <select id="selUnit"></select>
+        </div>
+        <div class="grow" style="min-width:150px">
+          <label class="fl" for="selType">과제 유형</label>
+          <select id="selType"></select>
+        </div>
+      </div>
+      <div style="margin-top:12px">
+        <label class="fl" for="selPrompt">논제 (발문)</label>
+        <select id="selPrompt"></select>
+        <div class="hint" id="promptHint"></div>
+      </div>
+      <div class="row" style="margin-top:14px">
+        <button class="btn btn-accent grow" id="btnOpenRoom" type="button">이 논제로 토론방 열기</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 학생: 입장 ═══ -->
+  <section class="screen" id="scJoin">
+    <div class="card">
+      <h2>토론방 들어가기</h2>
+      <div class="row">
+        <div class="grow" style="min-width:120px">
+          <label class="fl" for="inCode">방 번호</label>
+          <input id="inCode" type="text" maxlength="4" inputmode="numeric" placeholder="예) 4821">
+        </div>
+        <div class="grow" style="min-width:110px">
+          <label class="fl" for="inSeat">출석번호</label>
+          <input id="inSeat" type="number" min="1" max="40" inputmode="numeric" placeholder="예) 12">
+        </div>
+        <div class="grow" style="min-width:140px">
+          <label class="fl" for="inNick">별명</label>
+          <input id="inNick" type="text" maxlength="10" placeholder="예) 파란연필">
+        </div>
+      </div>
+      <div class="hint">실명은 쓰지 않아요. 칠판에는 <b>별명만</b> 보이고, 출석번호는 선생님 화면에서만 보입니다.</div>
+      <button class="btn btn-accent btn-wide" id="btnJoin" type="button" style="margin-top:14px">들어가기</button>
+    </div>
+  </section>
+
+  <!-- ═══ 학생: 주장·근거 입력 (F2) ═══ -->
+  <section class="screen" id="scInput">
+    <div class="steps" id="stepsInput"></div>
+    <div class="prompt-box">
+      <div class="prompt-meta">
+        <span class="chip" id="ipType"></span>
+        <span class="chip chip-g" id="ipMeta"></span>
+      </div>
+      <div class="prompt-text" id="ipPrompt"></div>
+      <div class="prompt-sub" id="ipIssue"></div>
+    </div>
+
+    <div class="card">
+      <h2>① 나의 입장을 골라 주세요</h2>
+      <div class="stance-grid" id="stanceGrid"></div>
+    </div>
+
+    <div class="card">
+      <h2>② 나의 주장</h2>
+      <textarea id="inClaim" placeholder="예) 나는 두 번째 그래프가 사실을 더 잘 보여준다고 생각해." aria-label="나의 주장"></textarea>
+      <h2 style="margin-top:15px">③ 그렇게 생각한 까닭 <span style="color:var(--warn)">(꼭 필요해요)</span></h2>
+      <textarea id="inReason" placeholder="예) 왜냐하면 세로축이 0에서 시작해서 차이가 부풀려지지 않았기 때문이야." aria-label="그렇게 생각한 까닭"></textarea>
+      <div class="mic-line">
+        <button class="btn-mic" id="btnMic" type="button" aria-label="누르고 있는 동안 말하기">🎤</button>
+        <div class="mic-hint" id="micHint">꾹 누르고 말하면 까닭 칸에 받아써 줘요 (키보드가 기본이에요)</div>
+      </div>
+      <h2 style="margin-top:15px">④ 내 근거는 어떤 종류인가요?</h2>
+      <div class="tag-row" id="tagRow"></div>
+      <button class="btn btn-main btn-wide" id="btnSubmit" type="button" style="margin-top:15px" disabled>칠판에 올리기</button>
+      <div class="hint" id="submitHint">까닭을 적어야 올릴 수 있어요.</div>
+    </div>
+  </section>
+
+  <!-- ═══ 공유 칠판 (F1/F3/F4) ═══ -->
+  <section class="screen" id="scBoard">
+    <div class="steps" id="stepsBoard"></div>
+    <div class="prompt-box">
+      <div class="prompt-meta">
+        <span class="chip" id="bdType"></span>
+        <span class="chip chip-g" id="bdMeta"></span>
+      </div>
+      <div class="prompt-text" id="bdPrompt"></div>
+    </div>
+
+    <div class="board-wrap">
+      <div class="board-head">
+        <div>
+          <h3>우리 반 생각 칠판</h3>
+          <div class="sub" id="bdCount"></div>
+        </div>
+        <div class="row" id="bdTools"></div>
+      </div>
+      <div id="boardBody"></div>
+      <div class="counter-slot" id="counterSlot" style="display:none">
+        <div class="lab">🔥 반례 카드 — 답이 아니라 질문입니다</div>
+        <div id="counterList"></div>
+      </div>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn btn-ghost" id="btnBackInput" type="button">내 생각 고치기</button>
+      <button class="btn btn-accent grow" id="btnToSecond" type="button">토론 끝 — 2차 입장 정하기</button>
+    </div>
+  </section>
+
+  <!-- ═══ 2차 재투표 (F5) ═══ -->
+  <section class="screen" id="scSecond">
+    <div class="steps" id="stepsSecond"></div>
+    <div class="prompt-box">
+      <div class="prompt-text" id="sdPrompt"></div>
+      <div class="prompt-sub" id="sdFirst"></div>
+    </div>
+    <div class="card">
+      <h2>토론이 끝난 지금, 내 입장은?</h2>
+      <div class="stance-grid" id="stance2Grid"></div>
+    </div>
+    <div class="card" id="changeBox" style="display:none">
+      <h2>입장을 바꾸었네요. 무엇 때문인가요?</h2>
+      <div class="tag-row" id="reasonRow"></div>
+    </div>
+    <div class="card">
+      <h2>지금 내 근거를 다시 적는다면</h2>
+      <textarea id="inReason2" placeholder="토론에서 들은 이야기를 반영해 다시 적어 보세요." aria-label="2차 근거"></textarea>
+      <h2 style="margin-top:15px">내 근거의 종류</h2>
+      <div class="tag-row" id="tag2Row"></div>
+      <button class="btn btn-main btn-wide" id="btnSubmit2" type="button" style="margin-top:15px" disabled>2차 입장 올리기</button>
+    </div>
+  </section>
+
+  <!-- ═══ 문제 출제 보드 (F7) ═══ -->
+  <section class="screen" id="scCreate">
+    <div class="steps" id="stepsCreate"></div>
+    <div class="card">
+      <h2>친구들이 갈라질 문제를 만들어 봅시다</h2>
+      <div class="hint" style="margin-bottom:11px">문제를 내기 전에 스스로 점검해 보세요. 세 가지에 모두 표시해야 낼 수 있어요.</div>
+      <div class="tag-row" id="checkRow"></div>
+      <textarea id="inProblem" placeholder="예) 우리 반 급식 잔반량을 조사해 그래프로 그릴 때, 어떤 그래프가 옳은지 친구들이 갈라질 문제를 내 봅시다." aria-label="내가 만든 문제" style="margin-top:13px"></textarea>
+      <h2 style="margin-top:15px">이 문제는 어떤 유형인가요?</h2>
+      <div class="tag-row" id="ptypeRow"></div>
+      <button class="btn btn-main btn-wide" id="btnSubmitProblem" type="button" style="margin-top:15px" disabled>문제 내기</button>
+    </div>
+    <div class="card">
+      <h2>우리 반이 만든 문제</h2>
+      <div id="problemList"></div>
+    </div>
+  </section>
+
+  <!-- ═══ 교사 대시보드 (F6) ═══ -->
+  <section class="screen" id="scDash">
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <div>
+          <h2 style="margin:0">토론방 <span id="dashCode" style="color:var(--ink);font-size:19px"></span></h2>
+          <div class="hint" id="dashPrompt" style="margin-top:5px"></div>
+        </div>
+        <div class="row">
+          <button class="btn btn-ghost btn-sm" id="btnDashBoard" type="button">칠판 보기</button>
+          <button class="btn btn-ghost btn-sm" id="btnDashCsv" type="button">자료 내보내기</button>
+        </div>
+      </div>
+      <div class="steps" id="stepsDash" style="margin-top:13px"></div>
+    </div>
+
+    <div class="card">
+      <h2>참여 현황</h2>
+      <div class="stat-grid" id="dashStats"></div>
+      <div id="dashAlert"></div>
+    </div>
+
+    <div class="card">
+      <h2>입장 분포 (쏠림 확인)</h2>
+      <div class="dist" id="dashStance"></div>
+    </div>
+
+    <div class="card">
+      <h2>근거 유형 분포</h2>
+      <div class="dist" id="dashTags"></div>
+    </div>
+
+    <div class="card">
+      <h2>반례 카드 투입</h2>
+      <div class="hint">카드는 <b>질문만</b> 담습니다. 답을 알려 주지 않습니다.</div>
+      <div class="row" style="margin-top:11px">
+        <button class="btn btn-accent" id="btnCounterPreset" type="button">준비된 반례 카드 넣기</button>
+        <button class="btn btn-ghost" id="btnCounterAi" type="button">AI에게 반례 카드 받기</button>
+      </div>
+      <div class="hint" id="counterMsg" style="min-height:18px"></div>
+      <div id="dashCounters"></div>
+    </div>
+
+    <div class="card">
+      <h2>2차 입장 변화</h2>
+      <div id="dashChange"></div>
+    </div>
+  </section>
+</main>
+
+<!-- 카드 상세 모달 -->
+<div class="modal" id="cardModal">
+  <div class="modal-box">
+    <h3 id="mdNick"></h3>
+    <div class="kv">입장</div><div class="tx" id="mdStance"></div>
+    <div class="kv">주장</div><div class="tx" id="mdClaim"></div>
+    <div class="kv">그렇게 생각한 까닭</div><div class="tx" id="mdReason"></div>
+    <div class="kv">근거 종류</div><div class="tx" id="mdTag"></div>
+    <div class="row" style="margin-top:16px" id="mdReactRow"></div>
+    <button class="btn btn-ghost btn-wide" id="mdClose" type="button" style="margin-top:11px">닫기</button>
+  </div>
+</div>
+
+<!-- 마이크 접근권한 사전 고지 (정보통신망법 제22조의2) -->
+<div class="modal" id="micNotice">
+  <div class="modal-box" role="dialog" aria-modal="true">
+    <h3>마이크를 사용해도 될까요?</h3>
+    <div class="tx">말한 내용을 글자로 바꾸어 <b>까닭 칸에 받아쓰는 데에만</b> 마이크를 사용해요.
+목소리 녹음은 <b>저장하지 않고</b>, 글자로 바꾼 뒤 바로 지워요.
+다음 화면에서 브라우저가 허용 여부를 물어봐요.</div>
+    <button class="btn btn-main btn-wide" id="btnMicOk" type="button" style="margin-top:16px">알겠어요</button>
+  </div>
+</div>
+
+<!-- 교사 설정 (C10) -->
+<div class="panel" id="settingsPanel">
+  <div class="row" style="justify-content:space-between">
+    <h3>교사 설정</h3>
+    <button class="btn btn-ghost btn-sm" id="btnPanelClose" type="button">닫기</button>
+  </div>
+
+  <div class="grp">
+    <label class="fl" for="cfgTitle">연구보고서 제목 (시작 화면 표시)</label>
+    <select id="cfgTitle"></select>
+    <div class="hint">요강에 따라 시작 화면에 보고서 제목과 대상 학년을 표시합니다.</div>
+  </div>
+
+  <div class="grp">
+    <label class="fl" for="cfgThreshold">쏠림 경고 임계값</label>
+    <div class="row">
+      <input id="cfgThreshold" type="number" min="50" max="100" step="5" style="max-width:110px">
+      <span class="hint" style="margin:0">% 이상 한쪽으로 몰리면 경고합니다.</span>
+    </div>
+  </div>
+
+  <div class="grp">
+    <label class="fl" for="cfgClassSize">학급 인원</label>
+    <input id="cfgClassSize" type="number" min="1" max="40" style="max-width:110px">
+    <div class="hint">미참여 인원 계산에 씁니다.</div>
+  </div>
+
+  <div class="grp">
+    <label class="fl" for="cfgUrl">교사 백엔드 주소</label>
+    <input id="cfgUrl" type="text" placeholder="비우면 화면을 준 서버와 같은 주소">
+    <label class="fl" for="cfgCode" style="margin-top:10px">교실 코드(4자리)</label>
+    <input id="cfgCode" type="text" maxlength="4">
+    <button class="btn btn-ghost btn-wide btn-sm" id="btnHealth" type="button" style="margin-top:9px">서버 연결 확인</button>
+    <div class="hint" id="healthMsg" style="min-height:17px"></div>
+  </div>
+
+  <div class="grp">
+    <label class="fl">자료 내보내기</label>
+    <button class="btn btn-ghost btn-wide btn-sm" id="btnCsv1" type="button">입장 변화 내려받기 (CSV)</button>
+    <button class="btn btn-ghost btn-wide btn-sm" id="btnCsv2" type="button" style="margin-top:7px">근거 태그 내려받기 (CSV)</button>
+    <div class="hint">데이터 수집 양식의 「2.입장변화」·「3.근거태그」 시트 형식으로 저장됩니다.</div>
+  </div>
+
+  <div class="grp">
+    <label class="fl">시연·점검용</label>
+    <button class="btn btn-ghost btn-wide btn-sm" id="btnDemoFill" type="button">시연용 응답 30명 채우기</button>
+    <div class="hint">심사 시연이나 화면 점검에 씁니다. 실제 수업 자료와 섞이지 않도록 새 방에서 사용하세요.</div>
+  </div>
+
+  <div class="grp">
+    <div class="hint">이 설정은 저장되지 않으며, 화면을 새로 고치면 처음 값으로 돌아갑니다(브라우저 저장소 미사용 원칙).</div>
+  </div>
+</div>
+
+<script>
+/* ─────────────────────────────────────────────────────────
+   수담(數談) v2 — 논쟁 지속형 수학 토론 소프트웨어
+   · 정답을 표시하지 않음(C4). 주장과 근거로 겨루게 함.
+   · 학생 기기는 생성형 AI를 직접 호출하지 않음(C3). 교사 백엔드만 호출함.
+   · 브라우저 저장소 미사용(C1). 상태는 메모리 변수로만 유지함.
+   · 외부 프레임워크 미사용(C8). 기본 웹 기술만 사용함.
+   · 통신이 끊겨도 텍스트 입력과 칠판 표시가 계속됨(C9, F8).
+────────────────────────────────────────────────────────── */
+
+// ===== 교사 설정값 (C10: 코드 고정 금지 — 설정 화면에서 변경) =====
+const TITLE_OPTIONS = [
+  "정답 이후에도 이어지는 수학 수업 — 논쟁 지속형 과제와 토론 소프트웨어 「수담」 개발",
+  "모두의 풀이가 칠판이 되는 교실 — 수학 토론 소프트웨어 「수담」 개발과 적용",
+  "답은 같은데 생각은 다르다 — 근거를 겨루는 수학 토론 소프트웨어 「수담」 개발과 적용",
+  "다투게 하는 수학 수업 — 논쟁 과제 3유형과 토론 소프트웨어 「수담」 개발",
+  "익명으로 열고 근거로 겨루는 수학 교실 — 토론 소프트웨어 「수담」 개발과 적용"
+];
+const CONFIG = {
+  reportTitle: TITLE_OPTIONS[0],
+  targetGrade: "대상: 초등학교 6학년 1학기 · 수학 토론 10차시",
+  backendUrl: "",        // 비우면 화면을 제공한 서버와 같은 주소
+  classCode: "0000",
+  classSize: 30,
+  skewThreshold: 80,     // 쏠림 경고 임계값(%)
+  pollMs: 2500,
+  timeoutMs: 8000,
+  maxRecordSec: 30
+};
+
+// ===== 코드표 (데이터 수집 양식과 동일) =====
+const STANCES = [
+  { code: "A", label: "첫 번째 주장에 동의함" },
+  { code: "B", label: "두 번째 주장에 동의함" },
+  { code: "C", label: "제3의 주장을 제시함" },
+  { code: "D", label: "판단을 보류함" }
+];
+const TAGS = [
+  { code: "E1", label: "계산" },
+  { code: "E2", label: "그림·모형" },
+  { code: "E3", label: "정의·약속" },
+  { code: "E4", label: "반례" },
+  { code: "E5", label: "실생활" }
+];
+const CHANGE_REASONS = [
+  { code: "R1", label: "친구의 근거가 더 타당해서" },
+  { code: "R2", label: "반례를 보고" },
+  { code: "R3", label: "계산을 다시 해 보고" },
+  { code: "R4", label: "그냥 바꿈" }
+];
+const TASK_TYPES = [
+  { code: "T1", label: "판단형" },
+  { code: "T2", label: "반직관형" },
+  { code: "T3", label: "다표현형" },
+  { code: "T4", label: "정의형" }
+];
+const TYPE_BY_NAME = { "판단형": "T1", "반직관형": "T2", "다표현형": "T3", "정의형": "T4" };
+
+// ===== 10차시 지도 계획 (교육과정 재구성표) =====
+const LESSON_PLAN = [
+  { n: 1,  type: "공통",     unit: "",                        topic: "수학 토론 규칙과 근거 언어 세우기", toron: "T·O" },
+  { n: 2,  type: "반직관형", unit: "1. 분수의 나눗셈",          topic: "몫이 커지는 나눗셈",               toron: "T·R" },
+  { n: 3,  type: "반직관형", unit: "1. 분수의 나눗셈",          topic: "나눗셈의 두 가지 의미 다투기",      toron: "R" },
+  { n: 4,  type: "반직관형", unit: "1. 분수의 나눗셈",          topic: "계산 방법 정당화하기",             toron: "R·O" },
+  { n: 5,  type: "판단형",   unit: "5. 여러 가지 그래프",       topic: "같은 자료 다른 그래프",            toron: "T·O" },
+  { n: 6,  type: "판단형",   unit: "5. 여러 가지 그래프",       topic: "이 그래프는 왜곡인가 (대표 수업)",  toron: "R" },
+  { n: 7,  type: "판단형",   unit: "5. 여러 가지 그래프",       topic: "탐구 문제 설정과 자료 수집",        toron: "T·N" },
+  { n: 8,  type: "판단형",   unit: "5. 여러 가지 그래프",       topic: "그래프 선택 변론과 반론",          toron: "R·O" },
+  { n: 9,  type: "다표현형", unit: "6. 직육면체의 겉넓이와 부피", topic: "부피가 같은데 겉넓이가 다르다",    toron: "O·R" },
+  { n: 10, type: "다표현형", unit: "6. 직육면체의 겉넓이와 부피", topic: "논쟁이 되는 문제 만들기",          toron: "N" }
+];
+
+// ===== 발문 은행 60개 (오프라인 폴백 · 인라인 임베드 → file:// 안전) =====
+const PROMPT_BANK = [
+  {"id":"Q01","unit":"1. 분수의 나눗셈","standard":"[6수01-11]","type":"반직관형","toron":"T","prompt":"6을 1/2로 나누면 답이 6보다 커짐. 이것도 나눗셈이라고 부를 수 있을까","counter_card":"나눗셈은 항상 작아진다고 배운 적이 있는가. 그 규칙은 어디까지 맞는가","expected_issue":"나눗셈은 작아진다는 직관과 결과의 충돌"},
+  {"id":"Q02","unit":"1. 분수의 나눗셈","standard":"[6수01-11]","type":"반직관형","toron":"R","prompt":"1/2÷1/4의 답이 2인 이유를 말로 설명해 보자","counter_card":"1/2 안에 1/4이 몇 번 들어가는지 그림으로 세어 보면 어떻게 되는가","expected_issue":"포함제 해석과 등분제 해석의 충돌"},
+  {"id":"Q03","unit":"1. 분수의 나눗셈","standard":"[6수01-11]","type":"반직관형","toron":"R","prompt":"8÷1/4을 '8을 1/4명이 나눠 갖는다'로 설명해도 되는가","counter_card":"1/4명이라는 사람이 있을 수 있는가. 없다면 이 나눗셈은 무엇을 묻는 것인가","expected_issue":"등분제 해석의 붕괴"},
+  {"id":"Q04","unit":"1. 분수의 나눗셈","standard":"[6수01-11]","type":"반직관형","toron":"R","prompt":"왜 나누는 분수를 뒤집어서 곱해도 답이 맞는가","counter_card":"뒤집어 곱하는 방법을 쓰지 않고도 답을 구할 수 있는가","expected_issue":"절차의 정당화 요구"},
+  {"id":"Q05","unit":"1. 분수의 나눗셈","standard":"[6수01-11]","type":"다표현형","toron":"O","prompt":"3/4÷2를 푸는 방법을 두 가지 이상 찾아보자","counter_card":"두 방법의 답이 같다면 두 방법은 같은 방법인가 다른 방법인가","expected_issue":"경로의 동일성과 차이"},
+  {"id":"Q06","unit":"1. 분수의 나눗셈","standard":"[6수01-11]","type":"반직관형","toron":"T","prompt":"나눗셈의 답이 나누어지는 수보다 커지는 경우와 작아지는 경우를 가르는 기준은 무엇인가","counter_card":"나누는 수가 정확히 1이면 어떻게 되는가","expected_issue":"기준값 1의 경계"},
+  {"id":"Q07","unit":"1. 분수의 나눗셈","standard":"[6수01-11]","type":"판단형","toron":"R","prompt":"리본 5m를 2/3m씩 자르면 7도막이 나오고 조금 남음. 답을 7이라 해야 하는가 7.5라 해야 하는가","counter_card":"남은 조각은 한 도막으로 셀 수 있는가","expected_issue":"몫과 나머지의 맥락 판단"},
+  {"id":"Q08","unit":"1. 분수의 나눗셈","standard":"[6수01-11]","type":"다표현형","toron":"O","prompt":"분수의 나눗셈을 그림으로 나타내는 방법을 각자 그려 보고 비교하자","counter_card":"친구의 그림에서 나누는 수는 어디에 나타나 있는가","expected_issue":"표현 방식의 차이"},
+  {"id":"Q09","unit":"1. 분수의 나눗셈","standard":"[6수01-11]","type":"반직관형","toron":"R","prompt":"분수의 나눗셈과 자연수의 나눗셈은 같은 연산인가 다른 연산인가","counter_card":"12÷3을 분수로 바꾸어 계산하면 같은 방법이 쓰이는가","expected_issue":"연산의 일관성"},
+  {"id":"Q10","unit":"1. 분수의 나눗셈","standard":"[6수01-11]","type":"판단형","toron":"N","prompt":"친구들이 답을 다르게 낼 만한 분수 나눗셈 문제를 만들어 보자","counter_card":"네 문제에서 답이 갈라지는 지점은 어디인가","expected_issue":"논쟁 조건의 자각"},
+  {"id":"Q11","unit":"2. 각기둥과 각뿔","standard":"[6수03-05]","type":"정의형","toron":"T","prompt":"옆으로 비스듬히 기울어진 기둥 모양은 각기둥인가","counter_card":"각기둥의 두 밑면은 어떤 관계여야 하는가","expected_issue":"정의의 경계 사례"},
+  {"id":"Q12","unit":"2. 각기둥과 각뿔","standard":"[6수03-05]","type":"정의형","toron":"R","prompt":"원기둥은 각기둥의 한 종류인가","counter_card":"각기둥의 밑면은 어떤 도형이어야 하는가","expected_issue":"상위 개념과 하위 개념"},
+  {"id":"Q13","unit":"2. 각기둥과 각뿔","standard":"[6수03-05]","type":"정의형","toron":"R","prompt":"밑면이 없는 입체도형도 있을 수 있는가","counter_card":"구에는 밑면이 있는가. 없다면 무엇이라 불러야 하는가","expected_issue":"정의의 적용 범위"},
+  {"id":"Q14","unit":"2. 각기둥과 각뿔","standard":"[6수03-05]","type":"다표현형","toron":"O","prompt":"각기둥과 각뿔의 공통점을 세 가지 이상 찾아보자","counter_card":"찾은 공통점은 다른 입체도형에도 해당되는가","expected_issue":"분류 기준의 변별력"},
+  {"id":"Q15","unit":"2. 각기둥과 각뿔","standard":"[6수03-05]","type":"반직관형","toron":"R","prompt":"면이 많을수록 더 복잡한 도형인가","counter_card":"면의 개수가 같은데 모양이 다른 도형이 있는가","expected_issue":"개수와 성질의 혼동"},
+  {"id":"Q16","unit":"2. 각기둥과 각뿔","standard":"[6수03-06]","type":"다표현형","toron":"O","prompt":"삼각기둥의 전개도를 각자 그려 보자. 몇 가지가 나올 수 있는가","counter_card":"친구의 전개도를 접으면 정말 같은 도형이 되는가","expected_issue":"전개도의 다양성"},
+  {"id":"Q17","unit":"2. 각기둥과 각뿔","standard":"[6수03-06]","type":"판단형","toron":"R","prompt":"전개도가 여러 가지라면 교과서의 전개도가 정답인가","counter_card":"정답 전개도라는 말이 성립하려면 무엇이 필요한가","expected_issue":"정답 개념의 재검토"},
+  {"id":"Q18","unit":"2. 각기둥과 각뿔","standard":"[6수03-05]","type":"정의형","toron":"R","prompt":"각뿔의 꼭짓점은 몇 개인가. 뾰족한 점만 꼭짓점인가","counter_card":"밑면의 모서리가 만나는 점은 꼭짓점이 아닌가","expected_issue":"용어의 정확한 적용"},
+  {"id":"Q19","unit":"2. 각기둥과 각뿔","standard":"[6수03-06]","type":"반직관형","toron":"R","prompt":"전개도로 그려 놓으면 넓어 보이는데 접으면 작아 보임. 크기가 변한 것인가","counter_card":"접기 전과 후에 변하지 않는 것은 무엇인가","expected_issue":"보존 개념"},
+  {"id":"Q20","unit":"2. 각기둥과 각뿔","standard":"[6수03-05]","type":"판단형","toron":"N","prompt":"친구들이 각기둥인지 아닌지 헷갈릴 도형을 만들어 보자","counter_card":"네가 만든 도형이 헷갈리는 이유는 어느 조건 때문인가","expected_issue":"경계 사례 제작"},
+  {"id":"Q21","unit":"3. 소수의 나눗셈","standard":"[6수01-15]","type":"반직관형","toron":"T","prompt":"7÷0.5의 답이 7보다 커짐. 왜 그런가","counter_card":"0.5는 1보다 큰가 작은가. 그것이 답의 크기와 무슨 관계인가","expected_issue":"1보다 작은 수로 나누기"},
+  {"id":"Q22","unit":"3. 소수의 나눗셈","standard":"[6수01-15]","type":"다표현형","toron":"O","prompt":"3.6÷0.4를 푸는 방법을 두 가지 이상 찾아보자","counter_card":"분수로 바꾸어 풀면 같은 답이 나오는가","expected_issue":"소수와 분수의 연결"},
+  {"id":"Q23","unit":"3. 소수의 나눗셈","standard":"[6수01-15]","type":"판단형","toron":"R","prompt":"리본 12.5m를 1.5m씩 자르면 몇 도막인가. 답을 8이라 해야 하는가 8.33이라 해야 하는가","counter_card":"실제로 리본을 자른다면 8.33도막이 존재하는가","expected_issue":"맥락에 따른 몫 처리"},
+  {"id":"Q24","unit":"3. 소수의 나눗셈","standard":"[6수01-15]","type":"반직관형","toron":"R","prompt":"나누는 수와 나누어지는 수에 똑같이 10을 곱해도 답이 같은 이유는 무엇인가","counter_card":"10 대신 100을 곱해도 되는가. 3을 곱하면 어떤가","expected_issue":"몫의 불변 성질"},
+  {"id":"Q25","unit":"3. 소수의 나눗셈","standard":"[6수01-15]","type":"판단형","toron":"R","prompt":"계산기로 나온 소수를 어디에서 반올림해야 하는가","counter_card":"물건 값이라면 어디까지 필요한가. 약 값이라면 어떤가","expected_issue":"맥락에 따른 어림 판단"},
+  {"id":"Q26","unit":"3. 소수의 나눗셈","standard":"[6수01-15]","type":"반직관형","toron":"R","prompt":"나머지 0.5는 5인가 0.5인가","counter_card":"원래 나누어지는 수의 자리를 되짚어 보면 어떻게 되는가","expected_issue":"나머지의 자릿값 오개념"},
+  {"id":"Q27","unit":"3. 소수의 나눗셈","standard":"[6수01-15]","type":"다표현형","toron":"O","prompt":"소수점을 옮기는 방법과 분수로 바꾸는 방법 중 어느 쪽이 나은가","counter_card":"어떤 수일 때 각각의 방법이 편한가","expected_issue":"전략 선택의 조건"},
+  {"id":"Q28","unit":"3. 소수의 나눗셈","standard":"[6수01-15]","type":"판단형","toron":"T","prompt":"계산기를 써도 되는 상황과 안 되는 상황을 나누어 보자","counter_card":"계산기가 알려 주지 않는 것은 무엇인가","expected_issue":"도구 사용의 판단"},
+  {"id":"Q29","unit":"3. 소수의 나눗셈","standard":"[6수01-15]","type":"반직관형","toron":"R","prompt":"나눗셈을 했는데 답이 딱 떨어지지 않고 끝없이 이어짐. 답이 없는 것인가","counter_card":"끝없이 이어지는 수도 하나의 수라고 할 수 있는가","expected_issue":"무한소수에 대한 직관"},
+  {"id":"Q30","unit":"3. 소수의 나눗셈","standard":"[6수01-15]","type":"판단형","toron":"N","prompt":"답을 어디서 반올림할지 친구들이 갈릴 문제를 만들어 보자","counter_card":"네 문제에서 반올림 자리를 정하는 근거는 무엇인가","expected_issue":"판단 지점 설계"},
+  {"id":"Q31","unit":"4. 비와 비율","standard":"[6수02-02]","type":"판단형","toron":"T","prompt":"3대 2와 2대 3은 다른 비인가. 순서를 바꾸면 무엇이 달라지는가","counter_card":"어느 쪽을 기준으로 삼았는지 말할 수 있는가","expected_issue":"기준량의 지정"},
+  {"id":"Q32","unit":"4. 비와 비율","standard":"[6수02-03]","type":"판단형","toron":"R","prompt":"타율 0.300인 선수와 0.280인 선수 중 누가 더 잘 치는 선수인가","counter_card":"각 선수가 타석에 몇 번 섰는지 알면 판단이 달라지는가","expected_issue":"비율만으로는 부족한 판단"},
+  {"id":"Q33","unit":"4. 비와 비율","standard":"[6수02-03]","type":"반직관형","toron":"R","prompt":"할인율 50%인 가게와 30% 할인 후 다시 30% 할인하는 가게 중 어디가 더 싼가","counter_card":"30% 할인을 두 번 하면 60% 할인과 같은가","expected_issue":"비율의 연속 적용"},
+  {"id":"Q34","unit":"4. 비와 비율","standard":"[6수02-02]","type":"판단형","toron":"R","prompt":"우리 반 남녀 비를 어떻게 쓰는 것이 옳은가. 순서는 누가 정하는가","counter_card":"순서를 바꾸면 사실이 달라지는가 표현이 달라지는가","expected_issue":"표현의 관습과 사실"},
+  {"id":"Q35","unit":"4. 비와 비율","standard":"[6수02-03]","type":"반직관형","toron":"R","prompt":"설탕물 A는 설탕이 더 많고 B는 물이 더 적음. 어느 쪽이 더 단가","counter_card":"두 컵의 전체 양이 다르다면 무엇을 비교해야 하는가","expected_issue":"기준량의 통일 필요"},
+  {"id":"Q36","unit":"4. 비와 비율","standard":"[6수02-03]","type":"다표현형","toron":"O","prompt":"같은 비율을 분수와 소수와 백분율로 각각 나타내고 비교하자","counter_card":"세 표현 중 어느 것이 비교하기 쉬운가. 상황에 따라 달라지는가","expected_issue":"표현 선택"},
+  {"id":"Q37","unit":"4. 비와 비율","standard":"[6수02-03]","type":"판단형","toron":"R","prompt":"합격률 90%인 시험과 합격자 90명인 시험 중 어느 쪽이 쉬운 시험인가","counter_card":"응시자 수를 모르면 판단할 수 있는가","expected_issue":"비율과 실수의 구별"},
+  {"id":"Q38","unit":"4. 비와 비율","standard":"[6수02-02]","type":"반직관형","toron":"R","prompt":"비율이 커지면 항상 양도 커지는가","counter_card":"전체가 줄어들면서 비율만 커질 수 있는가","expected_issue":"비율과 절대량의 분리"},
+  {"id":"Q39","unit":"4. 비와 비율","standard":"[6수02-03]","type":"판단형","toron":"R","prompt":"우리 반 재활용률이 작년보다 올랐다고 말해도 되는가","counter_card":"쓰레기 전체 양이 줄었다면 이 말은 여전히 옳은가","expected_issue":"통계 해석의 함정"},
+  {"id":"Q40","unit":"4. 비와 비율","standard":"[6수02-03]","type":"판단형","toron":"N","prompt":"비율만 보면 잘못 판단하게 되는 문제를 만들어 보자","counter_card":"네 문제에서 숨겨진 정보는 무엇인가","expected_issue":"함정 설계"},
+  {"id":"Q41","unit":"5. 여러 가지 그래프","standard":"[6수04-02]","type":"판단형","toron":"T","prompt":"같은 자료로 만든 두 그래프가 서로 다른 인상을 줌. 어느 쪽이 사실인가","counter_card":"두 그래프의 눈금은 같은가. 다르다면 무엇이 달라졌는가","expected_issue":"표현 방식과 해석"},
+  {"id":"Q42","unit":"5. 여러 가지 그래프","standard":"[6수04-02]","type":"판단형","toron":"R","prompt":"세로축을 0에서 시작하지 않은 그래프는 거짓말을 하고 있는가","counter_card":"0에서 시작하면 차이가 안 보이는 자료도 있는가","expected_issue":"왜곡과 강조의 구분"},
+  {"id":"Q43","unit":"5. 여러 가지 그래프","standard":"[6수04-02]","type":"판단형","toron":"R","prompt":"이 자료는 띠그래프가 맞는가 원그래프가 맞는가","counter_card":"두 그래프로 각각 그려 보면 무엇이 더 잘 보이는가","expected_issue":"그래프 선택의 근거"},
+  {"id":"Q44","unit":"5. 여러 가지 그래프","standard":"[6수04-02]","type":"반직관형","toron":"R","prompt":"항목이 20개인 자료를 원그래프로 그리면 어떻게 되는가","counter_card":"조각이 너무 작아지면 그래프의 목적을 이루는가","expected_issue":"표현의 한계"},
+  {"id":"Q45","unit":"5. 여러 가지 그래프","standard":"[6수04-02]","type":"판단형","toron":"R","prompt":"기타 항목이 30%인 원그래프는 좋은 그래프인가","counter_card":"기타에 무엇이 들어 있는지 모른다면 무엇을 알 수 있는가","expected_issue":"범주 설정의 문제"},
+  {"id":"Q46","unit":"5. 여러 가지 그래프","standard":"[6수04-03]","type":"판단형","toron":"T","prompt":"우리 반에서 조사할 만한 탐구 문제는 무엇인가. 결과가 뻔한 문제와 갈릴 문제를 나누어 보자","counter_card":"결과가 예상되는 조사는 왜 하는가","expected_issue":"탐구 문제의 가치"},
+  {"id":"Q47","unit":"5. 여러 가지 그래프","standard":"[6수04-03]","type":"판단형","toron":"R","prompt":"설문 문항을 어떻게 쓰느냐에 따라 결과가 달라질 수 있는가","counter_card":"같은 내용을 다르게 물으면 답이 달라지는가","expected_issue":"자료 수집 단계의 편향"},
+  {"id":"Q48","unit":"5. 여러 가지 그래프","standard":"[6수04-02]","type":"다표현형","toron":"O","prompt":"같은 자료를 막대, 띠, 원그래프로 각각 그리고 무엇이 보이고 무엇이 사라지는지 비교하자","counter_card":"사라진 정보는 중요하지 않은 정보인가","expected_issue":"표현별 정보 손실"},
+  {"id":"Q49","unit":"5. 여러 가지 그래프","standard":"[6수04-03]","type":"판단형","toron":"R","prompt":"우리 반 20명 조사 결과로 6학년 전체를 말할 수 있는가","counter_card":"몇 명을 조사하면 말할 수 있게 되는가","expected_issue":"표본과 일반화"},
+  {"id":"Q50","unit":"5. 여러 가지 그래프","standard":"[6수04-02]","type":"판단형","toron":"N","prompt":"보는 사람이 잘못 판단하게 만드는 그래프를 일부러 만들어 보자","counter_card":"네 그래프에서 속임수가 숨은 곳은 어디인가","expected_issue":"왜곡 기법의 역설계"},
+  {"id":"Q51","unit":"6. 직육면체의 겉넓이와 부피","standard":"[6수03-19]","type":"반직관형","toron":"T","prompt":"부피가 같은 두 상자의 겉넓이가 다름. 어느 쪽이 더 큰 상자인가","counter_card":"크다는 말은 부피가 큰 것인가 겉넓이가 큰 것인가","expected_issue":"크기 개념의 다의성"},
+  {"id":"Q52","unit":"6. 직육면체의 겉넓이와 부피","standard":"[6수03-17]","type":"다표현형","toron":"O","prompt":"직육면체의 겉넓이를 구하는 방법을 두 가지 이상 찾아보자","counter_card":"여섯 면을 모두 더하는 방법과 마주 보는 면을 짝지어 구하는 방법은 왜 답이 같은가","expected_issue":"경로의 동치"},
+  {"id":"Q53","unit":"6. 직육면체의 겉넓이와 부피","standard":"[6수03-19]","type":"반직관형","toron":"R","prompt":"모든 모서리를 2배로 늘리면 부피도 2배가 되는가","counter_card":"가로만 2배로 늘리면 어떻게 되는가. 세 방향을 모두 늘리면 어떤가","expected_issue":"차원과 배율"},
+  {"id":"Q54","unit":"6. 직육면체의 겉넓이와 부피","standard":"[6수03-17]","type":"반직관형","toron":"R","prompt":"모서리를 2배로 늘리면 겉넓이는 몇 배가 되는가","counter_card":"겉넓이와 부피가 늘어나는 배수는 같은가 다른가","expected_issue":"면과 부피의 증가율 차이"},
+  {"id":"Q55","unit":"6. 직육면체의 겉넓이와 부피","standard":"[6수03-19]","type":"판단형","toron":"R","prompt":"택배 상자를 고를 때 부피와 겉넓이 중 무엇을 봐야 하는가","counter_card":"포장지 값과 담기는 양 중 무엇이 더 중요한 상황인가","expected_issue":"맥락에 따른 기준 선택"},
+  {"id":"Q56","unit":"6. 직육면체의 겉넓이와 부피","standard":"[6수03-19]","type":"다표현형","toron":"O","prompt":"부피 24cm³인 직육면체를 몇 가지나 만들 수 있는가","counter_card":"그중 겉넓이가 가장 작은 것은 어떤 모양인가","expected_issue":"최적화 탐색"},
+  {"id":"Q57","unit":"6. 직육면체의 겉넓이와 부피","standard":"[6수03-18]","type":"반직관형","toron":"R","prompt":"1m³는 1cm³의 100배인가","counter_card":"1m가 100cm이면 세 방향 모두 어떻게 되는가","expected_issue":"단위 환산 오개념"},
+  {"id":"Q58","unit":"6. 직육면체의 겉넓이와 부피","standard":"[6수03-17]","type":"판단형","toron":"R","prompt":"상자를 겹쳐 쌓으면 겉넓이는 어떻게 되는가","counter_card":"맞닿은 면은 겉넓이에 포함되는가","expected_issue":"겉넓이 정의의 적용"},
+  {"id":"Q59","unit":"6. 직육면체의 겉넓이와 부피","standard":"[6수03-19]","type":"다표현형","toron":"O","prompt":"쌓기나무로 만든 모양의 부피를 세는 방법을 각자 정하고 비교하자","counter_card":"보이지 않는 안쪽 나무는 어떻게 세었는가","expected_issue":"세기 전략의 차이"},
+  {"id":"Q60","unit":"6. 직육면체의 겉넓이와 부피","standard":"[6수03-17]","type":"판단형","toron":"N","prompt":"부피만 보면 잘못 판단하게 되는 문제를 만들어 보자","counter_card":"네 문제에서 부피와 겉넓이 중 무엇이 답을 가르는가","expected_issue":"논쟁 조건 설계"}
+];
+
+// ===== 실행 환경 =====
+const OFFLINE_ONLY = location.protocol === "file:";   // 파일 단독 실행이면 서버를 쓰지 않음
+let serverOk = false;
+
+// ===== 상태 (메모리 전용, 브라우저 저장소 미사용) =====
+const STATE = {
+  role: null,          // "teacher" | "student"
+  room: null,          // { code, lesson, taskType, promptId, prompt, counterSeed, issue, unit, phase }
+  me: null,            // { seatNo, nickname }
+  responses: [],       // { seatNo, nickname, stance, claim, reason, tag, round, changeReason, agree, object }
+  counters: [],        // 투입된 반례 카드 문안
+  problems: [],        // { seatNo, nickname, text, type }
+  draft: { stance: null, tag: null, stance2: null, tag2: null, changeReason: null, checks: [], ptype: null }
+};
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+// ══════════════════════════════════════════════════════
+//  화면 전환
+// ══════════════════════════════════════════════════════
+const PHASES = [
+  { key: "first",  label: "1차 입장" },
+  { key: "debate", label: "근거 다투기" },
+  { key: "second", label: "2차 입장" },
+  { key: "create", label: "문제 만들기" }
+];
+function show(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.toggle("active", s.id === id));
+  window.scrollTo({ top: 0, behavior: "instant" });
+}
+function renderSteps(boxId) {
+  const box = $(boxId); if (!box) return;
+  const cur = STATE.room ? STATE.room.phase : "first";
+  box.innerHTML = PHASES.map(p =>
+    \`<div class="step" aria-current="\${p.key === cur}">\${esc(p.label)}</div>\`).join("");
+}
+
+// ══════════════════════════════════════════════════════
+//  서버 통신 (F8 3단계 폴백 · C9)
+//  실패하면 예외를 던지고, 호출한 쪽이 로컬 상태로 계속 진행함.
+// ══════════════════════════════════════════════════════
+function api(path, opts) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), CONFIG.timeoutMs);
+  return fetch(\`\${CONFIG.backendUrl}\${path}\`, { ...opts, signal: ctrl.signal })
+    .finally(() => clearTimeout(t));
+}
+async function apiJson(path, body) {
+  const res = await api(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...body, classCode: CONFIG.classCode })
+  });
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.reason || "server");
+  return data;
+}
+async function checkServer() {
+  if (OFFLINE_ONLY) { setNet(false, "오프라인 안전망 모드"); return false; }
+  try {
+    const res = await api("/api/health", {});
+    const d = await res.json();
+    serverOk = !!d.ok;
+    setNet(serverOk, serverOk ? "서버 연결됨" : "서버 응답 이상");
+  } catch { serverOk = false; setNet(false, "서버 없이 동작 중"); }
+  return serverOk;
+}
+function setNet(on, msg) {
+  const p = $("netPill");
+  p.textContent = msg;
+  p.className = "pill pill-net " + (on ? "on" : "off");
+}
+
+// 서버가 있으면 방 상태를 주기적으로 받아옴. 없으면 로컬 상태만 씀.
+let pollTimer = null;
+function startPolling() {
+  stopPolling();
+  if (!serverOk || !STATE.room) return;
+  pollTimer = setInterval(async () => {
+    try {
+      const res = await api(\`/api/room?code=\${encodeURIComponent(STATE.room.code)}\`, {});
+      const d = await res.json();
+      if (!d.ok) return;
+      STATE.room = { ...STATE.room, ...d.room };
+      STATE.responses = d.responses || [];
+      STATE.counters = d.counters || [];
+      STATE.problems = d.problems || [];
+      refreshLive();
+    } catch { /* 통신 실패해도 화면은 그대로 동작(C9) */ }
+  }, CONFIG.pollMs);
+}
+function stopPolling() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
+
+// 현재 보고 있는 화면만 다시 그림
+function refreshLive() {
+  const active = document.querySelector(".screen.active");
+  if (!active) return;
+  if (active.id === "scBoard") renderBoard();
+  else if (active.id === "scDash") renderDash();
+  else if (active.id === "scCreate") renderProblems();
+}
+
+// ══════════════════════════════════════════════════════
+//  초기화
+// ══════════════════════════════════════════════════════
+function applyConfig() {
+  $("hdReport").textContent = CONFIG.reportTitle;
+  $("hdGrade").textContent = CONFIG.targetGrade;
+}
+applyConfig();
+if (OFFLINE_ONLY) $("offlineNote").style.display = "block";
+
+// 설정 패널 채우기
+$("cfgTitle").innerHTML = TITLE_OPTIONS.map((t, i) =>
+  \`<option value="\${i}">\${esc(t)}</option>\`).join("");
+$("cfgThreshold").value = CONFIG.skewThreshold;
+$("cfgClassSize").value = CONFIG.classSize;
+$("cfgUrl").value = CONFIG.backendUrl;
+$("cfgCode").value = CONFIG.classCode;
+
+$("cfgTitle").addEventListener("change", e => {
+  CONFIG.reportTitle = TITLE_OPTIONS[Number(e.target.value)] || TITLE_OPTIONS[0];
+  applyConfig();
+});
+$("cfgThreshold").addEventListener("change", e => {
+  const v = Number(e.target.value);
+  if (v >= 50 && v <= 100) CONFIG.skewThreshold = v;
+  e.target.value = CONFIG.skewThreshold;
+  if (document.querySelector(".screen.active").id === "scDash") renderDash();
+});
+$("cfgClassSize").addEventListener("change", e => {
+  const v = Number(e.target.value);
+  if (v >= 1 && v <= 40) CONFIG.classSize = v;
+  e.target.value = CONFIG.classSize;
+  if (document.querySelector(".screen.active").id === "scDash") renderDash();
+});
+$("cfgUrl").addEventListener("change", e => { CONFIG.backendUrl = e.target.value.trim(); checkServer(); });
+$("cfgCode").addEventListener("change", e => { CONFIG.classCode = e.target.value.trim(); });
+
+$("btnSettings").addEventListener("click", () => $("settingsPanel").classList.add("open"));
+$("btnPanelClose").addEventListener("click", () => $("settingsPanel").classList.remove("open"));
+$("btnHealth").addEventListener("click", async () => {
+  const m = $("healthMsg");
+  if (OFFLINE_ONLY) { m.textContent = "파일 실행 상태에서는 서버를 쓰지 않아요."; return; }
+  m.textContent = "확인 중…";
+  const ok = await checkServer();
+  m.textContent = ok ? "✅ 서버 연결됨" : "❌ 연결 실패 — 서버 없이도 계속 쓸 수 있어요";
+  m.style.color = ok ? "var(--ok)" : "var(--warn)";
+});
+$("btnHome").addEventListener("click", () => { stopPolling(); show("scHome"); });
+
+// ══════════════════════════════════════════════════════
+//  시작 화면 → 역할 선택
+// ══════════════════════════════════════════════════════
+$("goTeacher").addEventListener("click", () => { STATE.role = "teacher"; openTeacherSetup(); });
+$("goStudent").addEventListener("click", () => { STATE.role = "student"; show("scJoin"); });
+
+// ══════════════════════════════════════════════════════
+//  교사: 방 개설
+// ══════════════════════════════════════════════════════
+function openTeacherSetup() {
+  $("selLesson").innerHTML = LESSON_PLAN.map(l =>
+    \`<option value="\${l.n}">\${l.n}차시 — \${esc(l.topic)}</option>\`).join("");
+  const units = [...new Set(PROMPT_BANK.map(p => p.unit))];
+  $("selUnit").innerHTML = units.map(u => \`<option value="\${esc(u)}">\${esc(u)}</option>\`).join("");
+  $("selType").innerHTML = \`<option value="">전체</option>\` +
+    [...new Set(PROMPT_BANK.map(p => p.type))].map(t => \`<option value="\${esc(t)}">\${esc(t)}</option>\`).join("");
+  $("selLesson").value = "6";      // 대표 수업 차시를 기본으로
+  syncLessonToFilters();
+  show("scTeacherSetup");
+}
+function syncLessonToFilters() {
+  const n = Number($("selLesson").value);
+  const plan = LESSON_PLAN.find(l => l.n === n);
+  if (plan && plan.unit) $("selUnit").value = plan.unit;
+  if (plan && plan.type !== "공통") $("selType").value = plan.type;
+  else $("selType").value = "";
+  fillPrompts();
+}
+function fillPrompts() {
+  const unit = $("selUnit").value, type = $("selType").value;
+  let list = PROMPT_BANK.filter(p => p.unit === unit && (!type || p.type === type));
+  if (list.length === 0) list = PROMPT_BANK.filter(p => p.unit === unit);
+  $("selPrompt").innerHTML = list.map(p =>
+    \`<option value="\${p.id}">[\${esc(p.type)}·\${esc(p.toron)}] \${esc(p.prompt)}</option>\`).join("");
+  showPromptHint();
+}
+function showPromptHint() {
+  const p = PROMPT_BANK.find(x => x.id === $("selPrompt").value);
+  $("promptHint").textContent = p
+    ? \`성취기준 \${p.standard} · 예상 쟁점: \${p.expected_issue}\`
+    : "";
+}
+$("selLesson").addEventListener("change", syncLessonToFilters);
+$("selUnit").addEventListener("change", fillPrompts);
+$("selType").addEventListener("change", fillPrompts);
+$("selPrompt").addEventListener("change", showPromptHint);
+
+$("btnOpenRoom").addEventListener("click", async () => {
+  const p = PROMPT_BANK.find(x => x.id === $("selPrompt").value);
+  if (!p) return;
+  const room = {
+    code: String(Math.floor(1000 + Math.random() * 9000)),
+    lesson: Number($("selLesson").value),
+    taskType: TYPE_BY_NAME[p.type] || "T1",
+    typeName: p.type,
+    promptId: p.id,
+    prompt: p.prompt,
+    counterSeed: p.counter_card,
+    issue: p.expected_issue,
+    unit: p.unit,
+    standard: p.standard,
+    phase: "first"
+  };
+  STATE.room = room;
+  STATE.responses = []; STATE.counters = []; STATE.problems = [];
+  if (serverOk) {
+    try { const d = await apiJson("/api/room/create", { room }); STATE.room.code = d.code || room.code; }
+    catch { /* 서버 실패해도 로컬로 진행(C9) */ }
+  }
+  startPolling();
+  renderDash();
+  show("scDash");
+});
+
+// ══════════════════════════════════════════════════════
+//  학생: 입장
+// ══════════════════════════════════════════════════════
+$("btnJoin").addEventListener("click", async () => {
+  const code = $("inCode").value.trim();
+  const seatNo = Number($("inSeat").value);
+  const nickname = $("inNick").value.trim().slice(0, 10);
+  if (!code || !seatNo || !nickname) { alert("방 번호, 출석번호, 별명을 모두 넣어 주세요."); return; }
+
+  if (serverOk) {
+    try {
+      const res = await api(\`/api/room?code=\${encodeURIComponent(code)}\`, {});
+      const d = await res.json();
+      if (!d.ok) { alert("그 번호의 토론방을 찾지 못했어요. 번호를 확인해 주세요."); return; }
+      STATE.room = d.room;
+      STATE.responses = d.responses || [];
+      STATE.counters = d.counters || [];
+      STATE.problems = d.problems || [];
+    } catch {
+      if (!STATE.room) { alert("서버에 연결하지 못했어요. 선생님께 알려 주세요."); return; }
+    }
+  } else if (!STATE.room) {
+    alert("아직 열린 토론방이 없어요. 선생님이 먼저 방을 열어야 해요.\\n(파일 단독 실행에서는 이 화면에서 선생님 역할로 먼저 방을 열어 주세요.)");
+    return;
+  }
+
+  STATE.me = { seatNo, nickname };
+  STATE.role = "student";
+  startPolling();
+  openInput();
+});
+
+// ══════════════════════════════════════════════════════
+//  학생: 주장·근거 입력 (F2 — 근거 없으면 제출 차단)
+// ══════════════════════════════════════════════════════
+function openInput() {
+  const r = STATE.room;
+  $("ipType").textContent = r.typeName || "논쟁";
+  $("ipMeta").textContent = \`\${r.lesson}차시 · \${r.unit || ""} \${r.standard || ""}\`.trim();
+  $("ipPrompt").textContent = r.prompt;
+  $("ipIssue").textContent = r.issue ? \`함께 다툴 지점 — \${r.issue}\` : "";
+  renderSteps("stepsInput");
+
+  $("stanceGrid").innerHTML = STANCES.map(s =>
+    \`<button class="stance" type="button" data-code="\${s.code}" aria-pressed="false">
+       <b>\${s.code}</b>\${esc(s.label)}</button>\`).join("");
+  $("stanceGrid").querySelectorAll("button").forEach(b =>
+    b.addEventListener("click", () => {
+      STATE.draft.stance = b.dataset.code;
+      $("stanceGrid").querySelectorAll("button").forEach(x =>
+        x.setAttribute("aria-pressed", String(x === b)));
+      validateSubmit();
+    }));
+
+  $("tagRow").innerHTML = TAGS.map(t =>
+    \`<button class="tagbtn" type="button" data-code="\${t.code}" aria-pressed="false">\${esc(t.label)}</button>\`).join("");
+  $("tagRow").querySelectorAll("button").forEach(b =>
+    b.addEventListener("click", () => {
+      STATE.draft.tag = b.dataset.code;
+      $("tagRow").querySelectorAll("button").forEach(x =>
+        x.setAttribute("aria-pressed", String(x === b)));
+      validateSubmit();
+    }));
+
+  // 이미 1차를 낸 학생이면 기존 내용을 불러와 고칠 수 있게 함
+  const mine = myResponse(1);
+  if (mine) {
+    $("inClaim").value = mine.claim || "";
+    $("inReason").value = mine.reason || "";
+    STATE.draft.stance = mine.stance; STATE.draft.tag = mine.tag;
+    const sb = $("stanceGrid").querySelector(\`[data-code="\${mine.stance}"]\`);
+    if (sb) sb.setAttribute("aria-pressed", "true");
+    const tb = $("tagRow").querySelector(\`[data-code="\${mine.tag}"]\`);
+    if (tb) tb.setAttribute("aria-pressed", "true");
+  }
+  validateSubmit();
+  show("scInput");
+}
+function myResponse(round) {
+  if (!STATE.me) return null;
+  return STATE.responses.find(r => r.seatNo === STATE.me.seatNo && r.round === round) || null;
+}
+function validateSubmit() {
+  const hasReason = $("inReason").value.trim().length > 0;   // F2: 근거 필수
+  const ok = hasReason && !!STATE.draft.stance;
+  $("btnSubmit").disabled = !ok;
+  $("submitHint").textContent = !hasReason
+    ? "까닭을 적어야 올릴 수 있어요."
+    : (!STATE.draft.stance ? "위에서 내 입장을 골라 주세요." : "이제 칠판에 올릴 수 있어요.");
+}
+$("inReason").addEventListener("input", validateSubmit);
+$("inClaim").addEventListener("input", validateSubmit);
+
+$("btnSubmit").addEventListener("click", async () => {
+  const resp = {
+    seatNo: STATE.me.seatNo, nickname: STATE.me.nickname,
+    stance: STATE.draft.stance,
+    claim: $("inClaim").value.trim(),
+    reason: $("inReason").value.trim(),
+    tag: STATE.draft.tag || "E0",
+    round: 1, changeReason: "", agree: 0, object: 0
+  };
+  await putResponse(resp);
+  if (STATE.room.phase === "first") await setPhase("debate", true);
+  renderBoard();
+  show("scBoard");
+});
+
+async function putResponse(resp) {
+  const i = STATE.responses.findIndex(r => r.seatNo === resp.seatNo && r.round === resp.round);
+  if (i >= 0) STATE.responses[i] = { ...STATE.responses[i], ...resp };
+  else STATE.responses.push(resp);
+  if (serverOk) { try { await apiJson("/api/room/respond", { code: STATE.room.code, response: resp }); } catch {} }
+}
+async function setPhase(phase, silent) {
+  STATE.room.phase = phase;
+  if (serverOk) { try { await apiJson("/api/room/phase", { code: STATE.room.code, phase }); } catch {} }
+  if (!silent) refreshLive();
+}
+
+// ══════════════════════════════════════════════════════
+//  공유 칠판 (F1 · 소수 의견 우선 배치 / F3 동의·반론 / F4 반례 카드)
+// ══════════════════════════════════════════════════════
+function renderBoard() {
+  const r = STATE.room; if (!r) return;
+  $("bdType").textContent = r.typeName || "논쟁";
+  $("bdMeta").textContent = \`\${r.lesson}차시 · 방 번호 \${r.code}\`;
+  $("bdPrompt").textContent = r.prompt;
+  renderSteps("stepsBoard");
+
+  const round = r.phase === "second" ? 2 : 1;
+  const list = STATE.responses.filter(x => x.round === round);
+  $("bdCount").textContent = \`\${list.length}명이 생각을 올렸어요 · 적게 나온 생각을 먼저 보여 줍니다\`;
+
+  // 교사에게만 보이는 도구
+  $("bdTools").innerHTML = STATE.role === "teacher"
+    ? \`<button class="btn btn-ghost btn-sm" id="bdToDash" type="button">대시보드</button>\`
+    : "";
+  if ($("bdToDash")) $("bdToDash").addEventListener("click", () => { renderDash(); show("scDash"); });
+
+  const groups = STANCES.map(s => ({
+    ...s, items: list.filter(x => x.stance === s.code)
+  })).filter(g => g.items.length > 0);
+  // 소수 의견 우선: 인원이 적은 입장부터 배치함(다수 쏠림이 토론을 조기 종료시키므로)
+  groups.sort((a, b) => a.items.length - b.items.length);
+
+  const body = $("boardBody");
+  if (list.length === 0) {
+    body.innerHTML = \`<div class="empty">아직 올라온 생각이 없어요.<br>학생이 주장과 까닭을 올리면 여기에 모두 함께 보입니다.</div>\`;
+  } else {
+    const minCount = groups[0].items.length;
+    body.innerHTML = groups.map(g => \`
+      <div class="stance-group">
+        <div class="sg-label">
+          <span>\${g.code}. \${esc(g.label)}</span>
+          <span class="sg-count">\${g.items.length}명</span>
+          \${g.items.length === minCount && groups.length > 1 ? \`<span class="sg-minor">소수 의견 먼저</span>\` : ""}
+        </div>
+        <div class="cards">
+          \${g.items.map(x => {
+            const mine = STATE.me && x.seatNo === STATE.me.seatNo;
+            const tag = TAGS.find(t => t.code === x.tag);
+            return \`<button class="rcard\${mine ? " mine" : ""}" type="button" data-seat="\${x.seatNo}" data-round="\${round}">
+              <div class="nick"><span>\${esc(x.nickname)}</span>\${mine ? "<span>나</span>" : ""}</div>
+              <div class="claim">\${esc(x.claim || "(주장 없음)")}</div>
+              <div class="reason">\${esc(x.reason)}</div>
+              <div class="foot">
+                \${tag ? \`<span class="minitag">\${esc(tag.label)}</span>\` : ""}
+                \${x.agree ? \`<span class="react">👍 \${x.agree}</span>\` : ""}
+                \${x.object ? \`<span class="react">💬 \${x.object}</span>\` : ""}
+              </div>
+            </button>\`;
+          }).join("")}
+        </div>
+      </div>\`).join("");
+    body.querySelectorAll(".rcard").forEach(c =>
+      c.addEventListener("click", () => openCard(Number(c.dataset.seat), Number(c.dataset.round))));
+  }
+
+  // 반례 카드 슬롯
+  if (STATE.counters.length) {
+    $("counterSlot").style.display = "block";
+    $("counterList").innerHTML = STATE.counters.map(c =>
+      \`<div class="counter-card">🤔 \${esc(c)}</div>\`).join("");
+  } else $("counterSlot").style.display = "none";
+
+  $("btnToSecond").style.display = STATE.role === "student" ? "" : "none";
+  $("btnBackInput").style.display = STATE.role === "student" ? "" : "none";
+}
+
+// 카드 상세 + 동의/반론 (F3)
+let modalTarget = null;
+function openCard(seatNo, round) {
+  const x = STATE.responses.find(r => r.seatNo === seatNo && r.round === round);
+  if (!x) return;
+  modalTarget = x;
+  const st = STANCES.find(s => s.code === x.stance);
+  const tg = TAGS.find(t => t.code === x.tag);
+  $("mdNick").textContent = x.nickname;
+  $("mdStance").textContent = st ? \`\${st.code}. \${st.label}\` : "-";
+  $("mdClaim").textContent = x.claim || "(주장을 적지 않았어요)";
+  $("mdReason").textContent = x.reason;
+  $("mdTag").textContent = tg ? tg.label : "적지 않음";
+  const mine = STATE.me && x.seatNo === STATE.me.seatNo;
+  $("mdReactRow").innerHTML = (STATE.role === "student" && !mine)
+    ? \`<button class="btn btn-ghost grow" id="mdAgree" type="button">👍 나도 그렇게 생각해</button>
+       <button class="btn btn-ghost grow" id="mdObject" type="button">💬 나는 다르게 생각해</button>\`
+    : \`<div class="hint" style="margin:0">\${mine ? "내가 올린 생각이에요." : "선생님 화면에서는 표시만 합니다."}</div>\`;
+  if ($("mdAgree")) $("mdAgree").addEventListener("click", () => react("agree"));
+  if ($("mdObject")) $("mdObject").addEventListener("click", () => react("object"));
+  $("cardModal").classList.add("open");
+}
+async function react(kind) {
+  if (!modalTarget) return;
+  modalTarget[kind] = (modalTarget[kind] || 0) + 1;
+  // 반론을 '건 사람'도 기록함 (수집 양식의 반론제기수 칸)
+  if (kind === "object" && STATE.me) {
+    const mine = STATE.responses.filter(r => r.seatNo === STATE.me.seatNo);
+    mine.forEach(r => { r.objectMade = (r.objectMade || 0) + 1; });
+  }
+  if (serverOk) {
+    try { await apiJson("/api/room/react", {
+      code: STATE.room.code, seatNo: modalTarget.seatNo, round: modalTarget.round,
+      kind, fromSeatNo: STATE.me ? STATE.me.seatNo : null }); } catch {}
+  }
+  $("cardModal").classList.remove("open");
+  renderBoard();
+}
+$("mdClose").addEventListener("click", () => $("cardModal").classList.remove("open"));
+$("cardModal").addEventListener("click", e => { if (e.target.id === "cardModal") $("cardModal").classList.remove("open"); });
+
+$("btnBackInput").addEventListener("click", openInput);
+$("btnToSecond").addEventListener("click", () => { openSecond(); });
+
+// ══════════════════════════════════════════════════════
+//  2차 재투표 (F5)
+// ══════════════════════════════════════════════════════
+function openSecond() {
+  const first = myResponse(1);
+  $("sdPrompt").textContent = STATE.room.prompt;
+  $("sdFirst").textContent = first
+    ? \`내 1차 입장은 \${first.stance}. \${(STANCES.find(s => s.code === first.stance) || {}).label || ""} 였어요.\`
+    : "";
+  renderSteps("stepsSecond");
+
+  $("stance2Grid").innerHTML = STANCES.map(s =>
+    \`<button class="stance" type="button" data-code="\${s.code}" aria-pressed="false">
+       <b>\${s.code}</b>\${esc(s.label)}</button>\`).join("");
+  $("stance2Grid").querySelectorAll("button").forEach(b =>
+    b.addEventListener("click", () => {
+      STATE.draft.stance2 = b.dataset.code;
+      $("stance2Grid").querySelectorAll("button").forEach(x =>
+        x.setAttribute("aria-pressed", String(x === b)));
+      const changed = first && first.stance !== STATE.draft.stance2;
+      $("changeBox").style.display = changed ? "" : "none";
+      if (!changed) STATE.draft.changeReason = "R0";
+      validateSubmit2();
+    }));
+
+  $("reasonRow").innerHTML = CHANGE_REASONS.map(r =>
+    \`<button class="tagbtn" type="button" data-code="\${r.code}" aria-pressed="false">\${esc(r.label)}</button>\`).join("");
+  $("reasonRow").querySelectorAll("button").forEach(b =>
+    b.addEventListener("click", () => {
+      STATE.draft.changeReason = b.dataset.code;
+      $("reasonRow").querySelectorAll("button").forEach(x =>
+        x.setAttribute("aria-pressed", String(x === b)));
+      validateSubmit2();
+    }));
+
+  $("tag2Row").innerHTML = TAGS.map(t =>
+    \`<button class="tagbtn" type="button" data-code="\${t.code}" aria-pressed="false">\${esc(t.label)}</button>\`).join("");
+  $("tag2Row").querySelectorAll("button").forEach(b =>
+    b.addEventListener("click", () => {
+      STATE.draft.tag2 = b.dataset.code;
+      $("tag2Row").querySelectorAll("button").forEach(x =>
+        x.setAttribute("aria-pressed", String(x === b)));
+      validateSubmit2();
+    }));
+
+  if (first) $("inReason2").value = first.reason || "";
+  validateSubmit2();
+  show("scSecond");
+}
+function validateSubmit2() {
+  const first = myResponse(1);
+  const hasReason = $("inReason2").value.trim().length > 0;
+  const changed = first && STATE.draft.stance2 && first.stance !== STATE.draft.stance2;
+  const okReason = !changed || !!STATE.draft.changeReason;
+  $("btnSubmit2").disabled = !(STATE.draft.stance2 && hasReason && okReason);
+}
+$("inReason2").addEventListener("input", validateSubmit2);
+
+$("btnSubmit2").addEventListener("click", async () => {
+  const first = myResponse(1);
+  const changed = first && first.stance !== STATE.draft.stance2;
+  await putResponse({
+    seatNo: STATE.me.seatNo, nickname: STATE.me.nickname,
+    stance: STATE.draft.stance2,
+    claim: (first && first.claim) || "",
+    reason: $("inReason2").value.trim(),
+    tag: STATE.draft.tag2 || (first && first.tag) || "E0",
+    round: 2,
+    changeReason: changed ? (STATE.draft.changeReason || "R4") : "R0",
+    agree: 0, object: 0
+  });
+  await setPhase("create", true);
+  openCreate();
+});
+
+// ══════════════════════════════════════════════════════
+//  문제 출제 보드 (F7)
+// ══════════════════════════════════════════════════════
+const CHECKS = [
+  "친구들이 갈라질 문제인가?",
+  "답이 하나로 정해지는가?",
+  "이유를 물을 수 있는가?"
+];
+function openCreate() {
+  renderSteps("stepsCreate");
+  STATE.draft.checks = [];
+  $("checkRow").innerHTML = CHECKS.map((c, i) =>
+    \`<button class="tagbtn" type="button" data-i="\${i}" aria-pressed="false">\${esc(c)}</button>\`).join("");
+  $("checkRow").querySelectorAll("button").forEach(b =>
+    b.addEventListener("click", () => {
+      const i = Number(b.dataset.i);
+      const on = b.getAttribute("aria-pressed") === "true";
+      b.setAttribute("aria-pressed", String(!on));
+      STATE.draft.checks = on ? STATE.draft.checks.filter(x => x !== i) : [...STATE.draft.checks, i];
+      validateProblem();
+    }));
+  $("ptypeRow").innerHTML = TASK_TYPES.slice(0, 3).map(t =>
+    \`<button class="tagbtn" type="button" data-code="\${t.code}" aria-pressed="false">\${esc(t.label)}</button>\`).join("");
+  $("ptypeRow").querySelectorAll("button").forEach(b =>
+    b.addEventListener("click", () => {
+      STATE.draft.ptype = b.dataset.code;
+      $("ptypeRow").querySelectorAll("button").forEach(x =>
+        x.setAttribute("aria-pressed", String(x === b)));
+      validateProblem();
+    }));
+  validateProblem();
+  renderProblems();
+  show("scCreate");
+}
+function validateProblem() {
+  $("btnSubmitProblem").disabled =
+    !($("inProblem").value.trim() && STATE.draft.checks.length === CHECKS.length && STATE.draft.ptype);
+}
+$("inProblem").addEventListener("input", validateProblem);
+$("btnSubmitProblem").addEventListener("click", async () => {
+  const p = {
+    seatNo: STATE.me.seatNo, nickname: STATE.me.nickname,
+    text: $("inProblem").value.trim(), type: STATE.draft.ptype
+  };
+  STATE.problems.push(p);
+  if (serverOk) { try { await apiJson("/api/room/problem", { code: STATE.room.code, problem: p }); } catch {} }
+  $("inProblem").value = "";
+  validateProblem();
+  renderProblems();
+});
+function renderProblems() {
+  const box = $("problemList");
+  if (!STATE.problems.length) {
+    box.innerHTML = \`<div class="hint">아직 낸 문제가 없어요.</div>\`; return;
+  }
+  box.innerHTML = \`<table class="mini"><tr><th>별명</th><th>유형</th><th>문제</th></tr>\` +
+    STATE.problems.map(p => {
+      const t = TASK_TYPES.find(x => x.code === p.type);
+      return \`<tr><td>\${esc(p.nickname)}</td><td>\${esc(t ? t.label : p.type)}</td><td>\${esc(p.text)}</td></tr>\`;
+    }).join("") + \`</table>\`;
+}
+
+// ══════════════════════════════════════════════════════
+//  교사 대시보드 (F6)
+// ══════════════════════════════════════════════════════
+function renderDash() {
+  const r = STATE.room; if (!r) { show("scHome"); return; }
+  $("dashCode").textContent = r.code;
+  $("dashPrompt").textContent = \`\${r.lesson}차시 · \${r.typeName} · \${r.prompt}\`;
+  renderSteps("stepsDash");
+
+  const r1 = STATE.responses.filter(x => x.round === 1);
+  const r2 = STATE.responses.filter(x => x.round === 2);
+  const joined = new Set(r1.map(x => x.seatNo)).size;
+  const missing = Math.max(0, CONFIG.classSize - joined);
+  const objections = STATE.responses.reduce((s, x) => s + (x.object || 0), 0);
+
+  // 쏠림 비율 = 가장 많은 입장의 비율
+  const counts = STANCES.map(s => r1.filter(x => x.stance === s.code).length);
+  const maxC = Math.max(0, ...counts);
+  const skew = r1.length ? Math.round((maxC / r1.length) * 100) : 0;
+  const over = r1.length >= 3 && skew >= CONFIG.skewThreshold;
+
+  $("dashStats").innerHTML = \`
+    <div class="stat"><div class="k">응답</div><div class="v">\${r1.length}</div></div>
+    <div class="stat"><div class="k">아직 안 낸 학생</div><div class="v">\${missing}</div></div>
+    <div class="stat\${over ? " warn" : ""}"><div class="k">쏠림 비율</div><div class="v">\${skew}%</div></div>
+    <div class="stat"><div class="k">반론</div><div class="v">\${objections}</div></div>
+    <div class="stat"><div class="k">2차 응답</div><div class="v">\${r2.length}</div></div>\`;
+
+  $("dashAlert").innerHTML = over
+    ? \`<div class="alert"><b>한쪽으로 몰리고 있습니다 (\${skew}%).</b>
+       토론이 일찍 끝날 수 있어요. 아래에서 <b>반례 카드</b>를 넣고,
+       소수 의견 학생에게 먼저 발언권을 주세요.</div>\`
+    : "";
+
+  $("dashStance").innerHTML = STANCES.map((s, i) => {
+    const n = counts[i], pct = r1.length ? Math.round(n / r1.length * 100) : 0;
+    return \`<div class="dist-row"><span>\${s.code}. \${esc(s.label)}</span>
+      <span class="bar"><i style="width:\${pct}%"></i></span><span class="n">\${n}명</span></div>\`;
+  }).join("");
+
+  const tagBase = r2.length ? r2 : r1;
+  $("dashTags").innerHTML = TAGS.map(t => {
+    const n = tagBase.filter(x => x.tag === t.code).length;
+    const pct = tagBase.length ? Math.round(n / tagBase.length * 100) : 0;
+    return \`<div class="dist-row"><span>\${t.code} \${esc(t.label)}</span>
+      <span class="bar"><i style="width:\${pct}%"></i></span><span class="n">\${n}명</span></div>\`;
+  }).join("") + \`<div class="hint">\${r2.length ? "2차 근거 기준" : "1차 근거 기준"}</div>\`;
+
+  $("dashCounters").innerHTML = STATE.counters.length
+    ? STATE.counters.map(c => \`<div class="counter-card" style="margin-top:8px">🤔 \${esc(c)}</div>\`).join("")
+    : \`<div class="hint">아직 넣은 반례 카드가 없어요.</div>\`;
+
+  // 입장 변화
+  const changed = r2.filter(x => {
+    const f = r1.find(y => y.seatNo === x.seatNo);
+    return f && f.stance !== x.stance;
+  });
+  if (!r2.length) {
+    $("dashChange").innerHTML = \`<div class="hint">2차 입장이 아직 없어요.</div>\`;
+  } else {
+    const byReason = CHANGE_REASONS.map(cr =>
+      ({ ...cr, n: changed.filter(x => x.changeReason === cr.code).length })).filter(x => x.n > 0);
+    $("dashChange").innerHTML = \`
+      <div class="stat-grid">
+        <div class="stat"><div class="k">입장을 바꾼 학생</div><div class="v">\${changed.length}</div></div>
+        <div class="stat"><div class="k">변화 비율</div><div class="v">\${r2.length ? Math.round(changed.length / r2.length * 100) : 0}%</div></div>
+      </div>
+      \${byReason.length ? \`<table class="mini"><tr><th>바꾼 까닭</th><th>인원</th></tr>\` +
+        byReason.map(x => \`<tr><td>\${esc(x.label)}</td><td>\${x.n}명</td></tr>\`).join("") + \`</table>\` : ""}\`;
+  }
+}
+$("btnDashBoard").addEventListener("click", () => { renderBoard(); show("scBoard"); });
+
+// 반례 카드 투입 (F4 · C5 질문만)
+$("btnCounterPreset").addEventListener("click", async () => {
+  const seed = STATE.room.counterSeed;
+  if (!seed) return;
+  if (!STATE.counters.includes(seed)) STATE.counters.push(seed);
+  if (serverOk) { try { await apiJson("/api/room/counter", { code: STATE.room.code, text: seed }); } catch {} }
+  $("counterMsg").textContent = "준비된 반례 카드를 칠판에 넣었어요.";
+  renderDash();
+});
+$("btnCounterAi").addEventListener("click", async () => {
+  const msg = $("counterMsg");
+  if (!serverOk) {
+    // 서버가 없으면 같은 단원·유형의 다른 발문에서 반례 카드를 골라 씀(F8 폴백)
+    const pool = PROMPT_BANK.filter(p =>
+      p.unit === STATE.room.unit && p.id !== STATE.room.promptId).map(p => p.counter_card);
+    const pick = pool.find(c => !STATE.counters.includes(c));
+    if (pick) { STATE.counters.push(pick); msg.textContent = "서버가 없어 준비된 카드 중에서 골라 넣었어요."; renderDash(); }
+    else msg.textContent = "더 넣을 카드가 없어요.";
+    return;
+  }
+  msg.textContent = "반례 카드를 만드는 중…";
+  try {
+    const d = await apiJson("/api/counter-card", {
+      prompt: STATE.room.prompt,
+      issue: STATE.room.issue,
+      unit: STATE.room.unit,
+      typeName: STATE.room.typeName,
+      claims: STATE.responses.filter(x => x.round === 1).slice(0, 12)
+        .map(x => ({ stance: x.stance, reason: x.reason }))
+    });
+    const text = (d.cards && d.cards[0]) || "";
+    if (!text) throw new Error("empty");
+    STATE.counters.push(text);
+    if (serverOk) { try { await apiJson("/api/room/counter", { code: STATE.room.code, text }); } catch {} }
+    msg.textContent = d.demo ? "미리 준비된 카드를 넣었어요(AI 응답 없음)." : "AI가 만든 반례 카드를 넣었어요.";
+    renderDash();
+  } catch {
+    msg.textContent = "AI 카드를 받지 못해 준비된 카드로 대신했어요.";
+    $("btnCounterPreset").click();
+  }
+});
+
+// ══════════════════════════════════════════════════════
+//  자료 내보내기 (데이터 수집 양식 형식)
+// ══════════════════════════════════════════════════════
+function download(name, text) {
+  const blob = new Blob(["﻿" + text], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 3000);
+}
+function csvCell(v) { const s = String(v == null ? "" : v); return /[",\\n]/.test(s) ? \`"\${s.replace(/"/g, '""')}"\` : s; }
+function exportStanceCsv() {
+  const r = STATE.room; if (!r) return;
+  const r1 = STATE.responses.filter(x => x.round === 1);
+  const r2 = STATE.responses.filter(x => x.round === 2);
+  const head = ["차시","출석번호","별명","과제유형","1차입장","2차입장","변경여부","변경사유","1차근거","2차근거","근거변화"];
+  const rows = r1.map(a => {
+    const b = r2.find(x => x.seatNo === a.seatNo);
+    const changed = b && b.stance !== a.stance ? 1 : 0;
+    const tagChanged = b && b.tag !== a.tag ? 1 : 0;
+    return [r.lesson, a.seatNo, a.nickname, r.taskType, a.stance, b ? b.stance : "",
+            b ? changed : "", b ? (b.changeReason || "R0") : "", a.tag, b ? b.tag : "", b ? tagChanged : ""];
+  });
+  download(\`수담_입장변화_\${r.lesson}차시.csv\`,
+    [head, ...rows].map(r => r.map(csvCell).join(",")).join("\\r\\n"));
+}
+function exportTagCsv() {
+  const r = STATE.room; if (!r) return;
+  // 학생마다 가장 나중 라운드(2차가 있으면 2차, 없으면 1차)를 대표로 씀 — 전원이 한 행씩 남도록
+  const seats = [...new Set(STATE.responses.map(x => x.seatNo))].sort((a, b) => a - b);
+  const head = ["차시","출석번호","별명","사용근거","반론제기수","반론피격수","발언횟수"];
+  const rows = seats.map(seat => {
+    const all = STATE.responses.filter(y => y.seatNo === seat);
+    const latest = all.find(y => y.round === 2) || all.find(y => y.round === 1) || all[0];
+    const hit = all.reduce((s, y) => s + (y.object || 0), 0);         // 내가 받은 반론
+    const made = all.reduce((s, y) => Math.max(s, y.objectMade || 0), 0); // 내가 건 반론
+    return [r.lesson, seat, latest.nickname, latest.tag, made, hit, all.length];
+  });
+  download(\`수담_근거태그_\${r.lesson}차시.csv\`,
+    [head, ...rows].map(r => r.map(csvCell).join(",")).join("\\r\\n"));
+}
+$("btnCsv1").addEventListener("click", exportStanceCsv);
+$("btnCsv2").addEventListener("click", exportTagCsv);
+$("btnDashCsv").addEventListener("click", exportStanceCsv);
+
+// 시연용 응답 채우기 (심사 시연·화면 점검용)
+const DEMO_NICKS = ["파란연필","노란지우개","초록자","빨간각도기","보라컴퍼스","하늘공책","분홍색연필","주황풀",
+  "검정볼펜","은빛클립","금빛스티커","연두테이프","남색가위","자주샤프","회색필통","흰색도화지","밤색스케치북",
+  "청록물감","살구붓","진주팔레트","구름지우개","별빛자","달빛펜","햇살노트","바람연필","이슬크레용","솔잎마커",
+  "모래시계","반짝핀","눈꽃공책"];
+$("btnDemoFill").addEventListener("click", () => {
+  if (!STATE.room) { alert("먼저 선생님 역할로 토론방을 열어 주세요."); return; }
+  if (STATE.responses.length &&
+      !confirm("이미 올라온 생각이 있어요. 모두 지우고 시연용 30명으로 바꿀까요?")) return;
+  const reasons = [
+    "세로축이 0에서 시작하지 않아서 차이가 크게 보이기 때문이야.",
+    "두 그래프의 눈금 간격이 서로 달라서 그래.",
+    "숫자를 직접 계산해 보면 차이가 크지 않았어.",
+    "그림으로 그려 보니 비율이 비슷해 보였어.",
+    "정의대로 따지면 이렇게 봐야 맞다고 생각해.",
+    "반대되는 경우를 하나 떠올려 보면 말이 안 돼.",
+    "실제로 가게에서 본 적이 있는데 그때도 그랬어."
+  ];
+  // 시연 데이터는 기존 응답을 대체함(출석번호 중복 방지).
+  // 분포를 한쪽으로 크게 몰아 두어 쏠림 경고(F6)와 소수 의견 우선 배치(F1)가 함께 드러나게 함.
+  STATE.responses = [];
+  const CLASS_N = 30;
+  for (let i = 0; i < CLASS_N; i++) {
+    const stance = STANCES[i < 25 ? 0 : (i < 28 ? 1 : (i < 29 ? 2 : 3))].code;   // A25·B3·C1·D1 → 약 83%
+    STATE.responses.push({
+      seatNo: i + 1, nickname: DEMO_NICKS[i], stance,
+      claim: stance === "A" ? "첫 번째 쪽이 사실을 더 잘 보여준다고 생각해."
+           : stance === "B" ? "두 번째 쪽이 더 정확하다고 생각해."
+           : stance === "C" ? "둘 다 아니고 다른 방법이 필요해." : "아직 판단하기 어려워.",
+      reason: reasons[i % reasons.length],
+      tag: TAGS[i % TAGS.length].code, round: 1, changeReason: "",
+      agree: i % 5 === 0 ? 2 : 0, object: i % 7 === 0 ? 1 : 0
+    });
+  }
+  CONFIG.classSize = CLASS_N;
+  $("cfgClassSize").value = CLASS_N;
+  STATE.room.phase = "debate";
+  $("settingsPanel").classList.remove("open");
+  renderDash(); show("scDash");
+});
+
+// ══════════════════════════════════════════════════════
+//  음성 보조 입력 (선택 기능 · 서버 있을 때만)
+//  텍스트 입력이 주 경로이며, 음성은 까닭 칸을 채워 주는 보조 수단임.
+// ══════════════════════════════════════════════════════
+let mediaRecorder = null, chunks = [], recStart = 0, recTimer = null, isRec = false, micNoticed = false;
+const micBtn = $("btnMic"), micHint = $("micHint");
+const micSupported = !!(navigator.mediaDevices && window.MediaRecorder);
+function updateMicAvailability() {
+  const usable = micSupported && serverOk && !OFFLINE_ONLY;
+  micBtn.disabled = !usable;
+  if (!micSupported) micHint.textContent = "이 기기에서는 키보드로 적어 주세요.";
+  else if (!usable) micHint.textContent = "말하기는 교사 서버에 연결됐을 때 쓸 수 있어요. 지금은 키보드로 적어 주세요.";
+  else micHint.textContent = "꾹 누르고 말하면 까닭 칸에 받아써 줘요 (키보드가 기본이에요)";
+}
+$("btnMicOk").addEventListener("click", () => {
+  $("micNotice").classList.remove("open"); micNoticed = true;
+  micHint.textContent = "이제 꾹 누르고 말해 보세요.";
+});
+function micDown(e) {
+  e.preventDefault();
+  if (micBtn.disabled || isRec) return;
+  if (!micNoticed) { $("micNotice").classList.add("open"); return; }
+  startRec();
+}
+function micUp(e) { e.preventDefault(); if (isRec) stopRec(); }
+micBtn.addEventListener("pointerdown", micDown);
+micBtn.addEventListener("pointerup", micUp);
+micBtn.addEventListener("pointercancel", micUp);
+micBtn.addEventListener("keydown", e => { if (e.key === " " || e.key === "Enter") micDown(e); });
+micBtn.addEventListener("keyup", e => { if (e.key === " " || e.key === "Enter") micUp(e); });
+
+async function startRec() {
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+  catch { micBtn.disabled = true; micHint.textContent = "마이크를 쓸 수 없어요. 키보드로 적어 주세요."; return; }
+  const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus"
+             : (MediaRecorder.isTypeSupported("audio/mp4") ? "audio/mp4" : "");
+  mediaRecorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+  chunks = [];
+  mediaRecorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+  mediaRecorder.onstop = async () => {
+    stream.getTracks().forEach(t => t.stop());
+    const blob = new Blob(chunks, { type: mediaRecorder.mimeType || "audio/webm" });
+    chunks = [];
+    if (Date.now() - recStart < 500) { micHint.textContent = "너무 짧아요. 조금 더 길게 눌러 주세요."; return; }
+    micHint.textContent = "말한 내용을 글자로 바꾸는 중…";
+    try {
+      const fd = new FormData();
+      fd.append("audio", blob, "speech");
+      fd.append("classCode", CONFIG.classCode);
+      const res = await api("/api/stt", { method: "POST", body: fd });
+      const d = await res.json();
+      if (d.ok && d.text) {
+        const box = $("inReason");
+        box.value = (box.value ? box.value.trim() + " " : "") + d.text;
+        box.focus(); validateSubmit();
+        micHint.textContent = "이렇게 들렸어요. 확인하고 고쳐 주세요.";
+      } else micHint.textContent = "잘 못 알아들었어요. 키보드로 적어 주세요.";
+    } catch { micHint.textContent = "지금은 받아쓰기를 할 수 없어요. 키보드로 적어 주세요."; }
+  };
+  mediaRecorder.start(); isRec = true; recStart = Date.now();
+  micBtn.classList.add("rec");
+  recTimer = setInterval(() => {
+    const left = CONFIG.maxRecordSec - Math.floor((Date.now() - recStart) / 1000);
+    micHint.textContent = \`🔴 녹음 중… \${left}초 남음\`;
+    if (left <= 0) stopRec();
+  }, 250);
+}
+function stopRec() {
+  if (!isRec) return;
+  isRec = false; clearInterval(recTimer);
+  micBtn.classList.remove("rec");
+  if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
+}
+
+// ══════════════════════════════════════════════════════
+//  시작
+// ══════════════════════════════════════════════════════
+checkServer().then(updateMicAvailability);
+</script>
+</body>
+</html>
+`;
+
+const MAX_AUDIO_BYTES = 2 * 1024 * 1024;
+const GEMINI_MODEL_DEFAULT = "gemini-flash-lite-latest";
+
+// ===== 반례 카드 생성 지침 (C5: 결론·정답 금지, 질문만) =====
+const COUNTER_SYSTEM = [
+  "너는 초등학교 6학년 수학 토론 수업에서 교사를 돕는 '반례 카드' 작성자다.",
+  "학생들의 토론이 한쪽으로 쏠려 일찍 끝나려 할 때, 다시 생각하게 만드는 질문을 만든다.",
+  "",
+  "반드시 지킬 규칙:",
+  "1) 정답·결론·풀이를 절대 담지 마라. 오직 '질문'만 쓴다.",
+  "2) 어느 편이 옳다고 암시하지 마라. 양쪽 모두를 흔드는 질문이어야 한다.",
+  "3) 초등학교 6학년이 이해할 수 있는 짧고 쉬운 문장으로 쓴다.",
+  "4) 한 장에 한 질문. 두 문장을 넘기지 마라.",
+  "5) 학생들이 놓친 조건이나 경계 사례를 건드려라.",
+  "6) 서술형 단정문('~이다', '~해야 한다')으로 끝내지 마라. 물음으로 끝내라."
+].join("\n");
+
+const COUNTER_SCHEMA = {
+  type: "OBJECT",
+  properties: { cards: { type: "ARRAY", items: { type: "STRING" } } },
+  required: ["cards"]
+};
+
+// ═══════════════ 공통 도우미 ═══════════════
+function json(body, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type"
+    }
+  });
+}
+function classCode(env) { return String(env.CLASS_CODE || "0000").trim(); }
+function checkCode(env, code) { return String(code || "").trim() === classCode(env); }
+// 학생 발화 내용은 남기지 않는 안전 로그
+function logSafe(route, note) {
+  console.log(`[${new Date().toISOString()}] ${route} | ${note}`);
+}
+
+// ═══════════════ D1 저장소 ═══════════════
+// 방 상태는 서버에 두어야 여러 기기가 같은 화면을 봅니다.
+// 저장하는 것은 출석번호·별명·주장·근거뿐이며 실명·연락처는 받지 않습니다(C2).
+let schemaReady = false;
+async function ensureSchema(db) {
+  if (schemaReady || !db) return;
+  await db.prepare(`CREATE TABLE IF NOT EXISTS rooms (
+    code TEXT PRIMARY KEY, data TEXT NOT NULL, updated_at TEXT NOT NULL)`).run();
+  await db.prepare(`CREATE TABLE IF NOT EXISTS responses (
+    code TEXT NOT NULL, seat_no INTEGER NOT NULL, round INTEGER NOT NULL,
+    data TEXT NOT NULL, PRIMARY KEY (code, seat_no, round))`).run();
+  await db.prepare(`CREATE TABLE IF NOT EXISTS counters (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL, text TEXT NOT NULL)`).run();
+  await db.prepare(`CREATE TABLE IF NOT EXISTS problems (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL, data TEXT NOT NULL)`).run();
+  schemaReady = true;
+}
+async function getRoom(db, code) {
+  const row = await db.prepare("SELECT data FROM rooms WHERE code = ?").bind(code).first();
+  return row ? JSON.parse(row.data) : null;
+}
+async function putRoom(db, room) {
+  await db.prepare("INSERT OR REPLACE INTO rooms (code, data, updated_at) VALUES (?, ?, ?)")
+    .bind(room.code, JSON.stringify(room), new Date().toISOString()).run();
+}
+async function listResponses(db, code) {
+  const r = await db.prepare("SELECT data FROM responses WHERE code = ? ORDER BY seat_no, round")
+    .bind(code).all();
+  return (r.results || []).map(x => JSON.parse(x.data));
+}
+async function listCounters(db, code) {
+  const r = await db.prepare("SELECT text FROM counters WHERE code = ? ORDER BY id").bind(code).all();
+  return (r.results || []).map(x => x.text);
+}
+async function listProblems(db, code) {
+  const r = await db.prepare("SELECT data FROM problems WHERE code = ? ORDER BY id").bind(code).all();
+  return (r.results || []).map(x => JSON.parse(x.data));
+}
+
+// ═══════════════ Gemini (반례 카드 · 음성 인식) ═══════════════
+function geminiEndpoint(env, model) {
+  const useGateway = env.CF_AIG_ACCOUNT_ID && env.CF_AIG_GATEWAY;
+  return useGateway
+    ? `https://gateway.ai.cloudflare.com/v1/${env.CF_AIG_ACCOUNT_ID}/${env.CF_AIG_GATEWAY}/google-ai-studio/v1beta/models/${model}:generateContent`
+    : `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+}
+function bufferToBase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+// 모델 응답에서 카드 목록을 안전하게 뽑아냄
+function parseCards(raw) {
+  let s = String(raw || "").trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+  try {
+    const o = JSON.parse(s);
+    if (o && Array.isArray(o.cards)) {
+      const out = o.cards.map(x => String(x).trim()).filter(Boolean).slice(0, 3);
+      if (out.length) return out;
+    }
+    if (Array.isArray(o)) {
+      const out = o.map(x => String(x).trim()).filter(Boolean).slice(0, 3);
+      if (out.length) return out;
+    }
+  } catch { /* 줄 단위 폴백 */ }
+  return s.split(/\r?\n/)
+    .map(l => l.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, "").replace(/^["'\s]+|["'\s]+$/g, "").trim())
+    .filter(Boolean).slice(0, 3);
+}
+
+async function generateCounterCards(env, ctx) {
+  if (!env.GEMINI_API_KEY) throw new Error("ai_unconfigured");
+  const model = env.GEMINI_MODEL || GEMINI_MODEL_DEFAULT;
+  const claims = (ctx.claims || []).slice(0, 12)
+    .map((c, i) => `${i + 1}) [${c.stance}] ${String(c.reason || "").slice(0, 80)}`).join("\n");
+  const userMsg = [
+    ctx.unit ? `단원: ${ctx.unit}` : "",
+    ctx.typeName ? `과제 유형: ${ctx.typeName}` : "",
+    `오늘의 논제: ${ctx.prompt}`,
+    ctx.issue ? `예상 쟁점: ${ctx.issue}` : "",
+    claims ? `\n학생들이 낸 근거:\n${claims}` : "",
+    "",
+    "위 토론이 한쪽으로 쏠려 끝나지 않도록, 학생들이 다시 생각하게 만드는 반례 질문 2개를 만들어라.",
+    "답을 알려 주지 말고 질문만 써라."
+  ].filter(Boolean).join("\n");
+
+  let res, body;
+  try {
+    res = await fetch(geminiEndpoint(env, model), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: COUNTER_SYSTEM }] },
+        contents: [{ role: "user", parts: [{ text: userMsg }] }],
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: COUNTER_SCHEMA,
+          maxOutputTokens: 1024
+          // thinkingConfig 는 넣지 않음: -latest 별칭이 새 모델로 갱신될 때
+          // 숫자형 thinkingBudget 이 400 오류를 유발한 사례가 있어 생략함.
+        }
+      })
+    });
+  } catch { throw new Error("ai_network"); }
+  try { body = await res.json(); } catch { body = null; }
+  if (!res.ok || !body) throw new Error("ai_http_" + res.status);
+  const cand = body.candidates && body.candidates[0];
+  if (!cand) throw new Error("ai_empty");
+  if (cand.finishReason === "SAFETY" || cand.finishReason === "RECITATION") throw new Error("ai_refused");
+  const text = ((cand.content && cand.content.parts) || []).map(p => p.text || "").join("");
+  const cards = parseCards(text);
+  if (!cards.length) throw new Error("ai_empty");
+  return cards;
+}
+
+async function transcribe(env, audioBlob) {
+  if (!env.GEMINI_API_KEY) throw new Error("stt_unconfigured");
+  const model = env.GEMINI_MODEL || GEMINI_MODEL_DEFAULT;
+  const mimeType = audioBlob.type || "audio/webm";
+  const b64 = bufferToBase64(await audioBlob.arrayBuffer());   // 음성은 저장하지 않고 그대로 전달
+  let res, body;
+  try {
+    res = await fetch(geminiEndpoint(env, model), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [
+          { inline_data: { mime_type: mimeType, data: b64 } },
+          { text: "이 음성을 한국어로 정확히 받아써라. 초등학생의 발화다. 설명 없이 받아쓴 문장만 출력하라." }
+        ]}],
+        generationConfig: { maxOutputTokens: 512 }
+      })
+    });
+  } catch { throw new Error("stt_network"); }
+  try { body = await res.json(); } catch { body = null; }
+  if (!res.ok || !body) throw new Error("stt_http_" + res.status);
+  const cand = body.candidates && body.candidates[0];
+  if (!cand) throw new Error("stt_empty");
+  if (cand.finishReason === "SAFETY" || cand.finishReason === "RECITATION") throw new Error("stt_refused");
+  return ((cand.content && cand.content.parts) || []).map(p => p.text || "").join("").trim();
+}
+
+// ═══════════════ 라우트 ═══════════════
+async function readJson(request) {
+  try { return await request.json(); } catch { return {}; }
+}
+
+async function handleRoomCreate(env, request) {
+  const d = await readJson(request);
+  if (!checkCode(env, d.classCode)) return json({ ok: false, reason: "bad_class_code" }, 403);
+  if (!env.DB) return json({ ok: false, reason: "no_db" }, 503);
+  const room = d.room || {};
+  if (!room.code) return json({ ok: false, reason: "no_code" }, 400);
+  await putRoom(env.DB, room);
+  logSafe("/api/room/create", `room=${room.code} lesson=${room.lesson} type=${room.taskType}`);
+  return json({ ok: true, code: room.code });
+}
+
+async function handleRoomGet(env, url) {
+  const code = url.searchParams.get("code");
+  if (!code) return json({ ok: false, reason: "no_code" }, 400);
+  if (!env.DB) return json({ ok: false, reason: "no_db" }, 503);
+  const room = await getRoom(env.DB, code);
+  if (!room) return json({ ok: false, reason: "not_found" }, 404);
+  const [responses, counters, problems] = await Promise.all([
+    listResponses(env.DB, code), listCounters(env.DB, code), listProblems(env.DB, code)
+  ]);
+  return json({ ok: true, room, responses, counters, problems });
+}
+
+async function handleRespond(env, request) {
+  const d = await readJson(request);
+  if (!checkCode(env, d.classCode)) return json({ ok: false, reason: "bad_class_code" }, 403);
+  if (!env.DB) return json({ ok: false, reason: "no_db" }, 503);
+  const r = d.response || {};
+  if (!d.code || !r.seatNo || !r.round) return json({ ok: false, reason: "bad_request" }, 400);
+  // 기존 반응 수(동의·반론)는 보존하고 본문만 갱신함
+  const prev = await env.DB.prepare(
+    "SELECT data FROM responses WHERE code = ? AND seat_no = ? AND round = ?")
+    .bind(d.code, r.seatNo, r.round).first();
+  const merged = prev ? { ...JSON.parse(prev.data), ...r } : r;
+  await env.DB.prepare(
+    "INSERT OR REPLACE INTO responses (code, seat_no, round, data) VALUES (?, ?, ?, ?)")
+    .bind(d.code, r.seatNo, r.round, JSON.stringify(merged)).run();
+  logSafe("/api/room/respond", `room=${d.code} seat=${r.seatNo} round=${r.round} stance=${r.stance}`);
+  return json({ ok: true });
+}
+
+async function handleReact(env, request) {
+  const d = await readJson(request);
+  if (!checkCode(env, d.classCode)) return json({ ok: false, reason: "bad_class_code" }, 403);
+  if (!env.DB) return json({ ok: false, reason: "no_db" }, 503);
+  const row = await env.DB.prepare(
+    "SELECT data FROM responses WHERE code = ? AND seat_no = ? AND round = ?")
+    .bind(d.code, d.seatNo, d.round).first();
+  if (!row) return json({ ok: false, reason: "not_found" }, 404);
+  const obj = JSON.parse(row.data);
+  const kind = d.kind === "object" ? "object" : "agree";
+  obj[kind] = (obj[kind] || 0) + 1;
+  await env.DB.prepare("UPDATE responses SET data = ? WHERE code = ? AND seat_no = ? AND round = ?")
+    .bind(JSON.stringify(obj), d.code, d.seatNo, d.round).run();
+  // 반론을 건 학생 쪽에도 기록함(수집 양식의 반론제기수)
+  if (kind === "object" && d.fromSeatNo) {
+    const mine = await env.DB.prepare("SELECT seat_no, round, data FROM responses WHERE code = ? AND seat_no = ?")
+      .bind(d.code, d.fromSeatNo).all();
+    for (const m of (mine.results || [])) {
+      const o = JSON.parse(m.data);
+      o.objectMade = (o.objectMade || 0) + 1;
+      await env.DB.prepare("UPDATE responses SET data = ? WHERE code = ? AND seat_no = ? AND round = ?")
+        .bind(JSON.stringify(o), d.code, m.seat_no, m.round).run();
+    }
+  }
+  return json({ ok: true });
+}
+
+async function handlePhase(env, request) {
+  const d = await readJson(request);
+  if (!checkCode(env, d.classCode)) return json({ ok: false, reason: "bad_class_code" }, 403);
+  if (!env.DB) return json({ ok: false, reason: "no_db" }, 503);
+  const room = await getRoom(env.DB, d.code);
+  if (!room) return json({ ok: false, reason: "not_found" }, 404);
+  room.phase = d.phase;
+  await putRoom(env.DB, room);
+  return json({ ok: true });
+}
+
+async function handleCounter(env, request) {
+  const d = await readJson(request);
+  if (!checkCode(env, d.classCode)) return json({ ok: false, reason: "bad_class_code" }, 403);
+  if (!env.DB) return json({ ok: false, reason: "no_db" }, 503);
+  if (!d.code || !d.text) return json({ ok: false, reason: "bad_request" }, 400);
+  await env.DB.prepare("INSERT INTO counters (code, text) VALUES (?, ?)").bind(d.code, d.text).run();
+  return json({ ok: true });
+}
+
+async function handleProblem(env, request) {
+  const d = await readJson(request);
+  if (!checkCode(env, d.classCode)) return json({ ok: false, reason: "bad_class_code" }, 403);
+  if (!env.DB) return json({ ok: false, reason: "no_db" }, 503);
+  if (!d.code || !d.problem) return json({ ok: false, reason: "bad_request" }, 400);
+  await env.DB.prepare("INSERT INTO problems (code, data) VALUES (?, ?)")
+    .bind(d.code, JSON.stringify(d.problem)).run();
+  return json({ ok: true });
+}
+
+// 반례 카드 생성 — 교사만 요청함(학생 기기는 AI를 직접 부르지 않음, C3)
+async function handleCounterCard(env, request) {
+  const d = await readJson(request);
+  if (!checkCode(env, d.classCode)) return json({ ok: false, reason: "bad_class_code" }, 403);
+  try {
+    const cards = await generateCounterCards(env, d);
+    logSafe("/api/counter-card", `ok (${cards.length} cards)`);
+    return json({ ok: true, cards });
+  } catch (err) {
+    logSafe("/api/counter-card", `failed: ${err.message}`);
+    // 실패해도 수업이 멈추지 않도록 화면이 준비된 카드로 대신하게 함
+    return json({ ok: true, cards: [], demo: true });
+  }
+}
+
+// 음성 받아쓰기 (보조 입력)
+async function handleStt(env, request) {
+  let form;
+  try { form = await request.formData(); } catch { return json({ ok: false, reason: "bad_form" }, 400); }
+  if (!checkCode(env, form.get("classCode"))) return json({ ok: false, reason: "bad_class_code" }, 403);
+  const audio = form.get("audio");
+  if (!audio || typeof audio.arrayBuffer !== "function" || audio.size === 0) {
+    return json({ ok: false, reason: "no_audio" }, 400);
+  }
+  if (audio.size > MAX_AUDIO_BYTES) return json({ ok: false, reason: "audio_too_large" }, 413);
+  logSafe("/api/stt", `audio ${audio.size} bytes`);   // 발화 내용은 기록하지 않음
+  try {
+    const text = await transcribe(env, audio);
+    return json({ ok: true, text });
+  } catch (err) {
+    logSafe("/api/stt", `failed: ${err.message}`);
+    return json({ ok: false, reason: "stt_failed" }, 502);
+  }
+}
+
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    const path = decodeURIComponent(url.pathname);
+    const method = request.method;
+
+    if (method === "OPTIONS") {
+      return new Response(null, { status: 204, headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type" } });
+    }
+
+    if ((method === "GET" || method === "HEAD") && (path === "/" || path === "/index.html")) {
+      return new Response(APP_HTML, {
+        headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
+    }
+
+    try {
+      if (env.DB) await ensureSchema(env.DB);
+
+      if (path === "/api/health" && method === "GET") {
+        return json({ ok: true, db: !!env.DB, ai: !!env.GEMINI_API_KEY });
+      }
+      if (path === "/api/room" && method === "GET") return handleRoomGet(env, url);
+      if (method === "POST") {
+        if (path === "/api/room/create")   return handleRoomCreate(env, request);
+        if (path === "/api/room/respond")  return handleRespond(env, request);
+        if (path === "/api/room/react")    return handleReact(env, request);
+        if (path === "/api/room/phase")    return handlePhase(env, request);
+        if (path === "/api/room/counter")  return handleCounter(env, request);
+        if (path === "/api/room/problem")  return handleProblem(env, request);
+        if (path === "/api/counter-card")  return handleCounterCard(env, request);
+        if (path === "/api/stt")           return handleStt(env, request);
+      }
+      return json({ ok: false, reason: "not_found" }, 404);
+    } catch (e) {
+      logSafe(path, `server_error: ${e && e.message}`);
+      return json({ ok: false, reason: "server_error" }, 500);
+    }
+  }
+};
