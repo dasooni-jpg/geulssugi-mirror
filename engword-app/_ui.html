@@ -41,9 +41,15 @@ class FakeD1 {
             if (self.codes.has(code)) throw new Error("UNIQUE constraint failed");
             self.codes.set(code, { section, id }); return { meta: { changes: 1 } };
           }
+          if (sql.startsWith("UPDATE")) {
+            const row = self.codes.get(this._args[1]);
+            if (row) row.section = this._args[0];
+            return { meta: { changes: row ? 1 : 0 } };
+          }
         }
         if (sql.includes("vocab_students")) {
           if (sql.startsWith("INSERT OR REPLACE")) { self.students.set(this._args[0] + "|" + this._args[1], this._args[2]); return { meta: { changes: 1 } }; }
+          if (sql.startsWith("DELETE")) { const existed = self.students.delete(this._args[0] + "|" + this._args[1]); return { meta: { changes: existed ? 1 : 0 } }; }
         }
         throw new Error("unknown sql: " + sql);
       },

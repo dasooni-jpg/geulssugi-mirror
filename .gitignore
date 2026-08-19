@@ -42,6 +42,9 @@
 !/engword-worker.js
 !/build-engword-worker.ps1
 !/engword-server.ps1
+!/engword-ai-proxy/
+# wrangler 로컬 캐시(계정 정보)는 빼고
+/engword-ai-proxy/.wrangler/
 
 # ↓ 수담(數談) 음성 입력 (Level 0 오프라인 + Node 서버 + Cloudflare Worker)
 !/sudam/

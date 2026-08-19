@@ -25,8 +25,22 @@
  *     - Worker → Settings → Variables 에 아래 둘 추가 (Text 로):
  *         CF_AIG_ACCOUNT_ID = (대시보드 우측의 Account ID)
  *         CF_AIG_GATEWAY    = (위에서 만든 Gateway 이름)
- *     ※ 한국 일부 통신망이 홍콩 데이터센터로 라우팅될 때 Gemini 가 막는 문제를 우회합니다.
- *  7. 배포 주소를 학생 태블릿 홈 화면에 추가하면 끝!
+ *     ※ 게이트웨이도 같은 데이터센터에서 나가기 때문에 이것만으로는 안 될 수 있습니다.
+ *  7. (그래도 "User location is not supported" 가 나면) AI 호출을 북미로 고정:
+ *     ※ Durable Object 는 대시보드만으로는 만들 수 없습니다. 네임스페이스를 만들려면
+ *       설정 파일에 선언해서 한 번 배포해야 하므로, 중계 전용 미니 워커를 따로 둡니다.
+ *     7-1. 이 저장소의 engword-ai-proxy 폴더에서 (한 번만):
+ *            npx wrangler login
+ *            npx wrangler deploy
+ *     7-2. engword 워커 → Settings → Bindings → Add → Durable Object
+ *            Variable name: AI_PROXY        (반드시 이 이름 그대로!)
+ *            Durable Object: AIProxy        (engword-ai-proxy 에서 옴)
+ *     ※ 이 바인딩이 있으면 Gemini 호출만 북미(enam)에 고정된 Durable Object 안에서
+ *       나가므로, 학생이 홍콩(HKG) 데이터센터로 붙어도 지역 차단에 걸리지 않습니다.
+ *       바인딩이 없으면 지금까지처럼 Worker 에서 바로 호출합니다(설정 안 해도 동작).
+ *     ※ 아래 AIProxy 클래스는 engword-ai-proxy 에도 같은 내용으로 들어 있습니다.
+ *       이 워커 자체를 wrangler 로 배포한다면 미니 워커 없이 이 클래스를 바로 써도 됩니다.
+ *  8. 배포 주소를 학생 태블릿 홈 화면에 추가하면 끝!
  *
  * 학생은 회원가입 없이 [반 선택 → 별명] 만으로 시작합니다. (개인정보 제로)
  * 이후엔 그 기기에서 별명 입력 없이 자동으로 이어서 학습하며, 별명은 "나의 기록" 화면에서 바꿀 수 있습니다.
@@ -67,6 +81,18 @@ const SECTIONS = {
   high: {
     name: "고등",
     desc: "고등학교 교과서와 수능·모의고사 영어 지문에 자주 나오는 영단어. 수능 필수 영단어 위주, 추상적 개념어와 시사·학술 어휘 포함. 대부분(80% 정도)은 이 수준으로 하되, 나머지 20% 정도는 중학교 심화 수준의 비교적 쉬운 단어를 섞어 난이도 폭을 넓힌다.",
+  },
+  adult: {
+    name: "성인",
+    audience: "성인 학습자",
+    desc: "성인 학습자를 위한 실용·비즈니스 영어 어휘. 직장, 회의, 이메일, 여행, 금융, 뉴스, 사회·문화, 자기계발 등 실제 성인 생활에서 자주 접하는 단어를 중심으로 한다. CEFR B1~C1 범위를 기본으로 하되 너무 전문적인 전공용어는 피하고, 업무와 일상에서 바로 활용할 수 있는 표현을 우선한다. 명사·동사·형용사·부사를 고르게 섞고, 같은 단어라도 실제 문맥에서 쓰이는 자연스러운 예문을 제공한다.",
+  },
+  // 학교에서 수업·학급운영에 바로 쓰는 '교실영어' 성인 모드(선생님용).
+  // 예문(example)이 곧 교실에서 그대로 말할 수 있는 표현이 되도록 지시한다.
+  teacher: {
+    name: "교실영어(교사)",
+    audience: "학교에서 영어로 수업하는 선생님",
+    desc: "교사가 학교 수업과 학급 운영에서 실제로 쓰는 교실영어(Classroom English) 어휘. 수업 시작·마무리 인사, 출석과 날짜 확인, 지시하기(줄 서기·자리 정리·조용히 하기·차례 지키기), 활동 안내(짝 활동·모둠·발표·역할놀이·게임·학습지), 칭찬과 격려, 주의 주기와 규칙 안내, 준비물·과제·평가 안내, 안전 지도와 이동 수업, 학교 행사(현장학습·학예회·상담주간), 학부모 상담과 교직 업무(생활기록·회의·통지표)에서 자주 쓰이는 단어를 중심으로 한다. CEFR A2~B2 범위의 실용 어휘로, 선생님이 수업 중 바로 입 밖으로 낼 수 있는 쉬운 단어를 우선하고 교육학 전문용어나 시험용 추상 어휘는 피한다. example 예문은 반드시 선생님이 교실에서 학생에게 말하듯 쓴 완전한 문장(그대로 따라 쓸 수 있는 교실영어 표현)으로 만든다. 예: \"Please line up quietly at the door.\", \"Take out your workbook and turn to page ten.\"",
   },
 };
 const WORDS_PER_DAY = 20; // 하루에 AI가 만드는 개수(반 공유 최대치) — 학생은 이 중 몇 개(10/15/20) 할지 스스로 고름
@@ -128,6 +154,69 @@ function sanitizeWords(list, max) {
   return out;
 }
 
+
+// ── 스티커북 ──
+const STICKER_PACK_PRICE = 80;      // 랜덤팩(코인) 가격 — 3장
+const STICKER_DUP_MILEAGE = 40;     // 중복이 나오면 코인 대신 '마일리지'로만 보상
+const STICKER_DRAW_COST = 100;      // 마일리지로 랜덤 1장 뽑기
+const STICKER_DRAW_DUP_BACK = 30;   // 마일리지 뽑기에서 중복이면 마일리지 일부 환급
+const STICKER_PAGE_REWARD = 500;    // 한 페이지(12장) 완성 보상(코인)
+const STICKER_TICKET_NEED = 10;     // 같은 스티커를 이만큼 모으면 '골드티켓' 1장으로 교환 가능
+const STICKER_TICKET_KEEP = 1;      // 교환 뒤 도감에 남겨 두는 장수(도감에서 사라지지 않도록)
+const REVIEW_REWARD = 30;           // '오늘 복습'을 끝내면 주는 코인(하루 1번)
+const GAME_REWARD = 20;             // '단어 게임'을 한 판 끝내면 주는 코인(하루 1번)
+// 스티커 가격: 도감에서 뒤로 갈수록(카테고리 내 위치가 뒤일수록) 비싸진다.
+function stickerPriceByPos(pos){ return 60 + pos * 20; }   // 1~12번 → 60,80,…,280
+// 뽑기 확률 가중치: 비쌀수록(뒤 번호) 낮게 → 희귀
+function stickerWeight(price){ return Math.max(20, 300 - price); }
+// 가격 가중치로 스티커 1장 뽑기
+function pickWeightedSticker(){
+  let total = 0; for (const s of SERVER_STICKERS) total += stickerWeight(s.price);
+  let r = Math.random() * total;
+  for (const s of SERVER_STICKERS){ r -= stickerWeight(s.price); if (r <= 0) return s; }
+  return SERVER_STICKERS[SERVER_STICKERS.length - 1];
+}
+// ✏️ 스티커를 실제 구매/뽑기 서버에 추가할 때도 같은 항목을 아래 배열에 추가하세요.
+// 클라이언트 STICKER_CATALOG와 SERVER_STICKERS의 목록을 동일하게 유지해야 합니다.
+const SERVER_STICKERS = [
+  ["animal","강아지","🐶"],["animal","고양이","🐱"],["animal","토끼","🐰"],["animal","다람쥐","🐿️"],["animal","곰","🐻"],["animal","판다","🐼"],["animal","사자","🦁"],["animal","코끼리","🐘"],["animal","코알라","🐨"],["animal","원숭이","🐵"],["animal","펭귄","🐧"],["animal","호랑이","🐯"],
+  ["dinosaur","티라노사우루스","🦖"],["dinosaur","트리케라톱스","🦕"],["dinosaur","브라키오사우루스","🦕"],["dinosaur","스테고사우루스","🦕"],["dinosaur","벨로시랩터","🦖"],["dinosaur","안킬로사우루스","🦕"],["dinosaur","스피노사우루스","🦖"],["dinosaur","파키케팔로사우루스","🦕"],["dinosaur","이구아노돈","🦕"],["dinosaur","프로토케라톱스","🦕"],["dinosaur","파라사우롤로푸스","🦕"],["dinosaur","알로사우루스","🦖"],
+  ["ocean","고래","🐋"],["ocean","돌고래","🐬"],["ocean","문어","🐙"],["ocean","상어","🦈"],["ocean","거북이","🐢"],["ocean","해파리","🪼"],["ocean","가오리","🐟"],["ocean","복어","🐡"],["ocean","새우","🦐"],["ocean","꽃게","🦀"],["ocean","불가사리","⭐"],["ocean","물고기","🐠"]
+].map((x,i)=>({sticker_id:x[0]+"_"+String(i%12+1).padStart(2,"0"),category:x[0],name:x[1],emoji:x[2],image_url:"/assets/stickers/"+x[0]+"_"+String(i%12+1).padStart(2,"0")+".png",price:stickerPriceByPos(i%12)}));
+const STICKER_MAP = Object.fromEntries(SERVER_STICKERS.map(x=>[x.sticker_id,x]));
+function ensureStickerData(data){
+  if(!data || typeof data!=="object") return data;
+  data.coins = Number.isFinite(Number(data.coins)) ? Math.max(0,Math.floor(Number(data.coins))) : 300;
+  if(!data.stickerBook || typeof data.stickerBook!=="object") data.stickerBook={};
+  if(!data.stickerBook.stickers || typeof data.stickerBook.stickers!=="object") data.stickerBook.stickers={};
+  if(!data.stickerBook.completedPages || typeof data.stickerBook.completedPages!=="object") data.stickerBook.completedPages={};
+  if(!Array.isArray(data.stickerBook.badges)) data.stickerBook.badges=[];
+  if(!Number.isFinite(Number(data.stickerBook.mileage))) data.stickerBook.mileage=0;
+  data.stickerBook.mileage=Math.max(0,Math.floor(Number(data.stickerBook.mileage)));
+  if(!Number.isFinite(Number(data.stickerBook.goldTickets))) data.stickerBook.goldTickets=0;
+  data.stickerBook.goldTickets=Math.max(0,Math.floor(Number(data.stickerBook.goldTickets)));
+  if(!data.rewardHistory || typeof data.rewardHistory!=="object") data.rewardHistory={};
+  return data;
+}
+function stickerCollected(data,category){ return SERVER_STICKERS.filter(x=>x.category===category).filter(x=>Number(data.stickerBook.stickers[x.sticker_id]||0)>0).length; }
+function checkStickerRewards(data){
+  const rewards=[];
+  for(const cat of ["animal","dinosaur","ocean"]){
+    if(stickerCollected(data,cat)>=12 && !data.stickerBook.completedPages[cat]){
+      data.stickerBook.completedPages[cat]=true;
+      const badge="sticker_page_"+cat;
+      if(!data.stickerBook.badges.includes(badge)) data.stickerBook.badges.push(badge);
+      data.coins += STICKER_PAGE_REWARD;
+      rewards.push({category:cat,reward:STICKER_PAGE_REWARD,badge});
+    }
+  }
+  return rewards;
+}
+function stickerPayload(data){
+  ensureStickerData(data);
+  return SERVER_STICKERS.map(x=>Object.assign({},x,{is_unlocked:Number(data.stickerBook.stickers[x.sticker_id]||0)>0,quantity:Number(data.stickerBook.stickers[x.sticker_id]||0)}));
+}
+
 // ── 새 학생 데이터 ──
 function newStudentData(nickname, dailyGoal) {
   return {
@@ -142,6 +231,9 @@ function newStudentData(nickname, dailyGoal) {
     friends: [],        // 함께 공부하는 친구 [{section, id}]
     cheers: [],         // 친구에게 받은 응원 [{fromId, fromNick, day}]
     messages: [],       // 친구에게 받은 쪽지 [{id, fromSection, fromId, fromNick, text, day}]
+    coins: 300,
+    stickerBook: { stickers: {}, mileage: 0, goldTickets: 0, badges: [], completedPages: {} },
+    rewardHistory: {},
   };
 }
 // 오래된 날짜 기록 정리 (최근 60일만 보관)
@@ -207,9 +299,10 @@ async function recentDaySets(db, section, limit) {
 }
 async function getStudent(db, section, id) {
   const row = await db.prepare("SELECT data FROM vocab_students2 WHERE section = ? AND id = ?").bind(section, id).first();
-  return row ? JSON.parse(row.data) : null;
+  return row ? ensureStickerData(JSON.parse(row.data)) : null;
 }
 async function putStudent(db, section, id, data) {
+  ensureStickerData(data);
   await db.prepare("INSERT OR REPLACE INTO vocab_students2 (section, id, data) VALUES (?, ?, ?)").bind(section, id, JSON.stringify(pruneStudent(data))).run();
 }
 
@@ -250,7 +343,7 @@ async function lookupByCode(db, code) {
 // flash-lite 계열: 빠르고 저렴하며 무료 한도가 넉넉해 매일 30개 생성에 적합.
 // (flash 계열은 무료 요청 한도가 낮아 429 quota 오류가 잘 남)
 // "-latest" 별칭이라 새 모델이 나와도 자동으로 최신 stable 로 갱신됨.
-const GEMINI_MODEL = "gemini-flash-lite-latest";
+const GEMINI_MODEL = "gemini-3.5-flash-lite";
 const WORD_SCHEMA = {
   type: "OBJECT",
   properties: {
@@ -273,19 +366,65 @@ const WORD_SCHEMA = {
   required: ["words"],
 };
 
+// ── Gemini 호출 경로 ──
+// 한국 통신망 일부는 Cloudflare 홍콩(HKG) 데이터센터로 붙는다. 그러면 Worker→Google 요청이
+// 홍콩에서 나가고, Gemini 가 "User location is not supported" (400) 로 막아 버린다.
+// AI Gateway 를 경유해도 게이트웨이 역시 같은 데이터센터에서 나가기 때문에 이 문제는 남는다.
+// 확실한 방법은 '허용 지역에 고정된 Durable Object' 를 한 번 거쳐 나가는 것이다.
+// (Durable Object 는 만들어질 때 정해진 지역에 계속 머물고, 그 안에서 부른 fetch 도 그 지역에서 나간다.)
+const AI_PROXY_REGION = "enam";   // 북미 동부. wnam(북미 서부)·weur(서유럽) 로 바꿔도 된다.
+
+// AI_PROXY 바인딩이 붙어 있을 때만 쓰이는, Gemini 호출 전용 중계 객체.
+// 바깥으로 열려 있지 않고(라우트 없음) 이 Worker 만 바인딩으로 부를 수 있다.
+export class AIProxy {
+  constructor(state, env) { this.env = env; }
+  async fetch(request) {
+    let call;
+    try { call = await request.json(); } catch (e) { call = null; }
+    if (!call || !call.endpoint) return new Response(JSON.stringify({ error: { message: "중계 요청이 잘못됐어요." } }), { status: 400 });
+    const res = await fetch(call.endpoint, {
+      method: "POST",
+      // 키는 부르는 쪽이 같이 넘겨 준다. (이 클래스를 별도 워커에 올린 경우
+      //  그 워커에 GEMINI_API_KEY 를 또 넣지 않아도 되게)
+      headers: { "Content-Type": "application/json", "x-goog-api-key": call.apiKey || this.env.GEMINI_API_KEY || "" },
+      body: JSON.stringify(call.payload),
+    });
+    return new Response(res.body, { status: res.status, headers: { "Content-Type": "application/json; charset=utf-8" } });
+  }
+}
+// Gemini 를 한 번 호출한다. AI_PROXY 가 있으면 그 지역에서, 없으면 지금 있는 곳에서.
+function geminiFetch(env, endpoint, payload) {
+  if (env.AI_PROXY) {
+    // 이름을 지역으로 두면, 나중에 지역을 바꿨을 때 새 객체가 그 지역에 새로 만들어진다.
+    // (locationHint 는 객체가 처음 만들어질 때만 반영되기 때문)
+    const stub = env.AI_PROXY.get(env.AI_PROXY.idFromName(AI_PROXY_REGION), { locationHint: AI_PROXY_REGION });
+    return stub.fetch("https://ai-proxy.internal/call", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ endpoint, payload, apiKey: env.GEMINI_API_KEY }),
+    });
+  }
+  return fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
+    body: JSON.stringify(payload),
+  });
+}
+
 async function generateWords(env, section, avoidWords, cf) {
   if (!env.GEMINI_API_KEY)
     return { error: "AI 키(GEMINI_API_KEY)가 아직 설정되지 않았어요. 선생님께 알려 주세요." };
 
   const lv = SECTIONS[section];
   const avoid = avoidWords.slice(0, 800).join(", ");
+  const who = lv.audience || (lv.name + " 학생");   // 성인·교사 모드는 '학생'이 아니다
   const prompt =
-    `대상: ${lv.name} 학생 (한국 학생이 배우는 영어 어휘).\n난이도 기준: ${lv.desc}\n\n` +
+    `대상: ${who} (한국 학습자가 배우는 영어 어휘).\n난이도 기준: ${lv.desc}\n\n` +
     `위 기준에 맞는 영단어를 정확히 ${WORDS_PER_DAY + 4}개 만들어 주세요.\n` +
     `규칙:\n` +
     `- word: 영단어 원형(기본형). 굴절되지 않은 사전 표제어 형태로.\n` +
     `- pronunciation: 국제음성기호(IPA)로 읽는 법. 대괄호나 슬래시 없이 기호만.\n` +
-    `- meaning: ${lv.name} 학생이 바로 이해할 한글 뜻(품사 표시 없이 간결하게).\n` +
+    `- meaning: ${who}이(가) 바로 이해할 한글 뜻(품사 표시 없이 간결하게).\n` +
     `- example: 그 단어가 반드시 원형 그대로(형태를 바꾸지 말고) 한 번 들어간 자연스러운 영어 예문 한 문장. (빈칸 문제로 쓰입니다)\n` +
     `- synonym / antonym: 각각 영단어 1개, 마땅한 것이 없으면 빈 문자열.\n` +
     `- 명사·동사·형용사를 골고루 섞고, 쉬운 것과 어려운 것을 골고루.\n` +
@@ -307,30 +446,20 @@ async function generateWords(env, section, avoidWords, cf) {
   let res, body, lastError;
   for (let attempt = 1; attempt <= MAX_TRIES; attempt++) {
     try {
-      res = await fetch(
-        endpoint,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-goog-api-key": env.GEMINI_API_KEY,
-          },
-          body: JSON.stringify({
-            system_instruction: { parts: [{ text: "당신은 한국 학생을 위한 영어 어휘 교육 전문가입니다. 학년 수준에 딱 맞는 영단어 목록을 만듭니다." }] },
-            contents: [{ role: "user", parts: [{ text: prompt }] }],
-            generationConfig: {
-              responseMimeType: "application/json",
-              responseSchema: WORD_SCHEMA,
-              maxOutputTokens: 8192,
-              // ※ thinkingConfig 는 넣지 않는다.
-              //    예전엔 속도·비용을 아끼려고 thinkingConfig:{thinkingBudget:0} 을 넣었지만,
-              //    "-latest" 별칭이 Gemini 3.x 로 자동 갱신되면서 숫자형 thinkingBudget 이 폐기(→ thinkingLevel)되어
-              //    이 필드가 있으면 "400 Request contains an invalid argument" 로 생성이 전부 실패한다.
-              //    구조화(responseSchema) 단순 생성이라 기본 설정으로도 충분히 빠르고 저렴하다.
-            },
-          }),
-        }
-      );
+      res = await geminiFetch(env, endpoint, {
+        system_instruction: { parts: [{ text: "당신은 한국 학습자를 위한 영어 어휘 교육 전문가입니다. 요청받은 대상과 수준에 딱 맞는 영단어 목록을 만듭니다." }] },
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: WORD_SCHEMA,
+          maxOutputTokens: 8192,
+          // ※ thinkingConfig 는 넣지 않는다.
+          //    예전엔 속도·비용을 아끼려고 thinkingConfig:{thinkingBudget:0} 을 넣었지만,
+          //    "-latest" 별칭이 Gemini 3.x 로 자동 갱신되면서 숫자형 thinkingBudget 이 폐기(→ thinkingLevel)되어
+          //    이 필드가 있으면 "400 Request contains an invalid argument" 로 생성이 전부 실패한다.
+          //    구조화(responseSchema) 단순 생성이라 기본 설정으로도 충분히 빠르고 저렴하다.
+        },
+      });
     } catch (e) {
       lastError = "AI 서버에 연결하지 못했어요.";
       continue;
@@ -338,12 +467,18 @@ async function generateWords(env, section, avoidWords, cf) {
     try { body = await res.json(); } catch (e) { body = null; }
     if (res.ok && body) { lastError = null; break; }
     lastError = "AI 호출 실패 (" + res.status + "): " + (body && body.error && body.error.message ? body.error.message : "알 수 없는 오류");
-    // 위치 제한처럼 colo 를 바꾸면 나아질 수 있는 오류만 재시도, 그 외(키 오류 등)는 바로 반환
-    const retryable = res.status >= 500 || (body && body.error && /location/i.test(body.error.message || ""));
-    if (!retryable) break;
+    // 지역 차단은 몇 번을 다시 걸어도 같은 데이터센터에서 나가므로 재시도가 소용없다.
+    // (해결책은 AI_PROXY 바인딩 — 파일 맨 위 설정 7번)
+    if (body && body.error && /location/i.test(body.error.message || "")) {
+      lastError = env.AI_PROXY
+        ? "AI 서버가 지금 지역에서 막혔어요. 선생님께 알려 주세요. (AI_PROXY 지역 확인 필요)"
+        : "AI 서버가 이 지역에서는 막혀 있어요. 선생님께 알려 주세요. (설정 7번: AI_PROXY 바인딩)";
+      break;
+    }
+    if (res.status < 500) break;   // 키 오류 등은 바로 반환, 서버 오류(5xx)만 재시도
   }
   if (lastError) {
-    const loc = cf ? ` [colo:${cf.colo || "?"} country:${cf.country || "?"} gw:${useGateway ? "on" : "off"}]` : "";
+    const loc = cf ? ` [colo:${cf.colo || "?"} country:${cf.country || "?"} gw:${useGateway ? "on" : "off"} proxy:${env.AI_PROXY ? AI_PROXY_REGION : "off"}]` : "";
     return { error: lastError + " 잠시 후 다시 시도해 주세요." + loc };
   }
 
@@ -362,10 +497,60 @@ async function generateWords(env, section, avoidWords, cf) {
   try { parsed = JSON.parse(text); } catch (e) {
     return { error: "AI 응답을 해석하지 못했어요. 다시 시도해 주세요." };
   }
-  const avoidSet = new Set(avoidWords);
-  const words = sanitizeWords((parsed.words || []).filter(w => w && !avoidSet.has(String(w.word || "").trim())), WORDS_PER_DAY);
-  if (words.length < WORDS_PER_DAY - 4)
-    return { error: "AI가 단어를 충분히 만들지 못했어요(" + words.length + "개). 다시 시도해 주세요." };
+  const rawWords = Array.isArray(parsed.words) ? parsed.words : [];
+  const avoidSet = new Set(avoidWords.map(w => String(w || "").trim().toLowerCase()).filter(Boolean));
+
+  // AI가 최근 단어를 일부 섞어 내더라도 전체 생성 실패로 만들지 않는다.
+  // 먼저 최근 단어와 겹치지 않는 것만 고르고, 부족하면 중복이 아닌 새 단어를
+  // 추가로 한 번 생성한 뒤 합쳐서 20개를 확보한다.
+  const fresh = rawWords.filter(w => {
+    const key = String(w && w.word || "").trim().toLowerCase();
+    return key && !avoidSet.has(key);
+  });
+  let words = sanitizeWords(fresh, WORDS_PER_DAY);
+
+  // 모델이 최근 단어를 너무 많이 반복한 경우: 첫 응답의 새 단어는 보존하고
+  // 짧은 재요청으로 부족분을 채운다.
+  if (words.length < WORDS_PER_DAY - 4) {
+    const usedNow = words.map(w => w.word.toLowerCase());
+    const extraAvoid = Array.from(new Set(avoidWords.concat(usedNow))).slice(0, 500);
+    const retryPrompt =
+      `앞서 생성한 단어 중 이미 사용된 단어가 많았습니다.\n` +
+      `${WORDS_PER_DAY - words.length + 8}개의 새로운 영단어를 만들어 주세요.\n` +
+      `절대로 다음 단어를 다시 사용하지 마세요: ${extraAvoid.join(", ")}\n` +
+      `각 항목은 word, pronunciation, meaning, example, synonym, antonym 필드를 가진 객체여야 합니다.\n` +
+      `JSON 객체 {"words":[...]}만 반환하세요.`;
+
+    try {
+      const retryRes = await geminiFetch(env, endpoint, {
+        system_instruction: { parts: [{ text: "당신은 한국 학생을 위한 영어 어휘 교육 전문가입니다. 새로운 영단어만 정확한 JSON 형식으로 만듭니다." }] },
+        contents: [{ role: "user", parts: [{ text: retryPrompt }] }],
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: WORD_SCHEMA,
+          maxOutputTokens: 8192,
+        },
+      });
+      const retryBody = await retryRes.json();
+      if (retryRes.ok && retryBody && retryBody.candidates && retryBody.candidates[0]) {
+        const retryText = ((retryBody.candidates[0].content && retryBody.candidates[0].content.parts) || []).map(p => p.text || "").join("");
+        try {
+          const retryParsed = JSON.parse(retryText);
+          const retryFresh = (Array.isArray(retryParsed.words) ? retryParsed.words : []).filter(w => {
+            const key = String(w && w.word || "").trim().toLowerCase();
+            return key && !avoidSet.has(key) && !usedNow.includes(key);
+          });
+          words = sanitizeWords(words.concat(retryFresh), WORDS_PER_DAY);
+        } catch (e) {}
+      }
+    } catch (e) {}
+  }
+
+  if (words.length < WORDS_PER_DAY - 4) {
+    const rawCount = rawWords.length;
+    const overlapCount = rawWords.filter(w => avoidSet.has(String(w && w.word || "").trim().toLowerCase())).length;
+    return { error: `AI가 새 단어를 충분히 만들지 못했어요(${words.length}개 확보 / AI 응답 ${rawCount}개 중 최근 단어 ${overlapCount}개 중복). 다시 시도해 주세요.` };
+  }
   return { words };
 }
 
@@ -430,6 +615,104 @@ async function handleApi(env, db, path, d, cf) {
     return ok({ section: found.section, sectionName: SECTIONS[found.section].name, data: found.data, today: kst().date });
   }
 
+  // ── 스티커: 도감 조회 ──
+  if (path === "/api/sticker/book") {
+    if (!validSection(d.section)) return fail("반 정보가 없어요.");
+    const id = validId(d.id); if (!id) return fail("기기 정보가 없어요.");
+    const data = await getStudent(db,d.section,id); if (!data) return fail("등록되지 않은 학생이에요.");
+    ensureStickerData(data);
+    return ok({data, stickers: stickerPayload(data)});
+  }
+
+  // ── 스티커: 원하는 스티커 1장 구매 ──
+  if (path === "/api/sticker/buy") {
+    if (!validSection(d.section)) return fail("반 정보가 없어요.");
+    const id = validId(d.id); if (!id) return fail("기기 정보가 없어요.");
+    const data = await getStudent(db,d.section,id); if (!data) return fail("등록되지 않은 학생이에요.");
+    ensureStickerData(data);
+    const sticker = STICKER_MAP[String(d.stickerId||"")];
+    if (!sticker) return fail("존재하지 않는 스티커예요.");
+    if (Number(data.stickerBook.stickers[sticker.sticker_id]||0)>0) return fail("이미 가지고 있는 스티커예요.");
+    if (data.coins < sticker.price) return fail("코인이 부족해요.");
+    data.coins -= sticker.price;
+    data.stickerBook.stickers[sticker.sticker_id]=1;
+    const pageRewards=checkStickerRewards(data);
+    await putStudent(db,d.section,id,data);
+    return ok({data,sticker,pageRewards});
+  }
+
+  // ── 스티커: 랜덤 팩 3장 (코인) — 중복은 '마일리지'로만 보상 ──
+  if (path === "/api/sticker/pack") {
+    if (!validSection(d.section)) return fail("반 정보가 없어요.");
+    const id = validId(d.id); if (!id) return fail("기기 정보가 없어요.");
+    const data = await getStudent(db,d.section,id); if (!data) return fail("등록되지 않은 학생이에요.");
+    ensureStickerData(data);
+    if (data.coins < STICKER_PACK_PRICE) return fail("코인이 부족해요.");
+    data.coins -= STICKER_PACK_PRICE;
+    const results=[];
+    for(let i=0;i<3;i++){
+      const sticker=pickWeightedSticker();                 // 비쌀수록 덜 나옴
+      const before=Number(data.stickerBook.stickers[sticker.sticker_id]||0);
+      data.stickerBook.stickers[sticker.sticker_id]=before+1;
+      if(before>0) data.stickerBook.mileage += STICKER_DUP_MILEAGE;   // 중복 → 마일리지만
+      results.push({sticker_id:sticker.sticker_id,name:sticker.name,emoji:sticker.emoji,image_url:sticker.image_url,duplicate:before>0,mileage:before>0?STICKER_DUP_MILEAGE:0});
+    }
+    const pageRewards=checkStickerRewards(data);
+    await putStudent(db,d.section,id,data);
+    return ok({data,results,pageRewards});
+  }
+
+  // ── 스티커: 마일리지로 랜덤 1장 뽑기 ──
+  if (path === "/api/sticker/draw") {
+    if (!validSection(d.section)) return fail("반 정보가 없어요.");
+    const id = validId(d.id); if (!id) return fail("기기 정보가 없어요.");
+    const data = await getStudent(db,d.section,id); if (!data) return fail("등록되지 않은 학생이에요.");
+    ensureStickerData(data);
+    if (data.stickerBook.mileage < STICKER_DRAW_COST) return fail("마일리지가 부족해요.");
+    data.stickerBook.mileage -= STICKER_DRAW_COST;
+    const sticker=pickWeightedSticker();                   // 비쌀수록 덜 나옴
+    const before=Number(data.stickerBook.stickers[sticker.sticker_id]||0);
+    data.stickerBook.stickers[sticker.sticker_id]=before+1;
+    if(before>0) data.stickerBook.mileage += STICKER_DRAW_DUP_BACK;   // 중복이면 일부 환급
+    const pageRewards=checkStickerRewards(data);
+    await putStudent(db,d.section,id,data);
+    return ok({data,result:{sticker_id:sticker.sticker_id,name:sticker.name,emoji:sticker.emoji,image_url:sticker.image_url,duplicate:before>0,mileageBack:before>0?STICKER_DRAW_DUP_BACK:0},pageRewards});
+  }
+
+  // ── 스티커: 같은 스티커 10장 → 골드티켓 1장으로 교환 ──
+  //    (도감에서 사라지지 않도록 STICKER_TICKET_KEEP 장은 남기고 나머지를 소모한다)
+  if (path === "/api/sticker/ticket/make") {
+    if (!validSection(d.section)) return fail("반 정보가 없어요.");
+    const id = validId(d.id); if (!id) return fail("기기 정보가 없어요.");
+    const data = await getStudent(db,d.section,id); if (!data) return fail("등록되지 않은 학생이에요.");
+    ensureStickerData(data);
+    const sticker = STICKER_MAP[String(d.stickerId||"")];
+    if (!sticker) return fail("존재하지 않는 스티커예요.");
+    const have = Number(data.stickerBook.stickers[sticker.sticker_id]||0);
+    if (have < STICKER_TICKET_NEED) return fail("같은 스티커를 " + STICKER_TICKET_NEED + "장 모아야 골드티켓으로 바꿀 수 있어요.");
+    data.stickerBook.stickers[sticker.sticker_id] = have - (STICKER_TICKET_NEED - STICKER_TICKET_KEEP);
+    data.stickerBook.goldTickets += 1;
+    await putStudent(db,d.section,id,data);
+    return ok({data,sticker,goldTickets:data.stickerBook.goldTickets,left:data.stickerBook.stickers[sticker.sticker_id]});
+  }
+
+  // ── 스티커: 골드티켓으로 원하는 스티커 1장 받기 (가격 상관없이 무료) ──
+  if (path === "/api/sticker/ticket/use") {
+    if (!validSection(d.section)) return fail("반 정보가 없어요.");
+    const id = validId(d.id); if (!id) return fail("기기 정보가 없어요.");
+    const data = await getStudent(db,d.section,id); if (!data) return fail("등록되지 않은 학생이에요.");
+    ensureStickerData(data);
+    const sticker = STICKER_MAP[String(d.stickerId||"")];
+    if (!sticker) return fail("존재하지 않는 스티커예요.");
+    if (data.stickerBook.goldTickets < 1) return fail("골드티켓이 없어요.");
+    if (Number(data.stickerBook.stickers[sticker.sticker_id]||0) > 0) return fail("이미 가지고 있는 스티커예요. 아직 없는 스티커에 사용해 보세요.");
+    data.stickerBook.goldTickets -= 1;
+    data.stickerBook.stickers[sticker.sticker_id] = 1;
+    const pageRewards = checkStickerRewards(data);
+    await putStudent(db,d.section,id,data);
+    return ok({data,sticker,pageRewards,goldTickets:data.stickerBook.goldTickets});
+  }
+
   // ── 학생: 별명 변경 ──
   if (path === "/api/student/rename") {
     if (!validSection(d.section)) return fail("반(레벨)을 선택해 주세요.");
@@ -442,6 +725,39 @@ async function handleApi(env, db, path, d, cf) {
     data.nickname = nickname;
     await putStudent(db, d.section, id, data);
     return ok({ data });
+  }
+
+  // ── 학생: 단계(레벨) 다시 선택 — 코인·스티커·기록은 그대로 새 단계로 옮긴다 ──
+  //    (예전에는 "나가기" 뒤 다른 단계로 다시 시작하면 그 단계용 새 학생이 만들어져
+  //     지금까지 모은 것이 전부 사라지는 것처럼 보였다. 같은 데이터를 section만 바꿔 옮긴다.)
+  if (path === "/api/student/changeSection") {
+    if (!validSection(d.section)) return fail("반(레벨) 정보가 없어요.");
+    const id = validId(d.id);
+    if (!id) return fail("기기 정보가 없어요.");
+    if (!validSection(d.newSection)) return fail("옮길 단계를 선택해 주세요.");
+    if (d.newSection === d.section) return fail("지금과 같은 단계예요.");
+    const data = await getStudent(db, d.section, id);
+    if (!data) return fail("등록되지 않은 학생이에요. 처음 화면에서 다시 시작해 주세요.");
+    const already = await getStudent(db, d.newSection, id);
+    if (already) return fail("이 기기는 이미 '" + SECTIONS[d.newSection].name + "' 단계에 등록되어 있어요. 그 단계 화면에서 '다른 기기에서 이어하기'로 내 코드를 넣어 이어가 주세요.");
+
+    // 친구 쪽에서 나를 가리키는 참조(section)도 함께 바꿔 준다.
+    // 안 바꾸면 내가 단계를 옮긴 뒤 친구 목록에서 조용히 사라진다.
+    for (const f of (data.friends || [])) {
+      const you = await getStudent(db, f.section, f.id);
+      if (!you || !Array.isArray(you.friends)) continue;
+      let changed = false;
+      you.friends = you.friends.map(ref => {
+        if (ref.section === d.section && ref.id === id) { changed = true; return { section: d.newSection, id }; }
+        return ref;
+      });
+      if (changed) await putStudent(db, f.section, f.id, you);
+    }
+
+    await putStudent(db, d.newSection, id, data);
+    await db.prepare("DELETE FROM vocab_students2 WHERE section = ? AND id = ?").bind(d.section, id).run();
+    if (data.code) await db.prepare("UPDATE vocab_codes SET section = ? WHERE code = ?").bind(d.newSection, data.code).run();
+    return ok({ data, section: d.newSection, sectionName: SECTIONS[d.newSection].name, today: kst().date });
   }
 
   // ── 학생: 진행 상황 저장 ──
@@ -460,8 +776,32 @@ async function handleApi(env, db, path, d, cf) {
     d.data.friends = Array.isArray(cur.friends) ? cur.friends : [];
     d.data.cheers = Array.isArray(cur.cheers) ? cur.cheers : [];
     d.data.messages = Array.isArray(cur.messages) ? cur.messages : [];
+    ensureStickerData(cur); ensureStickerData(d.data);
+    d.data.coins = cur.coins;
+    d.data.stickerBook = cur.stickerBook;
+    d.data.rewardHistory = cur.rewardHistory || {};
+    const oldTodayDone = !!(cur.days && cur.days[kst().date] && cur.days[kst().date].done);
+    const newTodayDone = !!(d.data.days && d.data.days[kst().date] && d.data.days[kst().date].done);
+    const dailyKey = "daily_complete_" + kst().date;
+    if (!oldTodayDone && newTodayDone && !d.data.rewardHistory[dailyKey]) {
+      d.data.rewardHistory[dailyKey] = true;
+      d.data.coins += 100;
+    }
+    // '오늘 복습' 완료 보상 (하루 1번) — days[오늘].reviewed 플래그는 화면(클라이언트)이 켠다
+    const reviewKey = "review_" + kst().date;
+    const todayRecSrv = d.data.days && d.data.days[kst().date];
+    if (todayRecSrv && todayRecSrv.reviewed && !d.data.rewardHistory[reviewKey]) {
+      d.data.rewardHistory[reviewKey] = true;
+      d.data.coins += REVIEW_REWARD;
+    }
+    // '단어 게임' 완주 보상 (하루 1번) — days[오늘].gamePlayed 플래그는 화면(클라이언트)이 켠다
+    const gameKey = "game_" + kst().date;
+    if (todayRecSrv && todayRecSrv.gamePlayed && !d.data.rewardHistory[gameKey]) {
+      d.data.rewardHistory[gameKey] = true;
+      d.data.coins += GAME_REWARD;
+    }
     await putStudent(db, d.section, id, d.data);
-    return ok({});
+    return ok({ data: d.data });
   }
 
   // ── 친구: 코드로 친구 맺기 (서로 친구가 된다) ──
@@ -639,6 +979,25 @@ export default {
     if (method === "GET" || method === "HEAD") {
       if (path === "/" || path === "/index.html")
         return new Response(APP_HTML, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
+
+      // ── 스티커 이미지: KV(STICKER_KV)에서 꺼내 준다. 없으면 404 → 화면은 이모지로 대체 ──
+      if (path.startsWith("/assets/stickers/")) {
+        const key = path.slice("/assets/stickers/".length);
+        if (env.STICKER_KV) {
+          const buf = await env.STICKER_KV.get(key, "arrayBuffer");
+          if (buf) {
+            const ext = (key.split(".").pop() || "").toLowerCase();
+            const ct = ext === "png" ? "image/png"
+              : (ext === "jpg" || ext === "jpeg") ? "image/jpeg"
+              : ext === "webp" ? "image/webp"
+              : ext === "gif" ? "image/gif"
+              : ext === "svg" ? "image/svg+xml"
+              : "application/octet-stream";
+            return new Response(buf, { headers: { "Content-Type": ct, "Cache-Control": "public, max-age=86400" } });
+          }
+        }
+        return new Response("Not found", { status: 404 });
+      }
     }
 
     if (!path.startsWith("/api/")) return new Response("404", { status: 404 });

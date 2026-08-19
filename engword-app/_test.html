@@ -7,7 +7,7 @@
 <h3 id="summary">실행 중...</h3>
 <div id="log"></div>
 <script type="module">
-import worker from "./_worker.js";
+import worker, { AIProxy } from "./_worker.js";
 
 // ── 가짜 D1 (vocab_days / vocab_students2 / vocab_codes 재현) ──
 class FakeD1 {
@@ -36,6 +36,12 @@ class FakeD1 {
             self.codes.set(code, { section, id });
             return { meta: { changes: 1 } };
           }
+          if (sql.startsWith("UPDATE")) {
+            const [section, code] = this._args;
+            const row = self.codes.get(code);
+            if (row) row.section = section;
+            return { meta: { changes: row ? 1 : 0 } };
+          }
           throw new Error("unknown codes sql: " + sql);
         }
         if (sql.includes("vocab_students")) {
@@ -43,6 +49,11 @@ class FakeD1 {
             const [section, id, data] = this._args;
             self.students.set(section + "|" + id, data);
             return { meta: { changes: 1 } };
+          }
+          if (sql.startsWith("DELETE")) {
+            const [section, id] = this._args;
+            const existed = self.students.delete(section + "|" + id);
+            return { meta: { changes: existed ? 1 : 0 } };
           }
           throw new Error("unknown students sql: " + sql);
         }
@@ -105,13 +116,15 @@ globalThis.fetch = async (url, opt) => {
     aiCalls++;
     aiLastUrl = url;
     aiLastBody = JSON.parse(opt.body);
+    if (aiMode === "location")
+      return new Response(JSON.stringify({ error: { message: "User location is not supported for the API use." } }), { status: 400 });
     if (aiMode === "http500")
       return new Response(JSON.stringify({ error: { message: "boom" } }), { status: 500 });
     if (aiMode === "refusal")
       return new Response(JSON.stringify({ candidates: [], promptFeedback: { blockReason: "SAFETY" } }), { status: 200 });
     if (aiMode === "badjson")
       return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: "이건 JSON이 아님" }] }, finishReason: "STOP" }] }), { status: 200 });
-    const n = aiMode === "few" ? 10 : 24;
+    const n = aiMode === "few" ? 10 : aiMode === "tiny" ? 3 : 24;
     return new Response(JSON.stringify({
       candidates: [{ content: { parts: [{ text: JSON.stringify({ words: fakeWords(n) }) }] }, finishReason: "STOP" }],
     }), { status: 200 });
@@ -127,6 +140,26 @@ function check(name, cond) {
 }
 function makeEnv(withKey) {
   return withKey ? { DB: new FakeD1(), GEMINI_API_KEY: "test-key" } : { DB: new FakeD1() };
+}
+// 가짜 Durable Object 바인딩 — 워커가 AI 호출을 이쪽으로 넘기는지(그리고 어느 지역을 찍는지) 본다.
+let proxyCalls = 0, proxyHint = "", proxyEndpoint = "";
+function fakeAiProxy() {
+  return {
+    idFromName(name) { return { name }; },
+    get(id, opt) {
+      proxyHint = (opt && opt.locationHint) || "";
+      return {
+        async fetch(url, init) {
+          proxyCalls++;
+          const call = JSON.parse(init.body);
+          proxyEndpoint = call.endpoint;
+          // 진짜 DO 처럼, 객체 안에서 Google 을 부른다
+          const inst = new AIProxy({}, { GEMINI_API_KEY: "test-key" });
+          return inst.fetch(new Request("https://ai-proxy.internal/call", { method: "POST", body: init.body }));
+        },
+      };
+    },
+  };
 }
 let env = makeEnv(true);
 async function post(path, body, useEnv) {
@@ -150,7 +183,7 @@ try {
 
   // 1. 기본 정보
   let r = await post("/api/info", {});
-  check("앱 정보(섹션 8개: 1~6학년+중등+고등)", r.ok && r.appName === "매일 영단어" && r.sections.length === 8 && r.sections.some(s => s.name === "1학년") && r.sections.some(s => s.name === "6학년"));
+  check("앱 정보(단계 10개: 1~6학년+중등+고등+성인+교실영어)", r.ok && r.appName === "매일 영단어" && r.sections.length === 10 && r.sections.some(s => s.name === "1학년") && r.sections.some(s => s.name === "6학년") && r.sections.some(s => s.key === "adult") && r.sections.some(s => s.key === "teacher" && s.name === "교실영어(교사)"));
 
   // 2. 학생 시작하기 (기기별 id+별명, 개인정보 제로)
   const DEV1 = "device-uuid-0001";
@@ -208,7 +241,7 @@ try {
   check("오늘의 영단어 AI 생성", r.ok && r.words.length === 20);
   check("AI 는 1번만 호출됨", aiCalls === 1);
   check("단어 필드(word/pronunciation/meaning/example/synonym/antonym)", r.words.every(w => w.word && w.meaning && "pronunciation" in w && "example" in w && "synonym" in w && "antonym" in w));
-  check("요청 모델 확인(gemini-flash-lite-latest)", aiLastUrl.includes("gemini-flash-lite-latest"));
+  check("요청 모델 확인(gemini-3.5-flash-lite)", aiLastUrl.includes("gemini-3.5-flash-lite"));
   check("구조화 출력(responseSchema) 사용", aiLastBody.generationConfig && aiLastBody.generationConfig.responseMimeType === "application/json" && !!aiLastBody.generationConfig.responseSchema);
   const firstWord = r.words[0].word;
   r = await post("/api/today", { section: "g3" });
@@ -216,6 +249,23 @@ try {
   check("재사용 시 AI 호출 없음", aiCalls === 1);
   r = await post("/api/today", { section: "bad" });
   check("레벨 없이 오늘 단어 요청 거부", !r.ok);
+
+  // 3-0. 성인 · 교실영어(교사) 모드
+  aiCalls = 0;
+  r = await post("/api/today", { section: "adult" });
+  check("성인 모드 단어 생성", r.ok && r.words.length === 20 && aiCalls === 1);
+  check("성인 모드 프롬프트 대상은 '성인 학습자'", aiLastBody.contents[0].parts[0].text.includes("성인 학습자"));
+
+  aiCalls = 0;
+  r = await post("/api/today", { section: "teacher" });
+  check("교실영어(교사) 모드 단어 생성", r.ok && r.words.length === 20 && aiCalls === 1);
+  const tPrompt = aiLastBody.contents[0].parts[0].text;
+  check("교사 모드 프롬프트 대상은 선생님", tPrompt.includes("학교에서 영어로 수업하는 선생님") && !tPrompt.includes("선생님 학생"));
+  check("교사 모드 프롬프트에 교실영어 기준 포함", tPrompt.includes("교실영어(Classroom English)") && tPrompt.includes("학급 운영"));
+  r = await post("/api/student/join", { section: "teacher", id: "device-uuid-teacher", nickname: "김선생" });
+  check("교실영어(교사) 단계로 등록 가능", r.ok && r.data.nickname === "김선생");
+  r = await post("/api/parent/view", { code: r.data.code });
+  check("교사 단계 이름 표시", r.ok && r.sectionName === "교실영어(교사)");
 
   // 3-1. day 파라미터 (요일 탭 미리 학습용)
   function addDaysStr(day, n) {
@@ -245,14 +295,36 @@ try {
   r = await post("/api/today", { section: "middle" });
   check("JSON 해석 실패 처리", !r.ok);
   aiMode = "few";
-  r = await post("/api/today", { section: "middle" });
-  check("단어 부족(10개) 거부", !r.ok && r.error.includes("10"));
+  aiCalls = 0;
+  r = await post("/api/today", { section: "g1" });
+  check("단어가 모자라면 한 번 더 요청해서 20개를 채움", r.ok && r.words.length === 20);
+  check("이때 AI 는 2번 호출됨(첫 응답 + 부족분)", aiCalls === 2);
+  aiMode = "tiny";
+  aiCalls = 0;
+  r = await post("/api/today", { section: "g2" });
+  check("재요청으로도 못 채우면 거부", !r.ok && r.error.includes("충분히"));
+  check("재요청은 한 번까지만(무한 재시도 안 함)", aiCalls === 2);
   aiMode = "http500";
   r = await post("/api/today", { section: "middle" });
   check("AI 서버 오류(500) 처리", !r.ok);
   aiMode = "ok";
   r = await post("/api/today", { section: "middle" });
   check("복구 후 중등 생성 성공", r.ok && r.words.length === 20);
+
+  // 4-1. 지역 차단(홍콩 데이터센터) 대응 — AI_PROXY 경유
+  // 공용 env(뒤 테스트가 쓰는 DB)는 건드리지 않도록 임시 env 로만 부른다.
+  aiMode = "location";
+  let callsBefore = aiCalls;
+  r = await post("/api/today", { section: "high" }, makeEnv(true));
+  check("지역 차단이면 재시도하지 않고 바로 안내", !r.ok && aiCalls - callsBefore === 1 && r.error.includes("AI_PROXY"));
+  aiMode = "ok";
+  const proxyEnv = makeEnv(true);
+  proxyEnv.AI_PROXY = fakeAiProxy();
+  proxyCalls = 0; proxyHint = ""; proxyEndpoint = "";
+  r = await post("/api/today", { section: "high" }, proxyEnv);
+  check("AI_PROXY 가 있으면 AI 호출이 프록시를 거침", r.ok && r.words.length === 20 && proxyCalls === 1);
+  check("프록시는 북미(enam)로 고정 요청", proxyHint === "enam");
+  check("프록시가 부르는 주소는 Gemini 그대로", proxyEndpoint.includes("generativelanguage.googleapis.com"));
 
   // 5. 학생 진행 저장
   r = await post("/api/student/join", { section: "g3", id: DEV1 });
@@ -269,6 +341,16 @@ try {
   check("별명은 rename API 를 거치지 않으면 서버 값 그대로 유지", r.ok && r.data.nickname === "파란고래");
   r = await post("/api/student/save", { section: "g3", id: "device-uuid-9999", data });
   check("미등록 학생 저장 거부", !r.ok);
+
+  // 5-1. 단어 게임 완주 보상 (하루 1번, 서버가 준다)
+  r = await post("/api/student/join", { section: "g3", id: DEV1 });
+  const coinsBeforeGame = r.data.coins;
+  const gdata = r.data;
+  gdata.days[today] = Object.assign({}, gdata.days[today], { gamePlayed: true });
+  r = await post("/api/student/save", { section: "g3", id: DEV1, data: gdata });
+  check("게임 완주 보상 코인 20 지급", r.ok && r.data.coins === coinsBeforeGame + 20);
+  r = await post("/api/student/save", { section: "g3", id: DEV1, data: gdata });
+  check("같은 날 두 번째 게임은 보상 없음", r.ok && r.data.coins === coinsBeforeGame + 20);
 
   // 6. 친구: 초대 · 오늘 공부했는지 확인 · 응원
   r = await post("/api/student/join", { section: "g3", id: DEV1 });
@@ -358,6 +440,104 @@ try {
   check("삭제 후 내 목록 비움", r.friends.length === 0);
   r = await post("/api/friend/list", { section: "g1", id: DEVF });
   check("삭제 후 상대 목록에서도 사라짐", r.friends.length === 0);
+
+  // 2-2. 단계(레벨) 다시 선택 — "나의 기록"에서 단계를 바꿔도 코인·기록·친구 관계가 유지되는지
+  const DEVX = "device-uuid-movesec";
+  const DEVY = "device-uuid-movesec-friend";
+  r = await post("/api/student/join", { section: "g2", id: DEVX, nickname: "이동학생" });
+  const movedCode = r.data.code;
+  // 코인·스티커도 실제로 변경 없이 그대로 옮겨지는지 보려면 기본값(300코인) 말고 다른 값으로 심어야 한다.
+  (function seed() {
+    const obj = JSON.parse(env.DB.students.get("g2|" + DEVX));
+    obj.coins = 777;
+    obj.stickerBook.stickers.animal_01 = 3;
+    env.DB.students.set("g2|" + DEVX, JSON.stringify(obj));
+  })();
+  r = await post("/api/student/join", { section: "g1", id: DEVY, nickname: "옆친구" });
+  const devyCode = r.data.code;
+  r = await post("/api/friend/add", { section: "g2", id: DEVX, code: devyCode });
+  check("단계 이동 전 친구 맺기", r.ok);
+
+  r = await post("/api/student/changeSection", { section: "g2", id: DEVX, newSection: "g2" });
+  check("같은 단계로는 이동 거부", !r.ok);
+  r = await post("/api/student/changeSection", { section: "g2", id: DEVX, newSection: "college" });
+  check("없는 단계로 이동 거부", !r.ok);
+  r = await post("/api/student/changeSection", { section: "g2", id: "device-uuid-없음", newSection: "g4" });
+  check("등록 안 된 학생의 단계 이동 거부", !r.ok);
+
+  r = await post("/api/student/changeSection", { section: "g2", id: DEVX, newSection: "g4" });
+  check("단계 이동 성공", r.ok && r.section === "g4" && r.sectionName === "4학년");
+  check("이동 후에도 별명·코인·스티커 유지", r.data.nickname === "이동학생" && r.data.coins === 777 && r.data.stickerBook.stickers.animal_01 === 3);
+  check("이동 후에도 코드 유지", r.data.code === movedCode);
+
+  r = await post("/api/student/join", { section: "g2", id: DEVX, nickname: "새로시작" });
+  check("예전 단계에서는 완전히 새 학생으로 시작(예전 기록이 남아있지 않음)", r.ok && r.data.nickname === "새로시작" && r.data.coins === 300);
+
+  r = await post("/api/parent/view", { code: movedCode });
+  check("코드로 열람해도 새 단계로 보임", r.ok && r.sectionName === "4학년");
+
+  r = await post("/api/friend/list", { section: "g1", id: DEVY });
+  const movedFriend = r.friends.find(f => f.id === DEVX);
+  check("친구 목록에서도 옮긴 새 단계로 보이고 계속 조회됨", !!movedFriend && movedFriend.section === "g4" && movedFriend.sectionName === "4학년");
+
+  r = await post("/api/student/join", { section: "g5", id: DEVX, nickname: "다른자리" });
+  check("g5 자리에도 같은 기기로 별개 등록", r.ok);
+  r = await post("/api/student/changeSection", { section: "g4", id: DEVX, newSection: "g5" });
+  check("이미 존재하는 단계로는 이동 거부(자리 충돌)", !r.ok);
+
+  // 6-1. 스티커 · 골드티켓
+  const DEVS = "device-uuid-sticker";
+  // 스티커 보유 상태는 서버가 주인이라 API 로는 심을 수 없다 → 가짜 D1 에 직접 넣는다.
+  function seedStudent(section, sid, mutate) {
+    const k = section + "|" + sid;
+    const obj = JSON.parse(env.DB.students.get(k));
+    mutate(obj);
+    env.DB.students.set(k, JSON.stringify(obj));
+  }
+  r = await post("/api/student/join", { section: "g5", id: DEVS, nickname: "스티커왕" });
+  check("스티커 학생 등록", r.ok && r.data.stickerBook && r.data.stickerBook.goldTickets === 0);
+
+  r = await post("/api/sticker/book", { section: "g5", id: DEVS });
+  check("도감 조회(36종)", r.ok && r.stickers.length === 36 && r.stickers.every(x => !x.is_unlocked));
+
+  r = await post("/api/sticker/buy", { section: "g5", id: DEVS, stickerId: "animal_01" });
+  check("스티커 구매(60코인)", r.ok && r.data.coins === 240 && r.data.stickerBook.stickers.animal_01 === 1);
+  r = await post("/api/sticker/buy", { section: "g5", id: DEVS, stickerId: "animal_01" });
+  check("이미 가진 스티커 재구매 거부", !r.ok);
+
+  // 골드티켓: 같은 스티커 10장 → 티켓 1장 (도감 보관용 1장은 남는다)
+  seedStudent("g5", DEVS, o => { o.stickerBook.stickers.animal_01 = 9; });
+  r = await post("/api/sticker/ticket/make", { section: "g5", id: DEVS, stickerId: "animal_01" });
+  check("9장으로는 골드티켓 교환 거부", !r.ok);
+  seedStudent("g5", DEVS, o => { o.stickerBook.stickers.animal_01 = 10; });
+  r = await post("/api/sticker/ticket/make", { section: "g5", id: DEVS, stickerId: "animal_01" });
+  check("10장 → 골드티켓 1장(도감용 1장 남음)", r.ok && r.data.stickerBook.goldTickets === 1 && r.data.stickerBook.stickers.animal_01 === 1);
+  r = await post("/api/sticker/ticket/make", { section: "g5", id: DEVS, stickerId: "존재하지않음" });
+  check("없는 스티커 교환 거부", !r.ok);
+
+  r = await post("/api/sticker/ticket/use", { section: "g5", id: DEVS, stickerId: "animal_01" });
+  check("이미 가진 스티커에 골드티켓 사용 거부", !r.ok);
+  r = await post("/api/sticker/ticket/use", { section: "g5", id: DEVS, stickerId: "ocean_12" });
+  check("골드티켓으로 가장 비싼 스티커도 코인 없이 획득", r.ok && r.data.stickerBook.stickers.ocean_12 === 1 && r.data.stickerBook.goldTickets === 0 && r.data.coins === 240);
+  r = await post("/api/sticker/ticket/use", { section: "g5", id: DEVS, stickerId: "ocean_11" });
+  check("티켓 없으면 사용 거부", !r.ok);
+
+  // 티켓으로 페이지를 완성하면 완성 보상도 나온다
+  seedStudent("g5", DEVS, o => {
+    for (let i = 1; i <= 11; i++) o.stickerBook.stickers["ocean_" + String(i).padStart(2, "0")] = 1;
+    delete o.stickerBook.stickers.ocean_12;
+    o.stickerBook.goldTickets = 1;
+  });
+  r = await post("/api/sticker/ticket/use", { section: "g5", id: DEVS, stickerId: "ocean_12" });
+  check("티켓으로 도감 완성 시 500코인 보상", r.ok && r.pageRewards.length === 1 && r.data.coins === 740);
+
+  // 진행 저장(학생 기기 사본)으로는 티켓/스티커를 조작할 수 없다
+  r = await post("/api/student/join", { section: "g5", id: DEVS });
+  const sdata = r.data;
+  sdata.stickerBook = { stickers: {}, mileage: 0, goldTickets: 99, badges: [], completedPages: {} };
+  await post("/api/student/save", { section: "g5", id: DEVS, data: sdata });
+  r = await post("/api/sticker/book", { section: "g5", id: DEVS });
+  check("진행 저장으로 골드티켓 조작 불가", r.ok && r.data.stickerBook.goldTickets === 0 && r.data.stickerBook.stickers.ocean_12 === 1);
 
   // 7. 없는 주소
   r = await post("/api/what", {});
