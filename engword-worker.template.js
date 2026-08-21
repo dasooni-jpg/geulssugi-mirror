@@ -165,6 +165,8 @@ const STICKER_TICKET_NEED = 10;     // 같은 스티커를 이만큼 모으면 '
 const STICKER_TICKET_KEEP = 1;      // 교환 뒤 도감에 남겨 두는 장수(도감에서 사라지지 않도록)
 const REVIEW_REWARD = 30;           // '오늘 복습'을 끝내면 주는 코인(하루 1번)
 const GAME_REWARD = 20;             // '단어 게임'을 한 판 끝내면 주는 코인(하루 1번)
+const SNAKE_TICKET_PRICE = 50;      // 뱀 대격돌 입장권 1장 값(코인)
+const SNAKE_TICKET_PLAYS = 3;       // 입장권 1장으로 할 수 있는 판 수
 // 스티커 가격: 도감에서 뒤로 갈수록(카테고리 내 위치가 뒤일수록) 비싸진다.
 function stickerPriceByPos(pos){ return 60 + pos * 20; }   // 1~12번 → 60,80,…,280
 // 뽑기 확률 가중치: 비쌀수록(뒤 번호) 낮게 → 희귀
@@ -615,6 +617,23 @@ async function handleApi(env, db, path, d, cf) {
     return ok({ section: found.section, sectionName: SECTIONS[found.section].name, data: found.data, today: kst().date });
   }
 
+  // ── 뱀 대격돌: 입장권 사기 (코인은 서버가 주인이므로 차감도 서버에서) ──
+  // 입장권 = 1회용 토큰 + 판 수. 남은 판을 세는 것은 뱀 게임 쪽(별도 워커)이 맡는다.
+  // 토큰을 저장해 두는 이유: 창을 실수로 닫아도 같은 입장권으로 다시 열 수 있게 하려는 것.
+  // (이미 다 쓴 토큰은 뱀 게임이 기억하고 있어서 다시 열어도 판이 늘지 않는다)
+  if (path === "/api/game/snake-ticket") {
+    if (!validSection(d.section)) return fail("반 정보가 없어요.");
+    const id = validId(d.id); if (!id) return fail("기기 정보가 없어요.");
+    const data = await getStudent(db, d.section, id); if (!data) return fail("등록되지 않은 학생이에요.");
+    ensureStickerData(data);
+    if (data.coins < SNAKE_TICKET_PRICE)
+      return fail("코인이 " + (SNAKE_TICKET_PRICE - data.coins) + "개 모자라요. 공부하고 다시 와요!");
+    data.coins -= SNAKE_TICKET_PRICE;
+    data.snakeTicket = { token: genId(), plays: SNAKE_TICKET_PLAYS, day: kst().date };
+    await putStudent(db, d.section, id, data);
+    return ok({ data, ticket: data.snakeTicket });
+  }
+
   // ── 스티커: 도감 조회 ──
   if (path === "/api/sticker/book") {
     if (!validSection(d.section)) return fail("반 정보가 없어요.");
@@ -780,6 +799,7 @@ async function handleApi(env, db, path, d, cf) {
     d.data.coins = cur.coins;
     d.data.stickerBook = cur.stickerBook;
     d.data.rewardHistory = cur.rewardHistory || {};
+    d.data.snakeTicket = cur.snakeTicket || null;   // 입장권도 서버가 주인 (화면에서 못 늘린다)
     const oldTodayDone = !!(cur.days && cur.days[kst().date] && cur.days[kst().date].done);
     const newTodayDone = !!(d.data.days && d.data.days[kst().date] && d.data.days[kst().date].done);
     const dailyKey = "daily_complete_" + kst().date;

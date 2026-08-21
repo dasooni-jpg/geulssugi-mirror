@@ -485,6 +485,31 @@ try {
   r = await post("/api/student/changeSection", { section: "g4", id: DEVX, newSection: "g5" });
   check("이미 존재하는 단계로는 이동 거부(자리 충돌)", !r.ok);
 
+  // 6-0. 뱀 대격돌 입장권 (코인 50 → 3판)
+  const DEVT = "device-uuid-ticket";
+  r = await post("/api/student/join", { section: "g6", id: DEVT, nickname: "뱀돌이" });
+  check("입장권 테스트 학생 등록(기본 300코인)", r.ok && r.data.coins === 300);
+  r = await post("/api/game/snake-ticket", { section: "g6", id: DEVT });
+  check("입장권 구매 — 코인 50 차감", r.ok && r.data.coins === 250);
+  check("입장권에 1회용 번호와 판 수가 담김", !!r.ticket.token && r.ticket.plays === 3);
+  const firstToken = r.ticket.token;
+  r = await post("/api/game/snake-ticket", { section: "g6", id: DEVT });
+  check("다시 사면 또 차감되고 번호가 새로 나옴", r.ok && r.data.coins === 200 && r.ticket.token !== firstToken);
+  // 코인을 바닥내고 사 보기
+  seedStudent("g6", DEVT, o => { o.coins = 10; });
+  r = await post("/api/game/snake-ticket", { section: "g6", id: DEVT });
+  check("코인이 모자라면 구매 거부", !r.ok && r.error.includes("모자라"));
+  r = await post("/api/student/join", { section: "g6", id: DEVT });
+  check("거부됐으면 코인도 그대로", r.ok && r.data.coins === 10);
+  // 화면(클라이언트)이 진행 저장으로 입장권을 늘리려 해도 서버 값이 이긴다
+  const tData = r.data;
+  tData.snakeTicket = { token: "가짜", plays: 999 };
+  tData.coins = 99999;
+  r = await post("/api/student/save", { section: "g6", id: DEVT, data: tData });
+  check("진행 저장으로 입장권·코인 조작 불가", r.ok && r.data.coins === 10 && r.data.snakeTicket.plays === 3 && r.data.snakeTicket.token !== "가짜");
+  r = await post("/api/game/snake-ticket", { section: "g6", id: "device-uuid-9999" });
+  check("등록 안 된 학생은 입장권 구매 거부", !r.ok);
+
   // 6-1. 스티커 · 골드티켓
   const DEVS = "device-uuid-sticker";
   // 스티커 보유 상태는 서버가 주인이라 API 로는 심을 수 없다 → 가짜 D1 에 직접 넣는다.

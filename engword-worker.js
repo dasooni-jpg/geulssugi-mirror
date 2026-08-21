@@ -1459,6 +1459,8 @@ function viewStickerBook(){
 // 🐍 뱀 대격돌 주소 — 배포한 워커 주소로 바꿔 주세요 (snake-online/README 참고)
 const SNAKE_URL = "https://snake-clash.dasooni.workers.dev";
 const GAME_REWARD = 20;      // 하루 1번 게임을 끝내면 주는 코인(서버 GAME_REWARD 와 일치시킬 것)
+const SNAKE_TICKET_PRICE = 50;  // 뱀 대격돌 입장권 값(서버 SNAKE_TICKET_PRICE 와 일치시킬 것)
+const SNAKE_TICKET_PLAYS = 3;   // 입장권 1장으로 하는 판 수(서버 SNAKE_TICKET_PLAYS 와 일치시킬 것)
 const GAME_SPEED_SEC = 60;   // 스피드 퀴즈 제한 시간(초)
 const GAME_MATCH_PAIRS = 6;  // 짝 맞추기에 쓰는 단어 수(카드 12장)
 const GAME_SPELL_COUNT = 8;  // 철자 완성 문제 수
@@ -1505,16 +1507,43 @@ function gameResult(opt) {
 /* 뱀 대격돌 열기 — 오늘의 단어를 주소 조각(#)에 실어 넘긴다.
    조각은 서버로 전송되지 않으므로 단어 목록이 서버 기록에 남지 않는다.
    별도 앱이라 이 게임은 하루 1회 코인 보상 대상이 아니다(게임 자체 점수로 스킨을 연다). */
-function openSnakeGame() {
-  const list = (S.words || [])
+function snakeWordList() {
+  return (S.words || [])
     .map(w => [String(w.word || "").trim(), String(w.meaning || "").trim()])
     .filter(p => p[0] && p[1]);
-  if (list.length < 4) return toast("게임할 단어가 부족해요.");
-  const payload = { n: (S.login && S.login.nickname) || "", d: dayLabel(S.today), w: list };
-  let url;
-  try { url = SNAKE_URL + "#eng=" + encodeURIComponent(JSON.stringify(payload)); }
-  catch (e) { return toast("단어를 넘기지 못했어요."); }
-  const win = window.open(url, "_blank", "noopener");
+}
+// 입장권(토큰 + 판 수)을 단어와 함께 실어 새 창으로 넘긴다.
+function snakeUrlFor(ticket) {
+  const payload = {
+    n: (S.login && S.login.nickname) || "",
+    d: dayLabel(S.today),
+    w: snakeWordList(),
+    tk: ticket.token,          // 1회용 입장권 번호 (뱀 게임이 남은 판을 기억할 때 쓰는 열쇠)
+    p: ticket.plays | 0,       // 이 입장권으로 할 수 있는 판 수
+  };
+  return SNAKE_URL + "#eng=" + encodeURIComponent(JSON.stringify(payload));
+}
+// 새 창은 클릭 처리 안에서 미리 열어 둔다. (구매 응답을 기다린 뒤 열면 팝업 차단에 걸린다)
+async function buySnakeTicket() {
+  if (snakeWordList().length < 4) return toast("게임할 단어가 부족해요.");
+  const have = Number(S.data.coins || 0);
+  if (have < SNAKE_TICKET_PRICE)
+    return toast("코인이 " + (SNAKE_TICKET_PRICE - have) + "개 모자라요. 공부하고 다시 와요!");
+  if (!confirm("코인 " + SNAKE_TICKET_PRICE + "개로 입장권을 살까요?\\n(뱀 대격돌 " + SNAKE_TICKET_PLAYS + "판)")) return;
+  const win = window.open("about:blank", "_blank");
+  const r = await api("/api/game/snake-ticket", S.login);
+  if (!r.ok) { if (win) win.close(); return toast(r.error); }
+  S.data = r.data; ensureStickerClientData();
+  if (win) win.location = snakeUrlFor(r.ticket);
+  else toast("새 창이 막혔어요. 팝업을 허용한 뒤 '입장권으로 열기'를 눌러 주세요.");
+  viewGames();
+}
+// 방금 산 입장권으로 다시 열기 (창을 실수로 닫았을 때). 이미 쓴 판은 되살아나지 않는다.
+function reopenSnakeGame() {
+  const t = S.data && S.data.snakeTicket;
+  if (!t || !t.token) return toast("가지고 있는 입장권이 없어요.");
+  if (snakeWordList().length < 4) return toast("게임할 단어가 부족해요.");
+  const win = window.open(snakeUrlFor(t), "_blank", "noopener");
   if (!win) toast("새 창이 막혔어요. 브라우저에서 팝업을 허용해 주세요.");
 }
 
@@ -1551,10 +1580,11 @@ function viewGames() {
       </button>
       <button class="game-btn" id="gnSnake">
         <span class="ico">🐍</span>
-        <span class="grow"><span class="nm">뱀 대격돌</span>
-          <div class="de">뜻이 맞는 단어를 먹으면 뱀이 쑥쑥 자라요. 친구들과 온라인 대전도 할 수 있어요.</div>
-          <div class="best">오늘의 단어 \${n}개를 그대로 가져가요 · 새 창에서 열려요</div></span>
+        <span class="grow"><span class="nm">뱀 대격돌 <span class="badge amber" style="margin-left:4px">입장권 \${SNAKE_TICKET_PRICE}코인</span></span>
+          <div class="de">뜻이 맞는 단어를 먹으면 뱀이 쑥쑥 자라요. 입장권 1장으로 \${SNAKE_TICKET_PLAYS}판 할 수 있어요.</div>
+          <div class="best">🪙 지금 \${Number(S.data.coins || 0)}코인 · 오늘의 단어 \${n}개를 가져가요</div></span>
       </button>
+      \${(S.data && S.data.snakeTicket && S.data.snakeTicket.token) ? \`<button class="btn ghost" id="gnSnakeAgain" style="width:100%;padding:11px;font-size:14px">🎟️ 방금 산 입장권으로 다시 열기</button>\` : ""}
     </div>\`}
   \`);
   window.viewHomeGo = viewHome;
@@ -1562,7 +1592,9 @@ function viewGames() {
     document.getElementById("gnSpeed").onclick = startSpeed;
     document.getElementById("gnMatch").onclick = startMatch;
     document.getElementById("gnSpell").onclick = startSpell;
-    document.getElementById("gnSnake").onclick = openSnakeGame;
+    document.getElementById("gnSnake").onclick = buySnakeTicket;
+    const snakeAgain = document.getElementById("gnSnakeAgain");
+    if (snakeAgain) snakeAgain.onclick = reopenSnakeGame;
   }
 }
 
@@ -2100,6 +2132,8 @@ const STICKER_TICKET_NEED = 10;     // 같은 스티커를 이만큼 모으면 '
 const STICKER_TICKET_KEEP = 1;      // 교환 뒤 도감에 남겨 두는 장수(도감에서 사라지지 않도록)
 const REVIEW_REWARD = 30;           // '오늘 복습'을 끝내면 주는 코인(하루 1번)
 const GAME_REWARD = 20;             // '단어 게임'을 한 판 끝내면 주는 코인(하루 1번)
+const SNAKE_TICKET_PRICE = 50;      // 뱀 대격돌 입장권 1장 값(코인)
+const SNAKE_TICKET_PLAYS = 3;       // 입장권 1장으로 할 수 있는 판 수
 // 스티커 가격: 도감에서 뒤로 갈수록(카테고리 내 위치가 뒤일수록) 비싸진다.
 function stickerPriceByPos(pos){ return 60 + pos * 20; }   // 1~12번 → 60,80,…,280
 // 뽑기 확률 가중치: 비쌀수록(뒤 번호) 낮게 → 희귀
@@ -2550,6 +2584,23 @@ async function handleApi(env, db, path, d, cf) {
     return ok({ section: found.section, sectionName: SECTIONS[found.section].name, data: found.data, today: kst().date });
   }
 
+  // ── 뱀 대격돌: 입장권 사기 (코인은 서버가 주인이므로 차감도 서버에서) ──
+  // 입장권 = 1회용 토큰 + 판 수. 남은 판을 세는 것은 뱀 게임 쪽(별도 워커)이 맡는다.
+  // 토큰을 저장해 두는 이유: 창을 실수로 닫아도 같은 입장권으로 다시 열 수 있게 하려는 것.
+  // (이미 다 쓴 토큰은 뱀 게임이 기억하고 있어서 다시 열어도 판이 늘지 않는다)
+  if (path === "/api/game/snake-ticket") {
+    if (!validSection(d.section)) return fail("반 정보가 없어요.");
+    const id = validId(d.id); if (!id) return fail("기기 정보가 없어요.");
+    const data = await getStudent(db, d.section, id); if (!data) return fail("등록되지 않은 학생이에요.");
+    ensureStickerData(data);
+    if (data.coins < SNAKE_TICKET_PRICE)
+      return fail("코인이 " + (SNAKE_TICKET_PRICE - data.coins) + "개 모자라요. 공부하고 다시 와요!");
+    data.coins -= SNAKE_TICKET_PRICE;
+    data.snakeTicket = { token: genId(), plays: SNAKE_TICKET_PLAYS, day: kst().date };
+    await putStudent(db, d.section, id, data);
+    return ok({ data, ticket: data.snakeTicket });
+  }
+
   // ── 스티커: 도감 조회 ──
   if (path === "/api/sticker/book") {
     if (!validSection(d.section)) return fail("반 정보가 없어요.");
@@ -2715,6 +2766,7 @@ async function handleApi(env, db, path, d, cf) {
     d.data.coins = cur.coins;
     d.data.stickerBook = cur.stickerBook;
     d.data.rewardHistory = cur.rewardHistory || {};
+    d.data.snakeTicket = cur.snakeTicket || null;   // 입장권도 서버가 주인 (화면에서 못 늘린다)
     const oldTodayDone = !!(cur.days && cur.days[kst().date] && cur.days[kst().date].done);
     const newTodayDone = !!(d.data.days && d.data.days[kst().date] && d.data.days[kst().date].done);
     const dailyKey = "daily_complete_" + kst().date;
