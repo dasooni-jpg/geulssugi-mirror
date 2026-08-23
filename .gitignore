@@ -22,6 +22,9 @@
 # ↓ 다람쌤 오목 대회 플랫폼
 !/omok/
 
+# ↓ 우리 반 교실 꾸미기 (합치기 게임)
+!/classroom/
+
 # ↓ 우리 반 아이디어 보드 (와우아이디어스 대체, Cloudflare Worker + D1)
 !/ideaboard-app/
 !/ideaboard-worker.template.js
