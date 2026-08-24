@@ -24,6 +24,9 @@
 
 # ↓ 우리 반 교실 꾸미기 (합치기 게임)
 !/classroom/
+!/classroom-worker.template.js
+!/classroom-worker.js
+!/build-classroom-worker.ps1
 
 # ↓ 우리 반 아이디어 보드 (와우아이디어스 대체, Cloudflare Worker + D1)
 !/ideaboard-app/

@@ -51,6 +51,16 @@
 | `omok/` | ⚫ 오목 |
 | `ideaboard-app/` | 💡 아이디어 보드 |
 
+### 🏫 교실 꾸미기 인터넷에 올리기 (선택)
+학생들이 집에서도 하려면 Cloudflare Worker 하나로 올릴 수 있습니다. (데이터베이스·KV 필요 없음)
+1. `powershell -ExecutionPolicy Bypass -File build-classroom-worker.ps1` 실행
+   → `classroom-worker.js` 가 만들어집니다 (게임 파일 3개가 안에 들어 있는 **붙여넣기용 파일**).
+2. Cloudflare → Workers & Pages → Create → Worker → 편집기에 `classroom-worker.js` **전체**를 붙여넣고 Deploy.
+3. `https://<워커주소>/health` 가 `ok` 를 보이면 성공. 학생에게는 `https://<워커주소>/` 를 알려 주세요.
+
+게임을 고친 뒤에는 **1번을 다시 실행해서 새로 붙여넣어야** 반영됩니다.
+(`classroom/game.js` 는 브라우저에서 도는 파일이라 Cloudflare에 붙여넣지 않습니다.)
+
 ## 🔒 개인정보 보호 (설계 원칙)
 - 학생 글은 **각 학생의 기기(브라우저)에만 저장**됩니다. 서버나 중앙에 모으지 않습니다.
 - 선생님은 ① 학생 기기의 **‘보여주기’ 화면을 눈으로 확인**하거나, ② 학생이 **내보낸 파일을 불러와** 확인합니다. (개인정보 동의서 없이도 운영 가능)
