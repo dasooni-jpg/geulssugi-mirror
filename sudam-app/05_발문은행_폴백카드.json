@@ -1,0 +1,362 @@
+[
+  {
+    "id": "BR-01",
+    "category": "MIX",
+    "question": "설탕물 A(설탕 20g, 물 80g)와 B(설탕 30g, 물 120g) 중 어느 쪽이 더 달까?",
+    "discussionPoint": "절대량 비교와 비율 비교의 대립",
+    "expectedClaims": ["설탕 양만 비교(30g>20g이므로 B)", "전체에 대한 설탕의 비율 비교(20/100 vs 30/150)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "설탕이 많으면 항상 더 달까? 물이 1,000g이라면 어떻게 될까?" },
+      { "order": 2, "text": "설탕 30g에 물 970g을 넣은 컵과 비교하면 주장이 유지될까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-02",
+    "category": "MIX",
+    "question": "소금물 C(소금 15g, 물 135g)와 D(소금 25g, 물 175g) 중 어느 쪽이 더 짤까?",
+    "discussionPoint": "소금 절대량 비교와 비율 비교의 대립",
+    "expectedClaims": ["소금 양만 비교(25g>15g이므로 D가 더 짬)", "전체 대비 비율 비교(15/150 vs 25/200)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "소금이 많으면 항상 더 짤까? 물의 양이 다르면 어떻게 될까?" },
+      { "order": 2, "text": "소금 25g에 물 250g을 넣은 소금물과 비교하면 주장이 유지될까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-03",
+    "category": "MIX",
+    "question": "오렌지 원액 200mL에 물 600mL를 섞은 주스 E와 원액 150mL에 물 350mL를 섞은 주스 F 중 어느 쪽이 더 진할까?",
+    "discussionPoint": "혼합비 표현 방식(전체 대비 vs 물 대비)의 차이",
+    "expectedClaims": ["원액의 양만 비교(E가 원액이 더 많으므로 진하다)", "원액 대 전체(또는 물) 비율로 비교(1:3 vs 3:7)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "원액이 많으면 항상 진할까? 물을 매우 많이 넣으면 어떻게 될까?" },
+      { "order": 2, "text": "F의 원액과 물을 두 배로 늘리면(300mL, 700mL) 비교 결과가 바뀔까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-04",
+    "category": "MIX",
+    "question": "흰색 페인트 4L에 파란색 페인트 1L를 섞은 G와 흰색 6L에 파란색 2L를 섞은 H 중 어느 쪽이 더 진한 파란색일까?",
+    "discussionPoint": "부분 대 부분 비와 부분 대 전체 비의 혼동",
+    "expectedClaims": ["파란색 양만 비교(H가 2L로 더 많으므로 진하다)", "흰색 대 파란색 비로 비교(4:1 vs 6:2=3:1)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "파란색이 많으면 항상 진할까? 흰색도 함께 늘었다면 어떨까?" },
+      { "order": 2, "text": "G를 두 배로 늘리면(흰8L, 파2L) H와 비교가 어떻게 될까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-05",
+    "category": "PRICE",
+    "question": "문구점 A는 연필 12자루를 3,600원에 팔고, 문구점 B는 연필 20자루를 5,800원에 판다. 어느 가게가 더 싼가?",
+    "discussionPoint": "총액 비교와 단가(1개당 가격) 비교의 대립",
+    "expectedClaims": ["총액만 비교(5,800원이 더 비싸므로 A가 싸다)", "1자루당 가격으로 비교(3600/12=300원 vs 5800/20=290원)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "묶음이 크면 항상 더 쌀까? 1개당 가격으로 나누면 어떨까?" },
+      { "order": 2, "text": "두 가게 모두 60자루씩 산다면 각각 얼마가 될까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-06",
+    "category": "PRICE",
+    "question": "마트 A는 딸기 500g을 6,000원에, 마트 B는 딸기 750g을 8,700원에 판매한다. 어느 마트가 더 저렴한가?",
+    "discussionPoint": "무게가 다른 두 상품의 가격 비교 기준",
+    "expectedClaims": ["총 가격만 비교(6,000원이 더 싸므로 A가 저렴)", "100g당 가격으로 비교(6000/5=1200원 vs 8700/7.5=1160원)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "양이 적으면 항상 쌀까? 같은 양으로 맞추면 어떻게 될까?" },
+      { "order": 2, "text": "두 마트에서 1,500g씩 산다면 각각 얼마가 될까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-07",
+    "category": "PRICE",
+    "question": "놀이공원 자유이용권을 4명이 함께 사면 52,000원, 6명이 함께 사면 90,000원이다. 어느 쪽이 1인당 더 저렴한가?",
+    "discussionPoint": "인원수에 따른 총액과 1인당 금액의 관계",
+    "expectedClaims": ["총액만 비교(52,000원이 더 싸므로 4명 조건이 저렴)", "1인당 금액으로 비교(52000/4=13000원 vs 90000/6=15000원)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "인원이 적으면 항상 쌀까? 1인당 금액으로 나눠보면 어떨까?" },
+      { "order": 2, "text": "12명이 각각 4명 조건과 6명 조건으로 나눠 산다면 총액은 얼마가 될까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-08",
+    "category": "PRICE",
+    "question": "문구세트를 A상점은 3개에 4,500원, B상점은 5개에 8,000원에 판다. 어느 상점이 더 유리한가?",
+    "discussionPoint": "개수당 단가를 구하는 절차의 정당화",
+    "expectedClaims": ["총액만 비교(4,500원이 더 싸므로 A가 유리)", "1개당 가격으로 비교(4500/3=1500원 vs 8000/5=1600원)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "개수가 적으면 항상 쌀까? 1개당 가격을 구해보면 어떨까?" },
+      { "order": 2, "text": "15개를 산다면 A상점 조건과 B상점 조건 중 무엇이 더 쌀까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-09",
+    "category": "SPEED",
+    "question": "자전거 선수 갑은 30km를 2시간에 달렸고, 을은 42km를 3시간에 달렸다. 누가 더 빠른가?",
+    "discussionPoint": "이동 거리와 걸린 시간을 함께 고려하는 비교",
+    "expectedClaims": ["거리만 비교(42km가 더 기므로 을이 빠르다)", "시간당 거리(속력)로 비교(30/2=15km/h vs 42/3=14km/h)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "거리가 길면 항상 빠른 걸까? 걸린 시간이 다르면 어떨까?" },
+      { "order": 2, "text": "두 사람이 똑같이 6시간을 달린다면 각각 몇 km를 갈까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-10",
+    "category": "SPEED",
+    "question": "기차 A는 240km를 3시간에, 기차 B는 350km를 5시간에 이동했다. 어느 기차가 더 빠른가?",
+    "discussionPoint": "속력 = 거리 ÷ 시간이라는 비율 개념의 필요성",
+    "expectedClaims": ["거리만 비교(350km가 더 기므로 B가 빠르다)", "시간당 거리로 비교(240/3=80km/h vs 350/5=70km/h)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "거리가 길면 항상 빠른 걸까? 두 기차가 같은 시간 동안 간 거리를 비교하면?" },
+      { "order": 2, "text": "두 기차가 똑같이 1시간을 이동한다면 각각 몇 km를 갈까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-11",
+    "category": "SPEED",
+    "question": "마라톤 선수 갑은 10km를 50분에, 을은 15km를 70분에 완주했다. 누가 더 빨리 달린 것일까?",
+    "discussionPoint": "시간이 다를 때 빠르기를 비교하는 기준",
+    "expectedClaims": ["거리만 비교(15km가 더 기므로 을이 빠르다)", "분당 거리(또는 1km당 걸린 시간)로 비교(10/50=0.2km/분 vs 15/70≈0.214km/분)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "거리가 길면 항상 빠른 걸까? 걸린 시간까지 함께 봐야 하지 않을까?" },
+      { "order": 2, "text": "두 선수가 똑같이 100분을 달린다면 각각 몇 km를 갈까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-12",
+    "category": "SPEED",
+    "question": "로봇청소기 A는 12㎡를 15분에, B는 20㎡를 24분에 청소한다. 어느 로봇이 더 빠르게 청소하는가?",
+    "discussionPoint": "넓이당 시간(또는 시간당 넓이) 비교",
+    "expectedClaims": ["넓이만 비교(20㎡가 더 넓으므로 B가 빠르다)", "분당 청소 넓이로 비교(12/15=0.8㎡/분 vs 20/24≈0.83㎡/분)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "넓이가 넓으면 항상 빠른 걸까? 걸린 시간이 다르면 어떨까?" },
+      { "order": 2, "text": "두 로봇이 똑같이 60분 동안 청소한다면 각각 몇 ㎡를 청소할까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-13",
+    "category": "RATIO",
+    "question": "모둠 A는 남학생 3명, 여학생 2명이고, 모둠 B는 남학생 6명, 여학생 5명이다. 두 모둠 중 남학생 비율이 더 높은 모둠은?",
+    "discussionPoint": "'몇 명 더 많다'와 '비율이 높다'의 차이",
+    "expectedClaims": ["남학생 수만 비교(6명이 더 많으므로 B가 높다)", "전체 대비 비율로 비교(3/5=0.6 vs 6/11≈0.545)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "남학생 수가 많으면 항상 비율도 높을까? 전체 인원이 다르면 어떨까?" },
+      { "order": 2, "text": "B모둠에 남학생 1명이 더 들어와 7:5가 된다면 비율은 어떻게 바뀔까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-14",
+    "category": "RATIO",
+    "question": "반죽에 밀가루와 물을 A는 5:2로, B는 8:3으로 섞는다. 어느 반죽이 더 되직할까(밀가루 비중이 높을까)?",
+    "discussionPoint": "비를 분수로 바꾸어 비교하는 절차의 필요성",
+    "expectedClaims": ["밀가루 숫자만 비교(8이 5보다 크므로 B가 되직하다)", "밀가루 대 전체 비율로 비교(5/7 vs 8/11)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "밀가루 숫자가 크면 항상 되직할까? 물의 양도 함께 봐야 하지 않을까?" },
+      { "order": 2, "text": "두 비를 분모가 같도록 통분하면 어떤 값이 나올까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-15",
+    "category": "RATIO",
+    "question": "독서 동아리 A는 5명 중 3명이 소설을 좋아하고, 동아리 B는 8명 중 5명이 소설을 좋아한다. 어느 동아리가 소설을 더 선호한다고 할 수 있을까?",
+    "discussionPoint": "표본 크기가 다를 때 비율 비교의 타당성",
+    "expectedClaims": ["좋아하는 인원수만 비교(5명이 더 많으므로 B)", "전체 대비 비율로 비교(3/5=0.6 vs 5/8=0.625)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "좋아하는 사람 수가 많으면 항상 더 선호하는 걸까? 전체 인원이 다르면?" },
+      { "order": 2, "text": "두 동아리를 각각 40명으로 늘린다면 소설을 좋아하는 사람은 몇 명이 될까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-16",
+    "category": "RATIO",
+    "question": "모형 자동차를 만드는데 A팀은 바퀴 4개당 몸체 1개, B팀은 바퀴 10개당 몸체 3개 비율로 부품을 준비한다. 어느 팀의 비율이 원래 자동차(바퀴4:몸체1)에 더 가까운가?",
+    "discussionPoint": "기준이 되는 비와 다른 비를 비교하는 절차",
+    "expectedClaims": ["바퀴 개수만 비교(10개가 더 많으므로 B가 가깝다)", "몸체 1개당 바퀴 수로 비교(4/1=4 vs 10/3≈3.33)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "바퀴 수가 많으면 항상 비율이 비슷한 걸까? 몸체 수도 함께 봐야 하지 않을까?" },
+      { "order": 2, "text": "B팀의 비를 몸체 1개 기준으로 바꾸면 바퀴는 몇 개가 될까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-17",
+    "category": "RATE",
+    "question": "축구선수 갑은 20번 슛 중 12골, 을은 25번 슛 중 14골을 넣었다. 누가 더 골을 잘 넣는다고 할 수 있을까?",
+    "discussionPoint": "시도 횟수가 다를 때 성공률 비교",
+    "expectedClaims": ["골 개수만 비교(14골이 더 많으므로 을이 잘한다)", "슛 대비 성공률로 비교(12/20=0.6 vs 14/25=0.56)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "골 개수가 많으면 항상 잘하는 걸까? 시도 횟수가 다르면 어떨까?" },
+      { "order": 2, "text": "두 선수가 똑같이 100번씩 슛을 던진다면 각각 몇 골을 넣을까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-18",
+    "category": "RATE",
+    "question": "농구선수 갑은 자유투 15번 중 9번, 을은 자유투 18번 중 11번을 성공시켰다. 누구의 자유투 성공률이 더 높은가?",
+    "discussionPoint": "분수 비교를 통한 성공률 판단",
+    "expectedClaims": ["성공 횟수만 비교(11번이 더 많으므로 을이 높다)", "시도 대비 성공률로 비교(9/15=0.6 vs 11/18≈0.611)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "성공 횟수가 많으면 항상 성공률도 높을까? 시도 횟수가 다르면?" },
+      { "order": 2, "text": "두 선수가 똑같이 60번씩 시도한다면 각각 몇 번 성공할까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-19",
+    "category": "RATE",
+    "question": "기계 A는 부품 200개 중 4개가 불량이고, 기계 B는 부품 350개 중 6개가 불량이다. 어느 기계의 품질이 더 좋은가?",
+    "discussionPoint": "불량률(비율)을 통한 품질 비교",
+    "expectedClaims": ["불량 개수만 비교(6개가 더 많으므로 A가 좋다)", "생산량 대비 불량률로 비교(4/200=0.02 vs 6/350≈0.017)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "불량 개수가 적으면 항상 품질이 좋은 걸까? 생산량이 다르면 어떨까?" },
+      { "order": 2, "text": "두 기계가 똑같이 1,000개씩 만든다면 불량품은 각각 몇 개가 될까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-20",
+    "category": "RATE",
+    "question": "배드민턴 대회에서 갑 모둠은 9경기 중 6승, 을 모둠은 11경기 중 7승을 거두었다. 어느 모둠의 승률이 더 높은가?",
+    "discussionPoint": "경기 수가 다를 때 승률 비교",
+    "expectedClaims": ["승리 수만 비교(7승이 더 많으므로 을 모둠이 높다)", "경기 대비 승률로 비교(6/9≈0.667 vs 7/11≈0.636)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "이긴 경기 수가 많으면 항상 승률도 높을까? 전체 경기 수가 다르면?" },
+      { "order": 2, "text": "두 모둠이 똑같이 99경기를 치른다면 각각 몇 승을 거둘까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-21",
+    "category": "SCALE",
+    "question": "지도 A는 실제 거리 2km를 4cm로, 지도 B는 실제 거리 3km를 5cm로 나타낸다. 어느 지도가 더 자세한(축척이 큰) 지도인가?",
+    "discussionPoint": "축척(지도상 거리 : 실제 거리)의 비교 기준",
+    "expectedClaims": ["지도상 길이만 비교(5cm가 더 기므로 B가 자세하다)", "실제 거리 대비 지도상 길이 비율로 비교(4/2=2cm/km vs 5/3≈1.67cm/km)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "지도상 길이가 길면 항상 더 자세한 걸까? 나타내는 실제 거리가 다르면?" },
+      { "order": 2, "text": "두 지도에서 실제 거리 6km는 각각 몇 cm로 나타날까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-22",
+    "category": "SCALE",
+    "question": "설계도 C는 실제 길이 150cm인 책상을 10cm로, 설계도 D는 실제 길이 200cm인 책상을 15cm로 그렸다. 어느 설계도가 실제 크기를 덜 축소한 것인가?",
+    "discussionPoint": "축소 비율 비교와 절대 길이 비교의 구분",
+    "expectedClaims": ["그림 길이만 비교(15cm가 더 기므로 D가 덜 축소했다)", "실제 대비 그림 길이 비율로 비교(10/150≈0.067 vs 15/200=0.075)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "그림이 크면 항상 덜 축소한 걸까? 실제 길이가 다르면 어떨까?" },
+      { "order": 2, "text": "두 설계도에서 실제 길이 300cm인 물건은 각각 몇 cm로 그려질까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-23",
+    "category": "SCALE",
+    "question": "사진을 확대할 때 E는 원본 가로 5cm를 15cm로, F는 원본 가로 8cm를 20cm로 확대했다. 어느 사진이 더 많이 확대된 것인가?",
+    "discussionPoint": "확대 배율(비율)의 비교",
+    "expectedClaims": ["늘어난 길이(차이)만 비교(F가 12cm 늘어 더 많이 확대되었다)", "원본 대비 확대 배율로 비교(15/5=3배 vs 20/8=2.5배)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "늘어난 길이가 크면 항상 많이 확대된 걸까? 원본 크기가 다르면?" },
+      { "order": 2, "text": "E와 F를 원본의 4배로 확대하면 각각 몇 cm가 될까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-24",
+    "category": "SCALE",
+    "question": "모형 자동차 G는 실제 자동차 400cm를 20cm로, H는 실제 자동차 450cm를 25cm로 만들었다. 어느 모형이 실제 크기를 더 크게(축척이 더 크게) 만든 것인가?",
+    "discussionPoint": "축척 비교를 통한 정밀도 판단",
+    "expectedClaims": ["모형 길이만 비교(25cm가 더 기므로 H가 더 크게 만들었다)", "실제 대비 모형 길이 비율로 비교(20/400=0.05 vs 25/450≈0.056)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "모형이 크면 항상 비율도 큰 걸까? 실제 크기가 다르면 어떨까?" },
+      { "order": 2, "text": "두 모형을 실제 크기 900cm 기준으로 다시 만들면 각각 몇 cm가 될까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-25",
+    "category": "DENSITY",
+    "question": "상자 A에는 사탕 40개가 부피 2000㎤ 상자에, 상자 B에는 사탕 55개가 부피 2500㎤ 상자에 들어 있다. 어느 상자가 더 빽빽하게(밀도 높게) 담겨 있는가?",
+    "discussionPoint": "개수와 부피를 함께 고려하는 밀도 비교",
+    "expectedClaims": ["사탕 개수만 비교(55개가 더 많으므로 B가 빽빽하다)", "부피당 개수로 비교(40/2000=0.02개/㎤ vs 55/2500=0.022개/㎤)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "사탕이 많으면 항상 빽빽한 걸까? 상자 부피가 다르면 어떨까?" },
+      { "order": 2, "text": "두 상자가 똑같이 5000㎤라면 사탕은 각각 몇 개가 들어갈까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-26",
+    "category": "DENSITY",
+    "question": "텃밭 A에는 나무 12그루가 400㎡에, 텃밭 B에는 나무 18그루가 720㎡에 심어져 있다. 어느 텃밭이 나무를 더 빽빽하게 심었는가?",
+    "discussionPoint": "면적당 개수(밀도) 비교",
+    "expectedClaims": ["나무 수만 비교(18그루가 더 많으므로 B가 빽빽하다)", "면적당 나무 수로 비교(12/400=0.03그루/㎡ vs 18/720=0.025그루/㎡)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "나무 수가 많으면 항상 빽빽한 걸까? 면적이 다르면 어떨까?" },
+      { "order": 2, "text": "두 텃밭이 똑같이 1,200㎡라면 나무는 각각 몇 그루가 될까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-27",
+    "category": "DENSITY",
+    "question": "마을 A는 인구 6,000명이 넓이 3㎢에, 마을 B는 인구 8,400명이 넓이 4.5㎢에 살고 있다. 어느 마을이 더 붐비는가(인구밀도가 높은가)?",
+    "discussionPoint": "인구밀도 개념의 도입",
+    "expectedClaims": ["인구수만 비교(8,400명이 더 많으므로 B가 붐빈다)", "넓이당 인구수로 비교(6000/3=2000명/㎢ vs 8400/4.5≈1867명/㎢)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "인구가 많으면 항상 붐비는 걸까? 넓이가 다르면 어떨까?" },
+      { "order": 2, "text": "두 마을이 똑같이 9㎢라면 인구는 각각 몇 명이 될까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-28",
+    "category": "PERCENT",
+    "question": "옷가게에서 원래 20,000원인 티셔츠를 4,000원 할인하고, 원래 35,000원인 바지를 6,000원 할인한다. 어느 상품이 더 많이 할인된 것인가?",
+    "discussionPoint": "할인 금액과 할인율(백분율)의 차이",
+    "expectedClaims": ["할인 금액만 비교(6,000원이 더 크므로 바지가 많이 할인되었다)", "원래 가격 대비 할인율로 비교(4000/20000=20% vs 6000/35000≈17%)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "할인 금액이 크면 항상 많이 할인된 걸까? 원래 가격이 다르면?" },
+      { "order": 2, "text": "두 상품 모두 원래 가격 100,000원 기준이라면 할인 금액은 각각 얼마가 될까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-29",
+    "category": "PERCENT",
+    "question": "6학년 1반은 학생 25명 중 20명이 안경을 쓰지 않고, 2반은 학생 28명 중 22명이 안경을 쓰지 않는다. 어느 반이 안경을 쓰지 않는 학생 비율이 더 높은가?",
+    "discussionPoint": "인원수가 다른 집단의 백분율 비교",
+    "expectedClaims": ["안경 안 쓴 학생 수만 비교(22명이 더 많으므로 2반이 높다)", "전체 대비 백분율로 비교(20/25=80% vs 22/28≈78.6%)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "인원수가 많으면 항상 비율도 높을까? 전체 학생 수가 다르면?" },
+      { "order": 2, "text": "두 반을 각각 100명으로 늘린다면 안경을 안 쓴 학생은 몇 명이 될까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  },
+  {
+    "id": "BR-30",
+    "category": "PERCENT",
+    "question": "예금 상품 A는 원금 500,000원에 이자 15,000원이 붙고, 상품 B는 원금 800,000원에 이자 20,000원이 붙는다. 어느 상품의 이자율(백분율)이 더 높은가?",
+    "discussionPoint": "이자율(백분율) 비교를 통한 금융 개념 도입",
+    "expectedClaims": ["이자 금액만 비교(20,000원이 더 크므로 B가 유리하다)", "원금 대비 이자율로 비교(15000/500000=3% vs 20000/800000=2.5%)"],
+    "fallbackProbes": [
+      { "order": 1, "text": "이자 금액이 크면 항상 이자율도 높을까? 원금이 다르면 어떨까?" },
+      { "order": 2, "text": "두 상품 모두 원금 1,000,000원이라면 이자는 각각 얼마가 될까?" }
+    ],
+    "display": { "stage": "R", "cardType": "probe", "answerProvided": false }
+  }
+]
