@@ -10,7 +10,7 @@
     --bg:#fdf6ec; --card:#ffffff; --ink:#3a2f28; --muted:#8b7d72;
     --brand:#e8894a; --brand-d:#c76c31; --brand-l:#fbe4d1;
     --green:#4aa972; --green-bg:#e6f6ec;
-    --blue:#4c8dff; --gold:#f0b429;
+    --blue:#4c8dff; --blue-bg:#eaf1ff; --gold:#f0b429; --purple:#8b6cd6;
     --line:#f0e3d5; --radius:20px; --shadow:0 8px 26px rgba(160,110,60,.16);
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -23,20 +23,19 @@
   .app{height:100%;display:flex;flex-direction:column;max-width:1100px;margin:0 auto}
 
   /* ── 헤더 ── */
-  header.top{display:flex;align-items:center;gap:10px;padding:8px 12px 6px}
-  .mascot{width:38px;height:38px;object-fit:contain;border-radius:11px;flex:none}
-  .title h1{margin:0;font-size:17px;font-weight:800;letter-spacing:-.5px;white-space:nowrap}
+  header.top{display:flex;align-items:center;gap:9px;padding:7px 11px 5px}
+  .mascot{width:34px;height:34px;object-fit:contain;border-radius:10px;flex:none}
+  .title h1{margin:0;font-size:16px;font-weight:800;letter-spacing:-.5px;white-space:nowrap}
   .title p{margin:0;font-size:11px;color:var(--muted);white-space:nowrap}
-  .hud{margin-left:auto;display:flex;align-items:center;gap:7px}
+  .hud{margin-left:auto;display:flex;align-items:center;gap:6px}
   .pill{
-    display:flex;align-items:center;gap:6px;background:var(--card);border:1.5px solid var(--line);
+    display:flex;align-items:center;gap:5px;background:var(--card);border:1.5px solid var(--line);
     border-radius:999px;padding:5px 11px;font-weight:800;font-size:14px;box-shadow:0 2px 8px rgba(160,110,60,.08)
   }
-  .pill small{font-size:10px;color:var(--muted);font-weight:700}
-  .lvbox{min-width:96px}
+  .lvbox{min-width:112px}
   .lvbar{height:6px;background:var(--line);border-radius:99px;overflow:hidden;margin-top:3px}
   .lvbar i{display:block;height:100%;background:linear-gradient(90deg,#f7c66b,var(--brand));border-radius:99px;transition:width .3s}
-  .lvbox .row{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);font-weight:700}
+  .lvbox .row{display:flex;justify-content:space-between;gap:8px;font-size:10.5px;color:var(--muted);font-weight:700;white-space:nowrap}
   .lvbox .row b{color:var(--ink);font-size:13px}
 
   /* ── 무대(캔버스) ── */
@@ -44,51 +43,99 @@
     background:linear-gradient(#eaf3ff,#f3f7ec);box-shadow:var(--shadow)}
   canvas{display:block;width:100%;height:100%;touch-action:none}
   .float{position:absolute;display:flex;gap:6px}
-  .float.tl{top:9px;left:9px;flex-direction:column;align-items:flex-start}
-  .float.tr{top:9px;right:9px}
-  .float.br{bottom:9px;right:9px;flex-direction:column}
+  .float.tl{top:8px;left:8px;flex-direction:column;align-items:flex-start}
+  .float.tr{top:8px;right:8px}
+  .float.br{bottom:8px;right:8px;flex-direction:column}
   .fbtn{
-    border:none;background:rgba(255,255,255,.94);color:var(--ink);font-weight:800;font-size:13px;
-    padding:8px 12px;border-radius:14px;box-shadow:0 3px 10px rgba(120,80,40,.18);cursor:pointer;
-    display:flex;align-items:center;gap:5px;font-family:inherit
+    border:none;background:rgba(255,255,255,.94);color:var(--ink);font-weight:800;font-size:12.5px;
+    padding:7px 11px;border-radius:13px;box-shadow:0 3px 10px rgba(120,80,40,.18);cursor:pointer;
+    display:flex;align-items:center;gap:5px;font-family:inherit;position:relative
   }
-  .fbtn.icon{padding:8px 10px;font-size:15px}
+  .fbtn.icon{padding:7px 9px;font-size:15px}
   .fbtn:active{transform:scale(.95)}
   .fbtn.main{background:linear-gradient(180deg,#fbb36a,var(--brand));color:#fff}
+  .fbtn .dot{position:absolute;top:-4px;right:-4px;background:#e05a5a;color:#fff;font-size:10px;
+    min-width:17px;height:17px;border-radius:99px;display:flex;align-items:center;justify-content:center;padding:0 4px}
   .hint{
-    position:absolute;left:50%;bottom:10px;transform:translateX(-50%);
+    position:absolute;left:50%;bottom:8px;transform:translateX(-50%);
     background:rgba(58,47,40,.86);color:#fff;font-size:12.5px;font-weight:700;padding:7px 14px;
-    border-radius:999px;opacity:0;transition:opacity .25s;pointer-events:none;max-width:92%;text-align:center
+    border-radius:999px;opacity:0;transition:opacity .25s;pointer-events:none;max-width:92%;text-align:center;z-index:3
   }
   .hint.on{opacity:1}
 
-  /* ── 주문 카드 ── */
-  .dock{padding:8px 8px 10px}
-  .dock h2{margin:0 0 5px 4px;font-size:12px;color:var(--muted);font-weight:800;display:flex;align-items:center;gap:6px}
+  /* 선택한 아이템 정보 바 */
+  .infobar{
+    position:absolute;left:8px;right:8px;bottom:8px;display:none;align-items:center;gap:9px;
+    background:rgba(255,255,255,.97);border:1.5px solid var(--line);border-radius:16px;
+    padding:7px 10px;box-shadow:0 6px 18px rgba(120,80,40,.18);z-index:4
+  }
+  .infobar.on{display:flex}
+  .infobar .ie{font-size:26px;line-height:1}
+  .infobar .it{min-width:0;flex:1}
+  .infobar .it b{display:block;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .infobar .it small{display:block;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .infobar button{
+    border:none;border-radius:11px;padding:7px 10px;font-size:12px;font-weight:800;font-family:inherit;
+    background:var(--brand-l);color:var(--brand-d);cursor:pointer;white-space:nowrap
+  }
+  .infobar button.gold{background:#fdf0cf;color:#a9781a}
+  .infobar button.gray{background:var(--line);color:var(--muted);padding:7px 9px}
+  .infobar button:active{transform:scale(.95)}
+
+  /* ── 아래 판(주문 · 프로젝트) ── */
+  .dock{padding:6px 8px 9px}
+  .tabs{display:flex;gap:6px;margin-bottom:6px}
+  .tab{
+    border:1.5px solid var(--line);background:var(--card);color:var(--muted);font-weight:800;font-size:12px;
+    padding:5px 12px;border-radius:999px;font-family:inherit;cursor:pointer;display:flex;align-items:center;gap:5px
+  }
+  .tab.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .tab .n{background:var(--brand);color:#fff;border-radius:99px;font-size:10px;padding:0 5px;min-width:16px;text-align:center}
+  .tab.on .n{background:var(--brand)}
+  .pane{display:none}
+  .pane.on{display:block}
+
   .orders{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
   .orders::-webkit-scrollbar{display:none}
+  .orders{align-items:stretch}
   .order{
-    flex:0 0 auto;width:180px;background:var(--card);border:1.5px solid var(--line);border-radius:16px;
-    padding:8px 10px 9px;box-shadow:0 3px 12px rgba(160,110,60,.08);position:relative
+    flex:0 0 auto;width:172px;background:var(--card);border:1.5px solid var(--line);border-radius:16px;
+    padding:8px 10px 9px;box-shadow:0 3px 12px rgba(160,110,60,.08);position:relative;
+    display:flex;flex-direction:column
   }
+  .order .bottom{margin-top:auto}
+  .order .needs{min-height:30px}
+  .order.ready{border-color:#bfe6cd;background:linear-gradient(180deg,#fff,#f3fbf6)}
   .order .who{font-size:12px;font-weight:800;display:flex;align-items:center;gap:4px}
   .order .who span.face{font-size:15px}
-  .order .say{font-size:11px;color:var(--muted);margin:1px 0 6px;height:15px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-  .order .needs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:7px}
+  .order .say{font-size:11px;color:var(--muted);margin:0 0 6px;height:15px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  .needs{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:7px}
   .need{display:flex;align-items:center;gap:3px;background:#faf4ec;border:1.5px solid var(--line);
-    border-radius:11px;padding:3px 7px;font-size:12px;font-weight:800}
+    border-radius:11px;padding:2px 6px;font-size:11.5px;font-weight:800}
   .need .em{font-size:17px}
+  .need .lv{font-size:9px;color:var(--muted)}
   .need.ok{background:var(--green-bg);border-color:#bfe6cd;color:var(--green)}
-  .order .bottom{display:flex;align-items:center;gap:6px}
-  .reward{font-size:11.5px;font-weight:800;color:var(--gold)}
+  .order .bottom{display:flex;align-items:center;gap:6px;flex-wrap:nowrap}
+  .reward{font-size:11px;font-weight:800;color:var(--gold);line-height:1.25}
   .reward b{color:var(--blue)}
   .give{
     margin-left:auto;border:none;border-radius:11px;padding:6px 11px;font-size:12px;font-weight:800;
-    background:var(--line);color:#b0a196;font-family:inherit;cursor:not-allowed
+    background:var(--line);color:#b0a196;font-family:inherit;cursor:not-allowed;white-space:nowrap;flex:none
   }
   .give.on{background:linear-gradient(180deg,#63c48c,var(--green));color:#fff;cursor:pointer;box-shadow:0 2px 8px rgba(74,169,114,.35)}
   .give.on:active{transform:scale(.95)}
-  .skip{position:absolute;top:5px;right:6px;border:none;background:none;color:#cbbcae;font-size:14px;cursor:pointer;padding:2px 4px;font-family:inherit}
+  .skip{position:absolute;top:4px;right:5px;border:none;background:none;color:#cbbcae;font-size:13px;cursor:pointer;padding:2px 4px;font-family:inherit}
+
+  /* 프로젝트 카드 */
+  .project{background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:9px 12px 10px;
+    box-shadow:0 3px 12px rgba(160,110,60,.08);display:flex;gap:11px;align-items:center}
+  .project .pem{font-size:30px;flex:none}
+  .project .pbody{flex:1;min-width:0}
+  .project .pt{font-size:13px;font-weight:800;display:flex;align-items:center;gap:6px}
+  .project .pt small{font-size:10.5px;color:var(--muted);font-weight:700}
+  .project .pd{font-size:11px;color:var(--muted);margin-bottom:5px}
+  .project .pr{font-size:10.5px;color:var(--purple);font-weight:800;margin-top:4px}
+  .project .done{font-size:13px;font-weight:800;color:var(--green);text-align:center;padding:6px 0}
 
   /* ── 모달 ── */
   .modal{position:fixed;inset:0;background:rgba(58,47,40,.45);display:none;align-items:flex-end;justify-content:center;z-index:40}
@@ -111,26 +158,39 @@
   }
   .shopitem button:disabled{background:var(--line);color:#b0a196;cursor:default}
   .shopitem.owned{border-color:#bfe6cd;background:var(--green-bg)}
+
+  /* 창고 */
+  .storegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(62px,1fr));gap:8px}
+  .slot{aspect-ratio:1;border:2px dashed var(--line);border-radius:14px;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;background:var(--card);position:relative}
+  .slot.full{border-style:solid;cursor:pointer}
+  .slot .em{font-size:26px;line-height:1}
+  .slot .lv{position:absolute;right:4px;bottom:3px;font-size:10px;font-weight:800;color:#fff;
+    background:var(--brand);border-radius:99px;padding:0 5px}
+
+  /* 도감 */
+  .chainbox{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:8px 10px;margin:7px 0}
+  .chainbox .cn{font-size:12px;font-weight:800;color:var(--muted);display:flex;justify-content:space-between}
+  .chainbox .cl{font-size:19px;letter-spacing:1px;margin-top:3px;line-height:1.5;word-break:break-all}
   .help p{font-size:13.5px;margin:8px 0}
   .help ul{padding-left:18px;margin:6px 0;font-size:13.5px}
-  .help li{margin:4px 0}
-  .chainbox{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:8px 10px;margin:7px 0}
-  .chainbox .cn{font-size:12px;font-weight:800;color:var(--muted)}
-  .chainbox .cl{font-size:19px;letter-spacing:1px;margin-top:2px}
+  .help li{margin:5px 0}
   .danger{width:100%;margin-top:12px;border:1.5px solid #f0cfc4;background:#fff3ef;color:#c9563c;
     border-radius:12px;padding:10px;font-weight:800;font-size:13px;font-family:inherit;cursor:pointer}
 
   .toast{
-    position:fixed;left:50%;top:14px;transform:translate(-50%,-24px);z-index:60;
+    position:fixed;left:50%;top:56px;transform:translate(-50%,-24px);z-index:60;
     background:#fff;border:2px solid var(--brand-l);color:var(--ink);font-weight:800;font-size:13.5px;
-    padding:9px 16px;border-radius:999px;box-shadow:var(--shadow);opacity:0;transition:.25s;pointer-events:none
+    padding:9px 16px;border-radius:999px;box-shadow:var(--shadow);opacity:0;transition:.25s;pointer-events:none;
+    max-width:92%;text-align:center
   }
   .toast.on{opacity:1;transform:translate(-50%,0)}
 
   @media (max-width:420px){
     .title p{display:none}
-    .lvbox{min-width:80px}
+    .lvbox{min-width:78px}
     .pill{padding:4px 9px;font-size:13px}
+    .order{width:158px}
   }
 </style>
 </head>
@@ -144,10 +204,9 @@
     </div>
     <div class="hud">
       <div class="pill" title="동전"><span>🪙</span><span id="coins">0</span></div>
-      <div class="pill" title="기운"><span>⚡</span><span id="energy">0</span><small id="energyNext"></small></div>
       <div class="pill lvbox">
         <div style="flex:1">
-          <div class="row"><span>Lv <b id="lv">1</b></span><span id="xptxt">0/40</span></div>
+          <div class="row"><span>Lv <b id="lv">1</b></span><span id="xptxt">0/50</span></div>
           <div class="lvbar"><i id="xpbar" style="width:0%"></i></div>
         </div>
       </div>
@@ -158,24 +217,35 @@
     <canvas id="cv"></canvas>
     <div class="float tl">
       <button class="fbtn main" id="btnShop">🎀 교실 꾸미기</button>
-      <button class="fbtn" id="btnGuide">📖 아이템 도감</button>
+      <button class="fbtn" id="btnStore">🎒 창고 <span class="dot" id="storeDot">0</span></button>
+      <button class="fbtn" id="btnGuide">📖 도감</button>
     </div>
     <div class="float tr">
       <button class="fbtn icon" id="btnSound" title="소리">🔊</button>
       <button class="fbtn icon" id="btnHelp" title="도움말">❓</button>
     </div>
     <div class="float br">
-      <button class="fbtn icon" id="btnTrash" title="물건 정리하기">🗑️</button>
       <button class="fbtn icon" id="btnZoomIn">➕</button>
       <button class="fbtn icon" id="btnZoomOut">➖</button>
       <button class="fbtn icon" id="btnFit">🎯</button>
+    </div>
+    <div class="infobar" id="infobar">
+      <span class="ie" id="infoEm">✏️</span>
+      <div class="it"><b id="infoName">—</b><small id="infoSub">—</small></div>
+      <button id="infoStore">🎒 넣기</button>
+      <button class="gold" id="infoSell">🪙 팔기</button>
+      <button class="gray" id="infoClose">✕</button>
     </div>
     <div class="hint" id="hint"></div>
   </div>
 
   <div class="dock">
-    <h2>📋 알림장 — 친구들의 부탁 <span id="popTxt" style="margin-left:auto;color:var(--brand)"></span></h2>
-    <div class="orders" id="orders"></div>
+    <div class="tabs">
+      <button class="tab on" data-pane="paneOrders">📋 알림장 <span class="n" id="orderReadyN">0</span></button>
+      <button class="tab" data-pane="paneProject">🎯 학급 프로젝트 <span class="n" id="projN">1</span></button>
+    </div>
+    <div class="pane on" id="paneOrders"><div class="orders" id="orders"></div></div>
+    <div class="pane" id="paneProject"><div id="projectBox"></div></div>
   </div>
 </div>
 
@@ -184,6 +254,14 @@
   <h3>🎀 교실 꾸미기 <button class="x" data-close="mShop">✕</button></h3>
   <p class="sub">동전으로 교실을 꾸며요. 꾸민 물건마다 <b>교실 인기</b>가 올라 주문 보상이 많아져요.</p>
   <div class="shopgrid" id="shopGrid"></div>
+</div></div>
+
+<!-- 창고 -->
+<div class="modal" id="mStore"><div class="sheet">
+  <h3>🎒 창고 <button class="x" data-close="mStore">✕</button></h3>
+  <p class="sub">교실 자리가 모자랄 때 물건을 넣어 두세요. 칸을 누르면 교실로 다시 꺼냅니다.
+    <span id="storeCap"></span></p>
+  <div class="storegrid" id="storeGrid"></div>
 </div></div>
 
 <!-- 도감 -->
@@ -196,17 +274,19 @@
 <!-- 도움말 -->
 <div class="modal" id="mHelp"><div class="sheet help">
   <h3>❓ 놀이 방법 <button class="x" data-close="mHelp">✕</button></h3>
-  <p class="sub">2~6학년 누구나 할 수 있어요. 저장은 이 기기(브라우저)에만 됩니다.</p>
+  <p class="sub">저장은 이 기기(브라우저)에만 됩니다. 서버로 보내지 않아요.</p>
   <ul>
-    <li><b>합치기</b> — 같은 물건 둘을 끌어다 겹치면 더 좋은 물건이 돼요. (예: 몽당연필 + 몽당연필 = 색연필)</li>
-    <li><b>물건 꺼내기</b> — 🗄️사물함 · 🗃️책꽂이 · 🧺청소함 · 🍽️급식 카트를 <b>톡 누르면</b> ⚡기운을 써서 물건이 나와요.</li>
-    <li><b>기운(⚡)</b> — 시간이 지나면 저절로 차올라요. 게임을 꺼 놓아도 채워져요.</li>
-    <li><b>알림장 주문</b> — 친구가 부탁한 물건을 만들어 두고 <b>주기</b>를 누르면 🪙동전과 경험치를 받아요.</li>
-    <li><b>선물 상자(🎁)</b> — 톡 누르면 물건이 여러 개 쏟아져요.</li>
-    <li><b>교실 꾸미기</b> — 동전으로 시계 · 화분 · 게시판 같은 것을 사서 교실을 채워요.</li>
-    <li><b>자리 넓히기</b> — 레벨 3, 레벨 6이 되면 잠긴 자리(🔒)가 열려요. (레벨 3에는 급식 카트도 생겨요)</li>
-    <li><b>정리함(🗑️)</b> — 자리가 없을 때 누른 다음, 버릴 물건을 톡 누르면 한 개가 사라져요.</li>
-    <li>빈 곳을 끌면 화면이 움직이고, ➕ ➖ 으로 크게·작게 볼 수 있어요. 🎯는 화면을 처음 크기로 맞춰요.</li>
+    <li><b>합치기</b> — 같은 물건 둘을 끌어다 겹치면 다음 단계가 돼요. 사슬은 갈래마다 <b>8~9단계</b>까지 있어요.</li>
+    <li><b>생산기(🗄️🗃️🧺…)</b> — 톡 누르면 물건이 나와요. 생산기마다 <b>충전 ⚡</b>이 있고 시간이 지나면 저절로 채워져요.</li>
+    <li><b>생산기도 합쳐져요!</b> — 같은 생산기 둘을 겹치면 <b>Ⅱ → Ⅲ 단계</b>로 커져서, 충전이 많아지고 더 좋은 물건이 나와요.</li>
+    <li><b>상자(🎁📦🎊)</b> — 톡 누르면 물건이 쏟아져요. 상자끼리도 합쳐서 더 큰 상자가 됩니다.</li>
+    <li><b>포장(🎀)</b> — 리본이 묶인 물건은 여러 번 톡톡 누르면 풀려요.</li>
+    <li><b>알림장 주문</b> — 친구가 부탁한 물건을 만들어 두고 <b>주기</b>를 누르면 동전·경험치를 받아요. (창고 물건도 함께 셉니다)</li>
+    <li><b>학급 프로젝트</b> — 한 해 동안의 큰 목표예요. 완성할 때마다 <b>새 생산기·자리 확장·교실 장식</b>이 열려요.</li>
+    <li><b>창고(🎒)</b> — 자리가 모자랄 때 물건을 넣어 두는 곳. 레벨이 오르면 칸이 늘어나요.</li>
+    <li><b>팔기</b> — 물건을 눌러 아래 정보 바에서 동전으로 바꿀 수 있어요.</li>
+    <li><b>콤보·행운</b> — 빠르게 이어 합치면 <b>콤보 보너스</b>, 가끔 <b>행운 합치기</b>로 결과가 2개 나와요!</li>
+    <li>빈 곳을 끌면 화면이 움직이고, ➕ ➖ 🎯 으로 크게·작게·처음 크기로 볼 수 있어요.</li>
   </ul>
   <button class="danger" id="btnReset">🗑 처음부터 다시 시작하기</button>
 </div></div>
