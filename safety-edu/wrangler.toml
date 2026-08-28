@@ -1,0 +1,3 @@
+name = "safety-edu-copier"
+main = "safety-edu-worker.js"
+compatibility_date = "2026-07-21"
