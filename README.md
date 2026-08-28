@@ -46,3 +46,26 @@
 - 교사 대시보드는 불러온 파일을 **그 화면에서만** 보여주며 서버에 저장하지 않습니다.
 - 학생은 **별명만** 입력하며, 그 외 개인정보를 수집하지 않습니다.
 - API 키(`apikey.txt`)는 GitHub에 올라가지 않습니다(`.gitignore`로 제외).
+
+## 📦 이 저장소에 함께 담긴 수업 도구
+`.gitignore`가 허용목록 방식(`/*`로 전부 제외 → `!/…`로 다시 포함)이라, **새 프로젝트를 추가할 때는 반드시 `.gitignore`에 `!/폴더이름/`을 함께 넣어야 합니다.** 빠뜨리면 파일이 `git status`에도 나타나지 않습니다.
+
+| 폴더 | 도구 | 배포 |
+|------|------|------|
+| `app/` | 글쓰기 거울 (위 문서) | `server.ps1` 로컬 실행 |
+| `ideaboard-app/` | 우리 반 아이디어 보드 | `ideaboard-worker.js`를 Worker 편집기에 붙여넣기 |
+| `chess/` | 어린이 체스 교실 | `chess-online-worker.js` 붙여넣기 |
+| `omok/` | 다람쌤 오목 대회 | 정적 페이지 |
+| `typing-rain/` | 타자 연습 (낱말 비) | 정적 페이지 |
+| `safety-edu/` | 안전교육 문구 복사기 | **git 연동 자동배포** (아래 참고) |
+
+### `safety-edu/` 배포 주의
+이 도구만 유일하게 Cloudflare git 연동으로 자동배포됩니다(`safety-edu/wrangler.toml`).
+별도 저장소에서 이 저장소로 옮겨 왔으므로, Cloudflare 대시보드에서 두 가지를 맞춰야 자동배포가 이어집니다.
+
+1. Worker 프로젝트의 연결 저장소를 `geulssugi-mirror`로 변경
+2. **root directory를 `safety-edu`로 지정** (지정하지 않으면 `wrangler.toml`을 찾지 못합니다)
+3. (권장) build watch paths를 `safety-edu/*`로 제한 — 다른 도구를 고칠 때마다 빌드가 도는 것을 막습니다
+
+`wrangler.toml`의 `name = "safety-edu-copier"`는 그대로 두었으므로 **Worker 주소는 바뀌지 않습니다.**
+자세한 사용법과 빌드 방법은 `safety-edu/README.md`에 있습니다.
