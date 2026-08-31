@@ -13,11 +13,25 @@
 
 ## 배포 (Cloudflare Workers, GitHub 연동)
 
-Cloudflare 대시보드 → Workers & Pages → Create → "Import a repository" 에서 이 저장소를 연결하면,
-`main` 브랜치에 푸시할 때마다 `wrangler.toml` 설정대로 자동 배포됩니다. 별도 빌드 명령 없이 `safety-edu-worker.js`를 그대로 올립니다.
+이 폴더는 원래 `safety-edu-copier`라는 별도 저장소였고, 지금은 `geulssugi-mirror` 안으로 들어와 있습니다.
+`main` 브랜치의 `safety-edu/` 아래가 바뀔 때만 Cloudflare가 자동 배포합니다.
+
+Worker의 **Settings → Builds** 설정값입니다. 나중에 다시 손볼 일이 있으면 이 표와 맞는지 확인하세요.
+
+| 항목 | 값 |
+|------|-----|
+| Git repository | `dasooni-jpg/geulssugi-mirror` |
+| Root directory | `safety-edu` ← 비우면 `wrangler.toml`을 못 찾습니다 |
+| Build command | (비움) |
+| Deploy command | `npx wrangler deploy` ← `versions upload`이면 빌드는 성공해도 화면이 안 바뀝니다 |
+| Production branch | `main` (Builds for non-production branches 해제) |
+| Build watch paths → Include | `safety-edu/*` |
+
+`package.json`이 없어 빌드 단계는 없고, 커밋된 `safety-edu-worker.js`를 그대로 올립니다.
+Worker 이름은 `wrangler.toml`의 `name = "safety-edu-copier"`로 고정돼 있어 **접속 주소는 바뀌지 않습니다.**
 
 ## 화면(app.html)을 고칠 때
 
 1. `safety-edu-app/app.html` 수정
 2. `powershell -ExecutionPolicy Bypass -File build-safety-edu-worker.ps1` 실행 → `safety-edu-worker.js` 갱신
-3. 커밋 후 `main`에 푸시 → 자동 재배포
+3. 커밋 후 `geulssugi-mirror`의 `main`에 푸시 → 자동 재배포
