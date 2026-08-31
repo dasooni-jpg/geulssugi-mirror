@@ -457,6 +457,7 @@
             <input id="sTaxTime" type="time" style="width:110px">
           </td></tr>
           <tr><td>출근 마감 시각</td><td><input id="sDeadline" type="time" style="width:140px"></td></tr>
+          <tr><td>연속 거래 방지 (초)</td><td><input id="sCooldown" type="number" min="0" style="width:140px"></td></tr>
           <tr><td>회계사 1회 지급 한도</td><td><input id="sPayTx" type="number" step="0.01" style="width:140px"></td></tr>
           <tr><td>회계사 하루 누적 한도</td><td><input id="sPayDay" type="number" step="0.01" style="width:140px"></td></tr>
           <tr><td>🍀 행운 버튼</td><td>
@@ -470,6 +471,9 @@
         <p class="note">행운 버튼: 학생 [출근] 화면의 출근 버튼 아래에 생깁니다. <b>정해진 시각 사이에 누른 학생만</b> 보너스를 받고,
           다른 시간에 누르면 아무 일도 일어나지 않습니다. <b>하루 한 번</b>만 받을 수 있어 시간대 안에서 여러 번 눌러도 한 번만 지급됩니다.
           학생에게는 정확한 시각을 알려 주지 않아 "언제 눌러볼까?" 하는 재미를 줄 수 있습니다.</p>
+        <p class="note"><b>연속 거래 방지</b>: 학생이 [사기]·[팔기]나 은행 버튼을 연달아 누를 때, 마지막 거래로부터 이 시간이 지나야 다음 거래가 됩니다.
+          인터넷이 느려 "눌러도 반응이 없네?" 하고 여러 번 누르면 같은 주문이 여러 건 체결되던 문제를 막아 줍니다.
+          <b>0으로 두면 제한이 없어집니다</b>(권장 3초).</p>
         <p class="note">회계사 지급 한도: [학생·직업] 메뉴에서 "모둠원 지급 권한"을 가진 직업(예: 모둠 회계사)이 학생 화면에서 같은 모둠원에게 줄 수 있는 금액의 상한입니다.</p>
         <p class="note"><b>소득세는 정해진 요일·시각(기본 금요일 09:00)에 자동으로 빠져나갑니다.</b>
           그 주에 번 돈(일급 + 주급 수당 + 칭찬 지급 + 교사 수동 지급)을 모두 더해 세율만큼 한 번에 차감하며,
@@ -1243,6 +1247,7 @@ async function loadSettings(){
   $("sTax").value = s.taxRate; $("sDeadline").value = s.deadline; $("sPw").value = "";
   $("sPayTx").value = s.payLimitPerTx ?? 50; $("sPayDay").value = s.payLimitPerDay ?? 100;
   $("sTaxDay").value = String(s.taxWeekday ?? 5); $("sTaxTime").value = s.taxTime ?? "09:00";
+  $("sCooldown").value = s.tradeCooldown ?? 3;
   const lucky = s.luckyEnabled !== false;
   $("sLucky").checked = lucky; $("sLuckyLabel").classList.toggle("sel", lucky);
   $("sLuckyStart").value = s.luckyStart ?? "12:53";
@@ -1256,6 +1261,7 @@ async function saveSettings(){
     taxRate:Number($("sTax").value), deadline:$("sDeadline").value, teacherPw:$("sPw").value,
     payLimitPerTx:Number($("sPayTx").value), payLimitPerDay:Number($("sPayDay").value),
     taxWeekday:Number($("sTaxDay").value), taxTime:$("sTaxTime").value,
+    tradeCooldown:Number($("sCooldown").value),
     luckyEnabled:$("sLucky").checked, luckyStart:$("sLuckyStart").value,
     luckyEnd:$("sLuckyEnd").value, luckyReward:Number($("sLuckyReward").value)
   };

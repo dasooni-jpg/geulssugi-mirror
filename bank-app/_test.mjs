@@ -48,6 +48,11 @@ const S2 = { classCode: "6-1", number: 2, pin: "2222" };
 
 console.log("\n== 기본 준비 ==");
 check("교사 로그인", (await post("/api/login", { role: "teacher", id: "teacher", pw: "0000" })).ok);
+async function setCooldown(sec) {   // 다른 항목을 건드리지 않도록 현재 설정을 그대로 두고 한 값만 바꾼다
+  const cur = (await post("/api/teacher/settings", { ...T })).settings;
+  return await post("/api/teacher/settings/save", { ...T, settings: { ...cur, teacherPw: "", tradeCooldown: sec } });
+}
+await setCooldown(0);   // 기능 점검 동안에는 연타 제한 없이 진행
 await post("/api/teacher/students/save", { ...T, students: [
   { number: 1, nickname: "가", pin: "1111", jobId: 1, group: 1, active: true },
   { number: 2, nickname: "나", pin: "2222", jobId: 2, group: 1, active: true },
@@ -129,6 +134,31 @@ const bank = await post("/api/teacher/bank", { ...T });
 check("가장 재산이 적은 학생이 받음", bank.grants[0].number === bank.assets[bank.assets.length - 1].number || bank.grants.length === 1, { grant: bank.grants[0], poorest: bank.assets[bank.assets.length - 1] });
 check("기부 후 모인 금액 0", bank.totals.donationPool === 0, bank.totals);
 check("교사 은행 화면 정상", bank.ok && Array.isArray(bank.deposits) && Array.isArray(bank.loans) && Array.isArray(bank.assets));
+
+console.log("\n== 연타 방지 (느린 인터넷에서 중복 주문 막기) ==");
+await setCooldown(3);
+const wait3 = () => new Promise(r => setTimeout(r, 3100));   // 앞 검사에서 방금 거래했으므로 제한이 풀릴 때까지 기다린다
+const sid2 = state().stocks.find(x => x.name === "카카오").id;
+await wait3();
+r = await post("/api/student/stock/buy", { auth: S1, stockId: sid2, qty: 1 });
+check("첫 매수는 성공", r.ok, r);
+r = await post("/api/student/stock/buy", { auth: S1, stockId: sid2, qty: 1 });
+check("바로 이어서 누르면 거절", !r.ok && r.error.includes("너무 빨라요"), r);
+r = await post("/api/student/stock/sell", { auth: S1, stockId: sid2, qty: 1 });
+check("바로 파는 것도 거절", !r.ok, r);
+// 인터넷이 느려 [사기]를 8번 연타한 상황 (요청 8개가 동시에 도착)
+const before2 = (await post("/api/student/home", { auth: S1 })).balance;
+const many = await Promise.all(Array.from({ length: 8 }, () => post("/api/student/stock/buy", { auth: S2, stockId: sid2, qty: 1 })));
+const okCount = many.filter(x => x.ok).length;
+check("동시에 8번 눌러도 1건만 체결", okCount === 1, many.map(x => x.ok ? "성공" : x.error));
+const s2home = await post("/api/student/home", { auth: S2 });
+check("체결된 만큼만 돈이 빠짐", s2home.myStocks.reduce((a, m) => a + m.qty, 0) === 1, s2home.myStocks);
+await wait3();
+r = await post("/api/student/bank/donate", { auth: S1, amount: 1 });
+check("은행 거래도 연타 제한 적용", r.ok, r);
+r = await post("/api/student/bank/donate", { auth: S1, amount: 1 });
+check("연달아 기부하면 거절", !r.ok && r.error.includes("너무 빨라요"), r);
+await setCooldown(0);
 
 console.log("\n== 세금은 은행 거래에 붙지 않는다 ==");
 s = state();

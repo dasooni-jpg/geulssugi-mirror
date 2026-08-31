@@ -68,6 +68,8 @@ function defaultState() {
       savingsEnabled: true, savingsMax: 250, savingsRate: 5, savingsPeriodDays: 7, savingsLockDays: 10,
       loanEnabled: true, loanRate: 5, loanPeriodDays: 7, loanMultiplier: 2,
       donationEnabled: true, donationThreshold: 150,
+      // 연타·느린 인터넷으로 같은 주문이 여러 번 나가는 것을 막는 최소 간격(초)
+      tradeCooldown: 3,
     },
     // 주식 종목 (history: 가격 변동 기록, 최근 30개만 보관)
     stocks: [
@@ -157,6 +159,7 @@ function migrate(st) {
   if (!(Number(s.loanMultiplier) > 0)) s.loanMultiplier = 2;
   if (s.donationEnabled == null) s.donationEnabled = true;
   if (!(Number(s.donationThreshold) >= 1)) s.donationThreshold = 150;
+  if (!(Number(s.tradeCooldown) >= 0)) s.tradeCooldown = 3;
   if (!Array.isArray(st.deposits)) st.deposits = [];
   if (!Array.isArray(st.loans)) st.loans = [];
   if (!Array.isArray(st.donations)) st.donations = [];
@@ -305,6 +308,27 @@ function drawPool(st) {
 function drawPercent(st, item) {
   const total = drawPool(st).reduce((a, i) => a + Number(i.weight), 0);
   return total > 0 ? Math.round(Number(item.weight) / total * 1000) / 10 : 0;   // 소수 첫째자리까지
+}
+
+// ── 연타 방지 ────────────────────────────────────────────
+// 인터넷이 느리면 학생이 [사기]를 여러 번 누르게 되고, 그 사이 요청이 모두 서버에 도착해
+// 같은 주문이 여러 건 체결된다. 마지막 거래로부터 tradeCooldown 초가 지나지 않았으면 거절한다.
+// (돈 계산 자체는 저장 단계의 버전 잠금으로 이미 보호되지만, 의도치 않은 중복 주문을 막는다)
+const TRADE_TYPES = ["주식매수", "주식매도"];
+const BANK_TYPES = ["적금", "적금해지", "대출", "대출상환", "기부"];
+function lastActionAt(st, sid, types) {
+  let last = "";
+  for (const t of st.transactions)
+    if (t.studentId === sid && types.indexOf(t.type) >= 0 && String(t.createdAt) > last) last = String(t.createdAt);
+  return last;
+}
+function cooldownLeft(st, sid, types) {
+  const cool = Number(st.settings.tradeCooldown) || 0;
+  if (cool <= 0) return 0;
+  const last = lastActionAt(st, sid, types);
+  if (!last) return 0;
+  const passed = (dtMs(kst().datetime) - dtMs(last)) / 1000;
+  return passed >= cool ? 0 : Math.max(1, Math.ceil(cool - passed));
 }
 
 // ══════════ 은행: 적금 · 대출 · 기부 ══════════
@@ -920,6 +944,8 @@ function handleApi(st, path, method, d) {
       // 상품 목록과 확률은 학생에게 보내지 않는다 (뽑기 전에 알 수 없도록)
       drawAvailable: drawPool(st).length > 0,
       stockEnabled: st.settings.stockEnabled !== false,
+      tradeCooldown: Number(st.settings.tradeCooldown) || 0,
+      tradeWait: cooldownLeft(st, stu.id, TRADE_TYPES),
       stocks: st.stocks.filter(x => x.active).map(x => stockDto(st, x)),
       myStocks: myStocks(st, stu.id),
       // 은행 (적금 · 대출 · 기부)
@@ -964,6 +990,8 @@ function handleApi(st, path, method, d) {
     const item = st.shopItems.find(i => i.id === Number(d.itemId) && i.active && i.kind !== "draw");
     if (!item) return fail("판매 중인 상품이 아닙니다.");
     if (Number(item.stock) <= 0) return fail("품절되었습니다.");
+    const wait = cooldownLeft(st, stu.id, ["구매"]);
+    if (wait > 0) return fail(`너무 빨라요! ${wait}초 뒤에 다시 눌러 주세요.`);
     // 50% 할인권을 쓰겠다고 하면, 안 쓴 할인권 한 장을 찾아 값을 반으로 깎는다
     let ticket = null;
     if (d.useDiscount) {
@@ -1016,6 +1044,8 @@ function handleApi(st, path, method, d) {
     if (!stu) return fail("로그인이 필요합니다.", 401);
     const s = st.settings;
     if (s.bankEnabled === false || s.savingsEnabled === false) return fail("지금은 적금을 넣을 수 없어요.");
+    const wait = cooldownLeft(st, stu.id, BANK_TYPES);
+    if (wait > 0) return fail(`너무 빨라요! ${wait}초 뒤에 다시 눌러 주세요.`);
     const amount = money(d.amount);
     if (amount < 0.01) return fail("넣을 금액을 적어 주세요.");
     if (getBalance(st, stu.id) < amount) return fail("잔액이 부족해요.");
@@ -1036,6 +1066,8 @@ function handleApi(st, path, method, d) {
     if (!stu) return fail("로그인이 필요합니다.", 401);
     const dep = st.deposits.find(x => x.id === Number(d.depositId) && x.studentId === stu.id && x.status === "예치중");
     if (!dep) return fail("찾을 수 있는 적금이 없어요.");
+    const wait = cooldownLeft(st, stu.id, BANK_TYPES);
+    if (wait > 0) return fail(`너무 빨라요! ${wait}초 뒤에 다시 눌러 주세요.`);
     const info = depositInfo(st, dep);
     // 해약 제한 기간 안에는 '부득이한 해약'만 가능하고, 이자 없이 원금만 돌려받는다
     if (info.locked && !d.early) return fail(`아직 ${info.daysLeft}일 남았어요. 그래도 해약하려면 [부득이하게 해약]을 눌러 주세요.`);
@@ -1055,6 +1087,8 @@ function handleApi(st, path, method, d) {
     const s = st.settings;
     if (s.bankEnabled === false || s.loanEnabled === false) return fail("지금은 대출을 받을 수 없어요.");
     if (activeLoan(st, stu.id)) return fail("이미 받은 대출이 있어요. 다 갚아야 다시 빌릴 수 있어요.");
+    const wait = cooldownLeft(st, stu.id, BANK_TYPES);
+    if (wait > 0) return fail(`너무 빨라요! ${wait}초 뒤에 다시 눌러 주세요.`);
     const amount = money(d.amount);
     const limit = loanLimitOf(st, stu);
     if (limit <= 0) return fail("아직 직업(주급)이 없어서 빌릴 수 없어요. 선생님께 여쭤보세요.");
@@ -1075,6 +1109,8 @@ function handleApi(st, path, method, d) {
     if (!stu) return fail("로그인이 필요합니다.", 401);
     const ln = activeLoan(st, stu.id);
     if (!ln) return fail("갚을 대출이 없어요.");
+    const wait = cooldownLeft(st, stu.id, BANK_TYPES);
+    if (wait > 0) return fail(`너무 빨라요! ${wait}초 뒤에 다시 눌러 주세요.`);
     const amount = money(d.amount);
     if (amount < 0.01) return fail("갚을 금액을 적어 주세요.");
     if (amount > money(ln.principal)) return fail(`남은 원금은 ${money(ln.principal)}이에요.`);
@@ -1090,6 +1126,8 @@ function handleApi(st, path, method, d) {
     if (!stu) return fail("로그인이 필요합니다.", 401);
     const s = st.settings;
     if (s.bankEnabled === false || s.donationEnabled === false) return fail("지금은 기부를 받지 않아요.");
+    const wait = cooldownLeft(st, stu.id, BANK_TYPES);
+    if (wait > 0) return fail(`너무 빨라요! ${wait}초 뒤에 다시 눌러 주세요.`);
     const amount = money(d.amount);
     if (amount < 0.01) return fail("기부할 금액을 적어 주세요.");
     if (getBalance(st, stu.id) < amount) return fail("잔액이 부족해요.");
@@ -1108,6 +1146,8 @@ function handleApi(st, path, method, d) {
     const stu = authStudent(st, d.auth);
     if (!stu) return fail("로그인이 필요합니다.", 401);
     if (st.settings.stockEnabled === false) return fail("지금은 주식을 사고팔 수 없어요.");
+    const wait = cooldownLeft(st, stu.id, TRADE_TYPES);
+    if (wait > 0) return fail(`너무 빨라요! ${wait}초 뒤에 다시 눌러 주세요. (주식은 ${Number(st.settings.tradeCooldown)}초에 한 번만 사고팔 수 있어요)`);
     const x = st.stocks.find(s2 => s2.id === Number(d.stockId) && s2.active);
     if (!x) return fail("거래할 수 있는 주식이 아니에요.");
     const qty = Math.floor(Number(d.qty) || 0);
@@ -1128,6 +1168,8 @@ function handleApi(st, path, method, d) {
     const stu = authStudent(st, d.auth);
     if (!stu) return fail("로그인이 필요합니다.", 401);
     if (st.settings.stockEnabled === false) return fail("지금은 주식을 사고팔 수 없어요.");
+    const wait = cooldownLeft(st, stu.id, TRADE_TYPES);
+    if (wait > 0) return fail(`너무 빨라요! ${wait}초 뒤에 다시 눌러 주세요. (주식은 ${Number(st.settings.tradeCooldown)}초에 한 번만 사고팔 수 있어요)`);
     const x = st.stocks.find(s2 => s2.id === Number(d.stockId));
     if (!x) return fail("없는 주식이에요.");
     const h = holdingOf(st, stu.id, x.id);
@@ -1651,6 +1693,7 @@ function handleApi(st, path, method, d) {
     if (Number(ns.loanMultiplier) > 0) s.loanMultiplier = Math.round(Number(ns.loanMultiplier) * 100) / 100;
     if (ns.donationEnabled != null) s.donationEnabled = !!ns.donationEnabled;
     if (Number(ns.donationThreshold) >= 1) s.donationThreshold = money(ns.donationThreshold);
+    if (Number(ns.tradeCooldown) >= 0) s.tradeCooldown = Math.round(Number(ns.tradeCooldown));
     if (/^\d{2}:\d{2}$/.test(String(ns.deadline))) s.deadline = String(ns.deadline);
     if (Number(ns.taxWeekday) >= 1 && Number(ns.taxWeekday) <= 7) s.taxWeekday = Number(ns.taxWeekday);
     if (/^\d{2}:\d{2}$/.test(String(ns.taxTime))) s.taxTime = String(ns.taxTime);
@@ -1778,8 +1821,9 @@ export default {
 
     try {
       await ensureSchema(env.DB);
-      // 버전 충돌 시 다시 읽어 재시도 (최대 5회)
-      for (let attempt = 0; attempt < 5; attempt++) {
+      // 버전 충돌 시 다시 읽어 재시도 (최대 8회, 조금씩 쉬었다가)
+      for (let attempt = 0; attempt < 8; attempt++) {
+        if (attempt > 0) await sleep(20 + Math.floor(Math.random() * 60));   // 여러 명이 동시에 몰릴 때 서로 비켜 주기
         const { version, state } = await loadState(env.DB);
         const taxed = runScheduledTax(state);   // 금요일 9시가 지났으면 소득세를 먼저 징수
         const interest = accrueLoanInterest(state);  // 일주일이 지난 대출은 이자를 자동 차감

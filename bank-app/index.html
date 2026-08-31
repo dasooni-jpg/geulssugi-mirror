@@ -206,6 +206,11 @@
   .scratch-close{margin-top:18px;width:100%;padding:14px;font-size:17px;font-weight:800;border-radius:14px;background:var(--brand);color:#fff}
   .confetti{position:fixed;inset:0;pointer-events:none;z-index:80}
 
+  /* 요청을 보내는 중에는 버튼이 눌린 듯 흐려진다 (연타 방지) */
+  body.busy .stk-act button, body.busy .bank-row button, body.busy .dep-act button,
+  body.busy .buy-btn, body.busy .btn-big, body.busy .draw-btn, body.busy .checkin-btn{opacity:.55}
+  body.busy{cursor:progress}
+
   /* 토스트 */
   #toast{position:fixed;bottom:88px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 22px;border-radius:99px;font-size:16px;font-weight:700;z-index:60;white-space:nowrap}
 </style>
@@ -362,7 +367,7 @@
     <div class="card">
       <h3>💹 주식 시장 <span style="float:right;color:var(--muted);font-weight:400" id="stockBalance"></span></h3>
       <div id="stockListBox"></div>
-      <p style="font-size:13px;color:var(--muted);margin-top:10px">
+      <p style="font-size:13px;color:var(--muted);margin-top:10px" id="stockNote">
         값이 오를지 내릴지는 선생님이 정해요. 싸게 사서 비싸게 팔면 이득이에요!</p>
     </div>
   </div>
@@ -421,6 +426,27 @@ function toast(msg){
   document.body.appendChild(t); setTimeout(()=>t.remove(), 2200);
 }
 
+// ══════════ 연타 방지 ══════════
+// 인터넷이 느리면 "눌렀는데 아무 반응이 없네?" 하고 여러 번 누르게 되고,
+// 그 요청이 모두 서버에 도착해 같은 주문이 여러 건 체결된다.
+// ① 요청이 끝나기 전에는 다음 요청을 아예 보내지 않는다.
+// ② 주식은 서버가 정한 시간(기본 3초)이 지나야 다시 사고팔 수 있다.
+let acting = false;                 // 지금 서버에 요청을 보내는 중인가?
+let tradeReadyAt = 0;               // 이 시각(ms)이 지나야 다시 사고팔 수 있다
+let tradeTimer = null;
+function tradeWaitLeft(){ return Math.max(0, Math.ceil((tradeReadyAt - Date.now())/1000)); }
+function startTradeTimer(){
+  if(tradeTimer) return;
+  tradeTimer = setInterval(()=>{
+    if(state) renderStocks();
+    if(tradeWaitLeft() <= 0){ clearInterval(tradeTimer); tradeTimer = null; }
+  }, 1000);
+}
+function markTraded(){
+  const cool = Number((state && state.tradeCooldown) || 0);
+  if(cool > 0){ tradeReadyAt = Date.now() + cool*1000; startTradeTimer(); }
+}
+
 // ── 로그인 ──
 async function doLogin(){
   const a = { classCode:$("inCode").value.trim(), number:$("inNum").value.trim(), pin:$("inPin").value.trim() };
@@ -438,6 +464,7 @@ async function load(){
   const r = await api("/api/student/home", {auth:a});
   if(!r.ok){ showLogin(); return; }
   state = r; cur = r.currencyName;
+  if(Number(r.tradeWait) > 0){ tradeReadyAt = Math.max(tradeReadyAt, Date.now() + Number(r.tradeWait)*1000); startTradeTimer(); }
   $("loginView").classList.add("hidden");
   $("appView").classList.remove("hidden");
   render();
@@ -741,6 +768,11 @@ function renderStocks(){
   const totalProfit = mine.reduce((a,m)=>a+m.profit, 0);
   $("stockSummary").innerHTML = mine.length===0 ? "" :
     `평가액 ${fmt(totalValue)} ${cur} · <span class="${totalProfit>0?"up":(totalProfit<0?"down":"flat")}">${totalProfit>0?"+":""}${fmt(totalProfit)}</span>`;
+  const noteEl = $("stockNote");
+  if(noteEl) noteEl.innerHTML = Number(state.tradeCooldown) > 0
+    ? `값이 오를지 내릴지는 선생님이 정해요. 싸게 사서 비싸게 팔면 이득이에요!<br>
+       ⏳ 너무 빠른 거래를 막기 위해 <b>${state.tradeCooldown}초에 한 번만</b> 사고팔 수 있어요.`
+    : "값이 오를지 내릴지는 선생님이 정해요. 싸게 사서 비싸게 팔면 이득이에요!";
   $("myStocksBox").innerHTML = mine.length===0
     ? `<div class="empty">아직 가진 주식이 없어요. 아래에서 사 보세요!</div>`
     : mine.map(m=>`<div class="stk"><div class="stk-top">
@@ -750,6 +782,7 @@ function renderStocks(){
           <div class="sub ${m.profit>0?"up":(m.profit<0?"down":"flat")}" style="font-weight:800">${m.profit>0?"+":""}${fmt(m.profit)}</div></div>
       </div></div>`).join("");
   $("stockBalance").textContent = `잔액 ${fmt(state.balance)} ${cur}`;
+  const wait = tradeWaitLeft();   // 연타 방지: 남은 대기 시간(초)
   const list = state.stocks || [];
   $("stockListBox").innerHTML = list.length===0
     ? `<div class="empty">선생님이 주식 종목을 만들면 보여요.</div>`
@@ -765,21 +798,23 @@ function renderStocks(){
           </div>
           <div class="stk-act">
             <input id="q-${x.id}" type="number" inputmode="numeric" min="1" value="1">
-            <button class="btn-buy" ${state.balance < x.price ? "disabled":""} onclick="doStockBuy(${x.id},'${esc(x.name)}')">사기</button>
-            <button class="btn-sell" ${own===0?"disabled":""} onclick="doStockSell(${x.id},'${esc(x.name)}')">팔기</button>
+            <button class="btn-buy" ${(wait>0 || state.balance < x.price) ? "disabled":""} onclick="doStockBuy(${x.id},'${esc(x.name)}')">${wait>0?wait+"초":"사기"}</button>
+            <button class="btn-sell" ${(wait>0 || own===0)?"disabled":""} onclick="doStockSell(${x.id},'${esc(x.name)}')">${wait>0?wait+"초":"팔기"}</button>
           </div></div>`;
       }).join("");
 }
 async function doStockBuy(stockId, name){
   const qty = Number(($("q-"+stockId)||{}).value)||0;
+  if(tradeWaitLeft() > 0){ toast(`${tradeWaitLeft()}초 뒤에 다시 눌러 주세요 ⏳`); return; }
   const r = await api("/api/student/stock/buy", {auth:auth(), stockId, qty});
-  if(r.ok){ toast(`${name} ${qty}주 샀어요! 📈`); load(); }
+  if(r.ok){ markTraded(); toast(`${name} ${qty}주 샀어요! 📈`); load(); }
   else toast(r.error || "매수 실패");
 }
 async function doStockSell(stockId, name){
   const qty = Number(($("q-"+stockId)||{}).value)||0;
+  if(tradeWaitLeft() > 0){ toast(`${tradeWaitLeft()}초 뒤에 다시 눌러 주세요 ⏳`); return; }
   const r = await api("/api/student/stock/sell", {auth:auth(), stockId, qty});
-  if(r.ok){ toast(`${name} ${qty}주 팔았어요! 💰`); load(); }
+  if(r.ok){ markTraded(); toast(`${name} ${qty}주 팔았어요! 💰`); load(); }
   else toast(r.error || "매도 실패");
 }
 
@@ -1046,6 +1081,19 @@ function confetti(){
     }
     if(++frames < 150) requestAnimationFrame(tick); else cv.remove();
   })();
+}
+
+// 아래 동작들은 앞의 요청이 끝나기 전에는 다시 실행되지 않는다 (연타·중복 주문 방지)
+for(const name of ["doStockBuy","doStockSell","doDeposit","doWithdraw","doLoan","doRepay",
+                   "doDonate","doBuy","doCheckin","doDraw","doGroupPay","doUseCoupon","doLucky"]){
+  const fn = window[name];
+  window[name] = async function(...args){
+    if(acting){ toast("잠시만요, 처리 중이에요 ⏳"); return; }
+    acting = true; document.body.classList.add("busy");
+    try { return await fn.apply(this, args); }
+    catch(e){ toast("인터넷이 불안정해요. 잠시 뒤 다시 해 주세요."); }
+    finally { acting = false; document.body.classList.remove("busy"); }
+  };
 }
 
 load();
