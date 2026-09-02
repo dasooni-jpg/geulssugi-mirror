@@ -80,7 +80,19 @@ function migrate(st) {
   for (const p of st.posts || []) {
     if (p.likeAdjust === undefined) p.likeAdjust = 0;
   }
+  // 게시판 고정·순서 기본값 — 예전 데이터는 지금 보이던 순서 그대로 번호를 매긴다(화면이 안 바뀜)
+  const orderSeen = {};
+  for (const b of st.boards || []) {
+    if (b.pinned === undefined) b.pinned = false;
+    if (b.sortOrder === undefined) b.sortOrder = (orderSeen[b.spaceId] = (orderSeen[b.spaceId] | 0) + 1) * 10;
+  }
   return st;
+}
+
+// 홈 화면에 보여 줄 순서: 고정한 게시판 먼저 → 선생님이 정한 순서 → 만든 차례
+function sortedBoards(st, spaceId) {
+  return st.boards.filter(b => b.spaceId === spaceId)
+    .sort((a, b) => (!!b.pinned - !!a.pinned) || ((a.sortOrder | 0) - (b.sortOrder | 0)) || (a.id - b.id));
 }
 
 // ── 한국 시간 (Worker 는 UTC 로 돌므로 반드시 서울 기준으로 변환) ──
@@ -213,7 +225,7 @@ function postView(st, p, actor) {
   };
 }
 
-function handleApi(st, path, method, d) {
+function handleApi(st, path, method, d, version) {
   if (method !== "POST") return fail("없는 주소입니다.", 404);
 
   // ══════════ 로그인 ══════════
@@ -264,9 +276,10 @@ function handleApi(st, path, method, d) {
   if (path === "/api/home") {
     const space = getSpace(st, actor.spaceId);
     if (!space) return fail("소속된 반을 찾을 수 없어요.", 404);
-    const boards = st.boards.filter(b => b.spaceId === actor.spaceId).map(b => ({
+    const boards = sortedBoards(st, actor.spaceId).map(b => ({
       id: b.id, title: b.title, desc: b.desc, createdAt: b.createdAt,
       allowLikes: b.allowLikes !== false, allowComments: b.allowComments !== false,
+      pinned: !!b.pinned,
       postCount: st.posts.filter(p => p.boardId === b.id).length,
     }));
     const spaceTeachers = st.teachers.filter(t => t.spaceId === actor.spaceId);
@@ -489,6 +502,17 @@ function handleApi(st, path, method, d) {
       .map(m => ({ id: m.id, from: m.from, text: m.text, createdAt: m.createdAt }));
     return ok({ unread: unreadOf(st, actor).length, messages: unread });
   }
+  // 실시간 새로고침용 가벼운 신호.
+  //  v  = 데이터 버전(글·댓글·좋아요 등 무엇이든 바뀌면 1 올라감) → 화면이 이 값만 보고
+  //       달라졌을 때만 실제 내용을 다시 받아 간다. 응답이 작아 자주 불러도 부담이 적다.
+  if (path === "/api/ping") {
+    const un = unreadOf(st, actor);
+    const messages = un
+      .sort((a, b) => (a.createdAt > b.createdAt ? 1 : -1))
+      .slice(0, 10)
+      .map(m => ({ id: m.id, from: m.from, text: m.text, createdAt: m.createdAt }));
+    return ok({ v: version | 0, unread: un.length, messages });
+  }
 
   // ══════════ 교사 전용 ══════════
   if (path.startsWith("/api/teacher/")) {
@@ -497,9 +521,12 @@ function handleApi(st, path, method, d) {
     if (path === "/api/teacher/board/create") {
       const title = String(d.title || "").trim().slice(0, 60);
       if (!title) return fail("게시판 이름을 써 주세요.");
+      const mine = st.boards.filter(x => x.spaceId === actor.spaceId);
+      const maxOrder = mine.reduce((m, x) => Math.max(m, x.sortOrder | 0), 0);
       const b = {
         id: nextId(st), spaceId: actor.spaceId, title, desc: String(d.desc || "").trim().slice(0, 200),
         allowLikes: d.allowLikes !== false, allowComments: d.allowComments !== false,
+        pinned: false, sortOrder: maxOrder + 10,   // 새 게시판은 맨 뒤에
         createdAt: kst().datetime,
       };
       st.boards.push(b);
@@ -514,6 +541,38 @@ function handleApi(st, path, method, d) {
       b.desc = String(d.desc || "").trim().slice(0, 200);
       b.allowLikes = d.allowLikes !== false;
       b.allowComments = d.allowComments !== false;
+      return Object.assign(ok({}), { mutated: true });
+    }
+    // 게시판 고정하기 / 풀기 — 고정하면 홈 화면 맨 앞에 붙는다
+    if (path === "/api/teacher/board/pin") {
+      const b = findOwnBoard(st, actor, d.boardId);
+      if (!b) return fail("없는 게시판입니다.", 404);
+      const pin = !!d.pinned;
+      if (pin && !b.pinned) {
+        // 고정하면 맨 앞으로 (고정을 풀면 그 자리 그대로 일반 목록 맨 앞에 남는다)
+        const minOrder = st.boards.filter(x => x.spaceId === actor.spaceId)
+          .reduce((m, x) => Math.min(m, x.sortOrder | 0), 0);
+        b.sortOrder = minOrder - 10;
+      }
+      b.pinned = pin;
+      return Object.assign(ok({ pinned: b.pinned }), { mutated: true });
+    }
+    // 게시판 순서 바꾸기 — 화면에 보이는 차례대로 id 목록을 받는다
+    if (path === "/api/teacher/board/reorder") {
+      if (!Array.isArray(d.orderedIds)) return fail("순서 목록이 올바르지 않아요.");
+      const mine = st.boards.filter(x => x.spaceId === actor.spaceId);
+      const byId = new Map(mine.map(b => [b.id, b]));
+      const seen = new Set();
+      let n = 0;
+      for (const raw of d.orderedIds) {
+        const b = byId.get(Number(raw));
+        if (!b) return fail("내 반 게시판이 아니에요.", 403);
+        if (seen.has(b.id)) return fail("순서 목록에 같은 게시판이 두 번 있어요.");
+        seen.add(b.id);
+        b.sortOrder = ++n * 10;
+      }
+      // 목록에 안 들어온 게시판(다른 선생님이 방금 만든 것 등)은 뒤로 밀어 둔다
+      for (const b of mine) if (!seen.has(b.id)) b.sortOrder = ++n * 10;
       return Object.assign(ok({}), { mutated: true });
     }
     if (path === "/api/teacher/board/delete") {
@@ -724,7 +783,7 @@ export default {
       // 버전 충돌 시 다시 읽어 재시도 (최대 5회)
       for (let attempt = 0; attempt < 5; attempt++) {
         const { version, state } = await loadState(env.DB);
-        const r = handleApi(state, path, method, d);
+        const r = handleApi(state, path, method, d, version);
         if (!r.mutated) return jsonResponse(r.body, r.status);
         if (await saveState(env.DB, version, state)) {
           // 상태 저장 성공 후 첨부 파일 반영 (재시도마다 id가 새로 나므로 마지막 것만 사용)

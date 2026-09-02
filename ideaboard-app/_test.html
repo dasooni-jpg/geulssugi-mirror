@@ -469,6 +469,79 @@ try {
   r = await post("/api/home", { auth: T });
   check("원래 반 선생님 명단엔 영향 없음", r.teachers.every(t => t.loginId !== "park" && t.loginId !== "lee"));
 
+  // ── 게시판 고정 / 순서 바꾸기 (선생님만) ──
+  const SNOW = { role: "student", classCode: "7-1", number: 1, pin: "1111" };  // 14번에서 학급 코드가 7-1로 바뀌었음
+  r = await post("/api/teacher/board/create", { auth: T, title: "순서-가" });
+  const O1 = r.board.id;
+  r = await post("/api/teacher/board/create", { auth: T, title: "순서-나" });
+  const O2 = r.board.id;
+  r = await post("/api/teacher/board/create", { auth: T, title: "순서-다" });
+  const O3 = r.board.id;
+  r = await post("/api/home", { auth: T });
+  const order0 = r.boards.map(b => b.id);
+  check("새 게시판은 목록 맨 뒤에 붙음", order0.slice(-3).join() === [O1, O2, O3].join());
+  check("처음에는 고정된 게시판이 없음", r.boards.every(b => b.pinned === false));
+
+  const rest = order0.filter(id => id !== O1 && id !== O2 && id !== O3);
+  r = await post("/api/teacher/board/reorder", { auth: T, orderedIds: [O3, O2, O1].concat(rest) });
+  check("게시판 순서 바꾸기", r.ok);
+  r = await post("/api/home", { auth: T });
+  check("바꾼 순서대로 보임", r.boards.map(b => b.id).slice(0, 3).join() === [O3, O2, O1].join());
+  r = await post("/api/home", { auth: SNOW });
+  check("학생 홈에도 같은 순서로 보임", r.boards.map(b => b.id).slice(0, 3).join() === [O3, O2, O1].join());
+  r = await post("/api/teacher/board/reorder", { auth: SNOW, orderedIds: [O1] });
+  check("학생은 순서를 못 바꿈", !r.ok);
+  r = await post("/api/teacher/board/reorder", { auth: T, orderedIds: [O1, O1] });
+  check("같은 게시판이 두 번 오면 거부", !r.ok);
+  r = await post("/api/teacher/board/reorder", { auth: T, orderedIds: [BX] });
+  check("다른 반 게시판 순서는 못 건드림", !r.ok);
+  // 일부만 보내도(다른 선생님이 방금 만든 게시판 등) 나머지는 뒤로 밀려 남아 있어야 함
+  r = await post("/api/teacher/board/reorder", { auth: T, orderedIds: [O2] });
+  check("일부만 보내도 게시판이 사라지지 않음", r.ok);
+  r = await post("/api/home", { auth: T });
+  check("일부만 보내면 그 게시판이 맨 앞", r.boards[0].id === O2 && r.boards.length === order0.length);
+
+  r = await post("/api/teacher/board/pin", { auth: T, boardId: O1, pinned: true });
+  check("게시판 고정하기", r.ok && r.pinned === true);
+  r = await post("/api/home", { auth: SNOW });
+  check("고정한 게시판이 맨 앞(학생 화면)", r.boards[0].id === O1 && r.boards[0].pinned === true);
+  r = await post("/api/teacher/board/pin", { auth: T, boardId: O3, pinned: true });
+  r = await post("/api/home", { auth: T });
+  check("나중에 고정한 게시판이 더 앞", r.boards.map(b => b.id).slice(0, 2).join() === [O3, O1].join());
+  r = await post("/api/teacher/board/pin", { auth: SNOW, boardId: O1, pinned: true });
+  check("학생은 고정 못 함", !r.ok);
+  r = await post("/api/teacher/board/pin", { auth: T, boardId: BX, pinned: true });
+  check("다른 반 게시판은 고정 못 함", !r.ok);
+  r = await post("/api/teacher/board/pin", { auth: T, boardId: O1, pinned: false });
+  check("고정 풀기", r.ok && r.pinned === false);
+  r = await post("/api/home", { auth: T });
+  check("고정 풀면 고정 목록에서 빠짐", r.boards[0].id === O3 && r.boards[1].id === O1);
+
+  // ── 실시간 새로고침 신호 (/api/ping) ──
+  r = await post("/api/ping", { auth: X });
+  check("ping: 버전과 안 읽은 쪽지 수를 돌려줌", r.ok && typeof r.v === "number" && typeof r.unread === "number");
+  const V0 = r.v;
+  r = await post("/api/board", { auth: X, boardId: BX });
+  r = await post("/api/ping", { auth: X });
+  check("ping: 보기만 하면 버전 그대로", r.v === V0);
+  r = await post("/api/post/create", { auth: HX, boardId: BX, text: "실시간으로 보일 새 아이디어" });
+  check("ping: 학생이 새 글을 올림", r.ok);
+  r = await post("/api/ping", { auth: X });
+  check("ping: 새 글이 올라오면 버전이 올라감", r.v > V0);
+  const V1 = r.v;
+  r = await post("/api/comment/create", { auth: X, postId: 999999, text: "없는 글에 댓글" });
+  check("ping: 없는 글 댓글은 실패", !r.ok);
+  r = await post("/api/ping", { auth: X });
+  check("ping: 실패한 요청으로는 버전이 안 바뀜", r.v === V1);
+  const homeX = await post("/api/home", { auth: X });
+  const tidX = homeX.teachers.find(t => t.loginId === "park").id;
+  r = await post("/api/msg/send", { auth: HX, to: String(tidX), text: "선생님 질문 있어요" });
+  check("ping: 학생이 쪽지를 보냄", r.ok);
+  r = await post("/api/ping", { auth: X });
+  check("ping: 새 쪽지도 함께 알려 줌", r.unread >= 1 && r.messages.some(m => m.text.includes("질문")));
+  r = await post("/api/ping", {});
+  check("ping: 로그인 안 하면 거부", !r.ok);
+
   document.getElementById("summary").textContent =
     `완료: ${pass} PASS / ${fail} FAIL` + (fail === 0 ? " 🎉" : " ⚠️");
 } catch (e) {
