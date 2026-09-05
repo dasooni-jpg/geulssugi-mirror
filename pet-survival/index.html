@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#3f8f4e" />
+<title>다람쌤 펫 서바이벌 — 합체 디펜스</title>
+<style>
+  :root{
+    --bg:#eef7ea; --card:#ffffff; --ink:#23361f; --muted:#6b7d66;
+    --brand:#4caf50; --brand-d:#2f7a3a;
+    --gold:#e2a32b; --hp:#e05a5a; --wave:#5b8def;
+    --line:#dbe9d6; --radius:20px; --shadow:0 8px 26px rgba(47,122,58,.14);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%}
+  body{
+    font-family:"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;
+    background:var(--bg); color:var(--ink); line-height:1.5;
+    -webkit-font-smoothing:antialiased; overflow:hidden; user-select:none;
+  }
+  .app{max-width:560px;margin:0 auto;padding:8px 10px 10px;height:100%;display:flex;flex-direction:column;gap:8px}
+
+  /* ── 헤더 ── */
+  header.top{display:flex;align-items:center;gap:8px}
+  .mascot{width:38px;height:38px;object-fit:contain;border-radius:10px}
+  .title h1{margin:0;font-size:16px;font-weight:800;letter-spacing:-.5px}
+  .title p{margin:0;font-size:11px;color:var(--muted)}
+  .hud{margin-left:auto;display:flex;gap:10px}
+  .stat{background:var(--card);border-radius:14px;padding:5px 10px;text-align:center;min-width:62px;box-shadow:var(--shadow)}
+  .stat .v{font-size:16px;font-weight:800;line-height:1.15}
+  .stat .k{font-size:10px;color:var(--muted)}
+  .stat.g .v{color:var(--gold)} .stat.w .v{color:var(--wave)} .stat.h .v{color:var(--hp)}
+
+  /* ── 게임 화면 ── */
+  .stage{position:relative;flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+  canvas{border-radius:var(--radius);box-shadow:var(--shadow);touch-action:none;display:block}
+
+  /* ── 오버레이 ── */
+  .overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;background:rgba(238,247,234,.93);backdrop-filter:blur(3px);border-radius:var(--radius);padding:20px;gap:6px}
+  .overlay.hide{display:none}
+  .overlay h2{margin:0;font-size:26px;font-weight:800}
+  .overlay p{margin:0;font-size:14px;color:var(--muted);max-width:340px}
+  .overlay .big{font-size:40px;font-weight:800;color:var(--brand-d);margin:4px 0}
+  .howto{background:var(--card);border-radius:16px;padding:12px 14px;text-align:left;font-size:13px;
+    box-shadow:var(--shadow);margin:6px 0;max-width:340px}
+  .howto b{color:var(--brand-d)}
+  .howto div{margin:3px 0}
+
+  /* ── 다음 소환 미리보기 ── */
+  .tray{display:flex;align-items:center;gap:6px;background:var(--card);border-radius:16px;
+    padding:7px 10px;box-shadow:var(--shadow)}
+  .tray .lab{font-size:11px;color:var(--muted);font-weight:700;white-space:nowrap}
+  .eggs{display:flex;gap:5px;margin-left:auto}
+  .egg{width:34px;height:38px;border-radius:50% 50% 46% 46%;display:flex;align-items:center;justify-content:center;
+    font-size:15px;box-shadow:inset 0 -5px 8px rgba(0,0,0,.14), 0 2px 5px rgba(0,0,0,.12)}
+  .egg.first{outline:3px solid var(--brand);outline-offset:1px}
+
+  /* ── 버튼 바 ── */
+  .bar{display:flex;gap:7px}
+  .btn{border:none;border-radius:15px;padding:12px 10px;font-size:14px;font-weight:800;
+    cursor:pointer;font-family:inherit;transition:.12s;flex:1;line-height:1.25}
+  .btn:active{transform:scale(.96)}
+  .btn small{display:block;font-size:10px;font-weight:700;opacity:.85}
+  .btn.primary{background:linear-gradient(135deg,#66c46f,var(--brand-d));color:#fff;box-shadow:0 5px 14px rgba(47,122,58,.32)}
+  .btn.gold{background:linear-gradient(135deg,#f5c33b,#e2a32b);color:#fff}
+  .btn.up{background:linear-gradient(135deg,#f6c86a,#e2a32b);color:#fff;box-shadow:0 5px 14px rgba(226,163,43,.3)}
+  .btn.ghost{background:#e3efdf;color:var(--brand-d);flex:0 0 58px}
+  .btn:disabled{opacity:.45;cursor:default;box-shadow:none}
+  .btn.wide{flex:1.35}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <img class="mascot" src="mascot.png" alt="" />
+    <div class="title">
+      <h1>다람쌤 펫 서바이벌</h1>
+      <p>펫을 합쳐 키우고, 몰려오는 적을 막아라!</p>
+    </div>
+    <div class="hud">
+      <div class="stat g"><div class="v" id="uiGold">0</div><div class="k">코인</div></div>
+      <div class="stat w"><div class="v" id="uiWave">1</div><div class="k">웨이브</div></div>
+      <div class="stat h"><div class="v" id="uiHp">100</div><div class="k">기지</div></div>
+    </div>
+  </header>
+
+  <div class="stage" id="stage">
+    <canvas id="cv"></canvas>
+    <div class="overlay" id="ov">
+      <h2 id="ovTitle">다람쌤 펫 서바이벌</h2>
+      <p id="ovDesc">귀여운 펫을 소환해 격자에 놓고, 같은 펫끼리 합쳐 더 강하게 키우세요.</p>
+      <div class="howto" id="ovHow">
+        <div><b>1. 소환</b> — 아래 <b>소환</b> 버튼을 누르면 빈 칸에 펫이 나타납니다.</div>
+        <div><b>2. 합체</b> — 같은 종류·같은 레벨 펫을 <b>끌어다 겹치면</b> 레벨이 1 오릅니다.</div>
+        <div><b>3. 방어</b> — 펫은 길 위의 적을 자동으로 공격합니다. 길 가까운 칸이 유리합니다.</div>
+        <div><b>4. 목표</b> — 적이 오른쪽 아래 <b>기지</b>에 닿으면 체력이 깎입니다. 0이 되면 끝!</div>
+      </div>
+      <button class="btn primary" id="ovBtn" style="max-width:220px">게임 시작</button>
+    </div>
+  </div>
+
+  <div class="tray">
+    <div class="lab">다음 소환</div>
+    <div class="eggs" id="uiEggs"></div>
+  </div>
+
+  <div class="bar">
+    <button class="btn primary wide" id="btnSummon">소환<small id="uiSummonCost">12코인</small></button>
+    <button class="btn up" id="btnUpgrade">강화<small id="uiUpCost">40코인</small></button>
+    <button class="btn ghost" id="btnSpeed">x1<small>배속</small></button>
+    <button class="btn ghost" id="btnPause">⏸<small>멈춤</small></button>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ══════════════════════════════════════════════════════════
+   다람쌤 펫 서바이벌 — 합체 디펜스
+   · 인터넷 연결·계정·개인정보 없이 파일 하나로 동작합니다.
+   · 아래 BALANCE 값만 고치면 난이도를 조절할 수 있습니다.
+   ══════════════════════════════════════════════════════════ */
+
+/* ─── ① 밸런스 설정 (선생님이 고쳐도 되는 값) ─── */
+const BALANCE = {
+  시작코인: 120,        // 시작할 때 주는 코인
+  기지체력: 100,        // 기지 체력
+  소환기본비용: 12,     // 첫 소환 비용
+  소환비용증가율: 1.06, // 소환할 때마다 비용이 곱해지는 값
+  강화기본비용: 40,     // 첫 강화 비용
+  강화비용증가율: 1.28, // 강화할 때마다 비용이 곱해지는 값
+  강화공격력: 0.08,     // 강화 1회당 전체 공격력 상승폭(8%)
+  처치보상: 3,          // 적 1마리 처치 기본 코인
+  웨이브보상: 20,       // 웨이브 클리어 기본 코인
+  적기본체력: 30,       // 1웨이브 적 체력
+  적체력증가율: 1.30,   // 웨이브마다 적 체력이 곱해지는 값
+  적기본속도: 52,       // 적 이동 속도(초당 픽셀)
+  보스주기: 5,          // 몇 웨이브마다 보스가 나오는지
+  준비시간: 7,          // 웨이브 사이 준비 시간(초)
+  최대레벨: 8,          // 펫이 오를 수 있는 최고 레벨
+  레벨공격배수: 1.85,   // 레벨이 1 오를 때 공격력 배수
+};
+
+/* ─── ② 펫 종류 ─── */
+const 펫종류 = {
+  풀:   {이름:'풀펫',   아이콘:'🌿', 색1:'#b6e86f', 색2:'#4e9a2f', 공격력:6,  공속:1.0,  사거리:235, 특징:'기본기가 좋음'},
+  불:   {이름:'불펫',   아이콘:'🔥', 색1:'#ffa77a', 색2:'#d8381f', 공격력:11, 공속:0.7,  사거리:215, 특징:'화상 피해'},
+  얼음: {이름:'얼음펫', 아이콘:'❄',  색1:'#a9e2ff', 색2:'#2f8fd6', 공격력:5,  공속:0.95, 사거리:255, 특징:'적을 느리게'},
+  어둠: {이름:'어둠펫', 아이콘:'🌙', 색1:'#8f90b8', 색2:'#33334d', 공격력:4,  공속:1.7,  사거리:205, 특징:'가끔 치명타'},
+};
+const 펫키 = Object.keys(펫종류);
+
+/* ─── ③ 적 종류 ─── */
+const 적종류 = {
+  슬라임: {이름:'슬라임', 색1:'#a8e06a', 색2:'#5f9b32', 체력:1.0,  속도:1.0,  크기:24, 피해:5},
+  바위:   {이름:'바위벌레', 색1:'#b8c2cc', 색2:'#6f7d8a', 체력:2.4,  속도:0.68, 크기:29, 피해:8},
+  도깨비: {이름:'도깨비', 색1:'#8fd0f5', 색2:'#3272b0', 체력:0.65, 속도:1.65, 크기:22, 피해:5},
+  보스:   {이름:'보스',   색1:'#d9a3f0', 색2:'#7a3fa8', 체력:16,   속도:0.5,  크기:44, 피해:30},
+};
+
+/* ─── ④ 화면 좌표(논리 좌표계 720 x 1080) ─── */
+const W = 720, H = 1080;
+const 격자 = {열:5, 행:5, 칸:104, x:100, y:268};
+// 적이 지나가는 길: 왼쪽 아래 포털 → 왼쪽 위 → 위쪽 → 오른쪽 아래 기지
+const 길 = [
+  {x:52,  y:1030},
+  {x:52,  y:242},
+  {x:92,  y:196},
+  {x:628, y:196},
+  {x:668, y:242},
+  {x:668, y:1010},
+];
+const 포털 = 길[0], 기지 = 길[길.length-1];
+
+/* 길 구간 길이 미리 계산 */
+const 구간 = [];
+let 길이합 = 0;
+for(let i=0;i<길.length-1;i++){
+  const d = Math.hypot(길[i+1].x-길[i].x, 길[i+1].y-길[i].y);
+  구간.push({시작:길이합, 길이:d, a:길[i], b:길[i+1]});
+  길이합 += d;
+}
+function 길좌표(t){                       // t: 0 ~ 길이합
+  for(const s of 구간){
+    if(t <= s.시작 + s.길이){
+      const k = (t - s.시작) / s.길이;
+      return {x: s.a.x + (s.b.x-s.a.x)*k, y: s.a.y + (s.b.y-s.a.y)*k};
+    }
+  }
+  return {x:기지.x, y:기지.y};
+}
+
+/* ─── ⑤ 게임 상태 ─── */
+const S = {
+  진행:'대기',        // 대기 | 준비 | 전투 | 멈춤 | 종료
+  코인:0, 웨이브:1, 기지체력:0,
+  소환횟수:0, 강화횟수:0,
+  배속:1,
+  칸:[],              // 격자 25칸 (펫 또는 null)
+  적:[], 총알:[], 글자:[], 조각:[],
+  대기줄:[],          // 다음 소환 미리보기
+  남은소환:0, 소환간격:0, 준비타이머:0,
+  시간:0, 흔들림:0, 피격:0,
+  최고기록: 0,   // 아래 저장읽기()로 채웁니다
+};
+
+/* 브라우저가 저장을 막아도(파일로 직접 열기, 시크릿 모드 등) 게임은 계속 돌아가야 합니다 */
+function 저장읽기(){ try{ return Number(localStorage.getItem('petsurvival.best')||0)||0; }catch(e){ return 0; } }
+function 저장쓰기(v){ try{ localStorage.setItem('petsurvival.best', String(v)); }catch(e){} }
+S.최고기록 = 저장읽기();
+
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+
+/* ─── ⑥ 도우미 ─── */
+const 랜덤 = (a,b)=> a + Math.random()*(b-a);
+const 정수랜덤 = (a,b)=> Math.floor(랜덤(a,b+1));
+function 칸중심(i){
+  const c = i % 격자.열, r = Math.floor(i / 격자.열);
+  return {x: 격자.x + c*격자.칸 + 격자.칸/2, y: 격자.y + r*격자.칸 + 격자.칸/2};
+}
+function 좌표에서칸(x,y){
+  const c = Math.floor((x-격자.x)/격자.칸), r = Math.floor((y-격자.y)/격자.칸);
+  if(c<0||c>=격자.열||r<0||r>=격자.행) return -1;
+  return r*격자.열 + c;
+}
+function 펫공격력(펫){
+  const 기본 = 펫종류[펫.종류].공격력;
+  return 기본 * Math.pow(BALANCE.레벨공격배수, 펫.레벨-1) * (1 + S.강화횟수*BALANCE.강화공격력);
+}
+function 펫사거리(펫){ return 펫종류[펫.종류].사거리 + (펫.레벨-1)*7; }
+function 소환비용(){ return Math.round(BALANCE.소환기본비용 * Math.pow(BALANCE.소환비용증가율, S.소환횟수)); }
+function 강화비용(){ return Math.round(BALANCE.강화기본비용 * Math.pow(BALANCE.강화비용증가율, S.강화횟수)); }
+
+/* ─── ⑦ 간단한 효과음 (WebAudio) ─── */
+let 오디오 = null;
+function 삑(주파수, 길이, 종류, 음량){
+  try{
+    if(!오디오) 오디오 = new (window.AudioContext||window.webkitAudioContext)();
+    const o = 오디오.createOscillator(), g = 오디오.createGain();
+    o.type = 종류 || 'square'; o.frequency.value = 주파수;
+    g.gain.value = 음량 || 0.04;
+    g.gain.exponentialRampToValueAtTime(0.0001, 오디오.currentTime + (길이||0.09));
+    o.connect(g); g.connect(오디오.destination);
+    o.start(); o.stop(오디오.currentTime + (길이||0.09));
+  }catch(e){ /* 소리를 못 내도 게임은 계속 */ }
+}
+
+/* ─── ⑧ 게임 시작 / 초기화 ─── */
+function 새게임(){
+  S.진행 = '준비';
+  S.코인 = BALANCE.시작코인;
+  S.웨이브 = 1;
+  S.기지체력 = BALANCE.기지체력;
+  S.소환횟수 = 0; S.강화횟수 = 0;
+  S.칸 = new Array(격자.열*격자.행).fill(null);
+  S.적 = []; S.총알 = []; S.글자 = []; S.조각 = [];
+  S.대기줄 = [];
+  for(let i=0;i<5;i++) S.대기줄.push(펫키[정수랜덤(0,펫키.length-1)]);
+  S.남은소환 = 0; S.소환간격 = 0;
+  S.준비타이머 = BALANCE.준비시간;
+  S.피격 = 0; S.흔들림 = 0;
+  // 시작할 때 펫 2마리를 그냥 줍니다(첫 웨이브를 넘길 수 있도록)
+  펫놓기('풀', 15); 펫놓기('불', 19);
+  화면갱신();
+}
+
+function 빈칸찾기(){
+  const 빈 = [];
+  for(let i=0;i<S.칸.length;i++) if(!S.칸[i]) 빈.push(i);
+  return 빈;
+}
+function 펫놓기(종류, 칸번호){
+  if(칸번호 === undefined){
+    const 빈 = 빈칸찾기();
+    if(!빈.length) return false;
+    칸번호 = 빈[정수랜덤(0, 빈.length-1)];
+  }
+  if(S.칸[칸번호]) return false;
+  S.칸[칸번호] = {종류, 레벨:1, 쿨:랜덤(0,0.5), 등장:0, 흔들:0};
+  return true;
+}
+
+/* ─── ⑨ 소환 / 강화 ─── */
+function 소환(){
+  if(S.진행!=='준비' && S.진행!=='전투') return;
+  const 비용 = 소환비용();
+  if(S.코인 < 비용){ 알림('코인이 부족해요'); return; }
+  if(!빈칸찾기().length){ 알림('빈 칸이 없어요! 펫을 합쳐 보세요'); return; }
+  S.코인 -= 비용; S.소환횟수++;
+  const 종류 = S.대기줄.shift();
+  S.대기줄.push(펫키[정수랜덤(0,펫키.length-1)]);
+  펫놓기(종류);
+  삑(660, 0.08, 'triangle', 0.05);
+  화면갱신();
+}
+function 강화(){
+  if(S.진행!=='준비' && S.진행!=='전투') return;
+  const 비용 = 강화비용();
+  if(S.코인 < 비용){ 알림('코인이 부족해요'); return; }
+  S.코인 -= 비용; S.강화횟수++;
+  띄우기(W/2, 격자.y-24, '공격력 +'+Math.round(BALANCE.강화공격력*100)+'%', '#e2a32b', 26);
+  삑(880, 0.12, 'sine', 0.05);
+  화면갱신();
+}
+function 알림(글){ 띄우기(W/2, 격자.y+격자.행*격자.칸/2, 글, '#e05a5a', 26); }
+
+/* ─── ⑩ 웨이브 ─── */
+function 웨이브구성(w){
+  const 목록 = [];
+  const 보스웨이브 = (w % BALANCE.보스주기 === 0);
+  const 수 = Math.min(28, 5 + Math.floor(w*1.15));
+  for(let i=0;i<수;i++){
+    let 종 = '슬라임';
+    if(w>=3 && i%4===3) 종 = '바위';
+    if(w>=5 && i%5===2) 종 = '도깨비';
+    목록.push(종);
+  }
+  if(보스웨이브) 목록.splice(Math.floor(목록.length/2), 0, '보스');
+  return 목록;
+}
+function 웨이브시작(){
+  S.진행 = '전투';
+  S.남은소환 = 웨이브구성(S.웨이브);
+  S.소환간격 = 0;
+  띄우기(W/2, 격자.y+40, '웨이브 '+S.웨이브+' 시작!', '#5b8def', 34);
+  삑(520, 0.15, 'sawtooth', 0.04);
+}
+function 웨이브클리어(){
+  const 보상 = BALANCE.웨이브보상 + S.웨이브*6;
+  S.코인 += 보상;
+  띄우기(W/2, 격자.y+40, '웨이브 '+S.웨이브+' 클리어! +'+보상, '#2f7a3a', 32);
+  S.웨이브++;
+  if(S.웨이브-1 > S.최고기록){
+    S.최고기록 = S.웨이브-1;
+    저장쓰기(S.최고기록);
+  }
+  S.진행 = '준비';
+  S.준비타이머 = BALANCE.준비시간;
+  삑(784, 0.2, 'sine', 0.05);
+  화면갱신();
+}
+
+function 적생성(종){
+  const t = 적종류[종];
+  const 체력 = BALANCE.적기본체력 * Math.pow(BALANCE.적체력증가율, S.웨이브-1) * t.체력;
+  S.적.push({
+    종, 최대체력:체력, 체력:체력,
+    이동:0, 속도: BALANCE.적기본속도 * t.속도,
+    둔화:0, 화상:0, 화상피해:0,
+    x:포털.x, y:포털.y, 흔들:0, 튐:랜덤(0,6.28),
+  });
+}
+
+/* ─── ⑪ 매 프레임 계산 ─── */
+function 갱신(dt){
+  S.시간 += dt;
+  if(S.흔들림>0) S.흔들림 = Math.max(0, S.흔들림 - dt*3);
+  if(S.피격>0) S.피격 = Math.max(0, S.피격 - dt*2);
+
+  // 준비 시간
+  if(S.진행==='준비'){
+    S.준비타이머 -= dt;
+    if(S.준비타이머 <= 0) 웨이브시작();
+  }
+
+  // 적 등장
+  if(S.진행==='전투' && S.남은소환.length){
+    S.소환간격 -= dt;
+    if(S.소환간격 <= 0){
+      적생성(S.남은소환.shift());
+      S.소환간격 = Math.max(0.35, 0.95 - S.웨이브*0.015);
+    }
+  }
+
+  // 적 이동
+  for(const e of S.적){
+    let 속 = e.속도 * (e.둔화>0 ? 0.55 : 1);
+    e.이동 += 속 * dt;
+    const p = 길좌표(e.이동);
+    e.x = p.x; e.y = p.y;
+    if(e.둔화>0) e.둔화 -= dt;
+    if(e.화상>0){
+      e.화상 -= dt;
+      피해주기(e, e.화상피해*dt, false, true);
+    }
+    if(e.흔들>0) e.흔들 -= dt;
+    if(e.이동 >= 길이합){
+      e.죽음 = true; e.기지도달 = true;
+    }
+  }
+
+  // 기지 도달 처리
+  for(const e of S.적){
+    if(e.기지도달 && !e.처리됨){
+      e.처리됨 = true;
+      S.기지체력 -= 적종류[e.종].피해;
+      S.흔들림 = 1; S.피격 = 1;
+      띄우기(기지.x, 기지.y-50, '-'+적종류[e.종].피해, '#e05a5a', 30);
+      삑(160, 0.2, 'square', 0.05);
+      if(S.기지체력 <= 0){ S.기지체력 = 0; 게임오버(); }
+    }
+  }
+
+  // 펫 공격
+  for(let i=0;i<S.칸.length;i++){
+    const 펫 = S.칸[i];
+    if(!펫) continue;
+    if(펫.등장 < 1) 펫.등장 = Math.min(1, 펫.등장 + dt*4);
+    if(펫.흔들 > 0) 펫.흔들 -= dt;
+    펫.쿨 -= dt;
+    if(펫.쿨 > 0) continue;
+    const c = 칸중심(i);
+    const 사거리 = 펫사거리(펫);
+    let 표적 = null, 최소 = 1e9;
+    for(const e of S.적){
+      if(e.죽음) continue;
+      const d = Math.hypot(e.x-c.x, e.y-c.y);
+      if(d < 사거리 && d < 최소){ 최소 = d; 표적 = e; }
+    }
+    if(표적){
+      펫.쿨 = 1 / 펫종류[펫.종류].공속;
+      펫.흔들 = 0.16;
+      S.총알.push({
+        x:c.x, y:c.y, 표적, 종류:펫.종류, 레벨:펫.레벨,
+        피해:펫공격력(펫), 속도:760, 각도:Math.atan2(표적.y-c.y, 표적.x-c.x), 수명:2,
+      });
+    }
+  }
+
+  // 총알 이동
+  for(const b of S.총알){
+    b.수명 -= dt;
+    const t = b.표적;
+    if(!t || t.죽음){ b.죽음 = true; continue; }
+    const dx = t.x-b.x, dy = t.y-b.y, d = Math.hypot(dx,dy);
+    b.각도 = Math.atan2(dy,dx);
+    if(d < 18){
+      명중(b, t);
+      b.죽음 = true;
+    }else{
+      b.x += dx/d * b.속도 * dt;
+      b.y += dy/d * b.속도 * dt;
+    }
+    if(b.수명 <= 0) b.죽음 = true;
+  }
+
+  // 떠오르는 글자 / 조각
+  for(const f of S.글자){ f.수명 -= dt; f.y -= 42*dt; }
+  for(const p of S.조각){ p.수명 -= dt; p.x += p.vx*dt; p.y += p.vy*dt; p.vy += 420*dt; }
+
+  // 정리
+  S.적 = S.적.filter(e=>!e.죽음);
+  S.총알 = S.총알.filter(b=>!b.죽음);
+  S.글자 = S.글자.filter(f=>f.수명>0);
+  S.조각 = S.조각.filter(p=>p.수명>0);
+
+  // 웨이브 종료 판정
+  if(S.진행==='전투' && !S.남은소환.length && !S.적.length) 웨이브클리어();
+}
+
+function 명중(b, e){
+  let 피해 = b.피해, 치명 = false;
+  if(b.종류==='어둠' && Math.random() < 0.22){ 피해 *= 2; 치명 = true; }
+  if(b.종류==='얼음') e.둔화 = 1.6;
+  if(b.종류==='불'){ e.화상 = 2.0; e.화상피해 = b.피해*0.25; }
+  피해주기(e, 피해, 치명, false);
+  for(let i=0;i<4;i++){
+    S.조각.push({x:e.x, y:e.y, vx:랜덤(-80,80), vy:랜덤(-140,-30), 색:펫종류[b.종류].색1, 수명:0.4, 크기:랜덤(2,4)});
+  }
+}
+function 피해주기(e, 양, 치명, 조용히){
+  if(e.죽음) return;
+  e.체력 -= 양;
+  e.흔들 = 0.12;
+  if(!조용히) 띄우기(e.x + 랜덤(-10,10), e.y-30, String(Math.max(1,Math.round(양))), 치명 ? '#ffd34d' : '#ffffff', 치명?30:24);
+  if(e.체력 <= 0){
+    e.죽음 = true;
+    const 보상 = Math.round((BALANCE.처치보상 + S.웨이브*0.8) * (e.종==='보스'?12:1));
+    S.코인 += 보상;
+    띄우기(e.x, e.y-14, '+'+보상, '#f5c33b', 24);
+    for(let i=0;i<10;i++){
+      S.조각.push({x:e.x, y:e.y, vx:랜덤(-160,160), vy:랜덤(-260,-40), 색:적종류[e.종].색1, 수명:0.6, 크기:랜덤(2,5)});
+    }
+    if(!조용히) 삑(e.종==='보스'?200:420, 0.08, 'square', 0.03);
+    화면갱신();
+  }
+}
+function 띄우기(x,y,글,색,크기){ S.글자.push({x,y,글,색,크기:크기||24,수명:1.0}); }
+
+function 게임오버(){
+  S.진행 = '종료';
+  const best = Math.max(S.최고기록, S.웨이브-1);
+  S.최고기록 = best;
+  저장쓰기(best);
+  오버레이({
+    제목:'게임 오버',
+    설명:'기지가 무너졌어요. 다시 도전해 볼까요?',
+    큰글씨:'웨이브 ' + S.웨이브,
+    안내:'<div><b>최고 기록</b> — 웨이브 '+best+' 클리어</div>'+
+         '<div><b>다음엔 이렇게</b> — 길에 가까운 바깥쪽 칸에 펫을 두고, 같은 펫은 바로바로 합쳐 보세요.</div>'+
+         '<div><b>강화 버튼</b>도 잊지 마세요. 모든 펫의 공격력이 함께 오릅니다.</div>',
+    버튼:'다시 시작',
+    실행: ()=>{ 오버레이숨김(); 새게임(); },
+  });
+}
+
+/* ─── ⑫ 그리기 ─── */
+function 둥근사각(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);     ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+
+function 배경그리기(){
+  // 잔디
+  const g = ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'#8fd06a'); g.addColorStop(1,'#6cb44f');
+  ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+  // 잔디 무늬
+  ctx.fillStyle = 'rgba(255,255,255,.07)';
+  for(let y=0;y<H;y+=46) for(let x=(y/46%2)*46;x<W;x+=92) ctx.fillRect(x,y,46,23);
+
+  // 길(적이 지나가는 흙길)
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.strokeStyle = '#c9d47a'; ctx.lineWidth = 92;
+  ctx.beginPath(); ctx.moveTo(길[0].x,길[0].y);
+  for(let i=1;i<길.length;i++) ctx.lineTo(길[i].x,길[i].y);
+  ctx.stroke();
+  ctx.strokeStyle = '#dfe79a'; ctx.lineWidth = 74;
+  ctx.beginPath(); ctx.moveTo(길[0].x,길[0].y);
+  for(let i=1;i<길.length;i++) ctx.lineTo(길[i].x,길[i].y);
+  ctx.stroke();
+
+  // 격자
+  const gx=격자.x, gy=격자.y, gc=격자.칸;
+  둥근사각(gx-6, gy-6, 격자.열*gc+12, 격자.행*gc+12, 18);
+  ctx.fillStyle='rgba(60,120,50,.18)'; ctx.fill();
+  for(let r=0;r<격자.행;r++) for(let c=0;c<격자.열;c++){
+    둥근사각(gx+c*gc+3, gy+r*gc+3, gc-6, gc-6, 10);
+    ctx.fillStyle = ((r+c)%2===0) ? 'rgba(190,232,150,.75)' : 'rgba(172,220,132,.75)';
+    ctx.fill();
+  }
+
+  // 포털(적이 나오는 곳)
+  ctx.save(); ctx.translate(포털.x, 포털.y);
+  ctx.fillStyle='#7b8394'; 둥근사각(-42,-34,84,68,14); ctx.fill();
+  const pg = ctx.createRadialGradient(0,0,3,0,0,30);
+  pg.addColorStop(0,'#f0d0ff'); pg.addColorStop(.5,'#a24fd6'); pg.addColorStop(1,'#3b1256');
+  ctx.fillStyle=pg; ctx.beginPath(); ctx.arc(0,0,26+Math.sin(S.시간*3)*1.5,0,7); ctx.fill();
+  ctx.restore();
+
+  // 기지(플레이어)
+  기지그리기();
+}
+
+function 기지그리기(){
+  const x=기지.x, y=기지.y;
+  ctx.save(); ctx.translate(x,y);
+  // 발밑 빛
+  ctx.fillStyle='rgba(255,240,140,.55)'; ctx.beginPath(); ctx.ellipse(0,26,34,11,0,0,7); ctx.fill();
+  // 몸
+  ctx.fillStyle='#4a7fd6'; 둥근사각(-20,-14,40,40,12); ctx.fill();
+  // 얼굴
+  ctx.fillStyle='#ffe0bd'; ctx.beginPath(); ctx.arc(0,-30,21,0,7); ctx.fill();
+  // 모자
+  ctx.fillStyle='#f2f4f8'; ctx.beginPath(); ctx.arc(0,-36,21,Math.PI,0); ctx.fill();
+  ctx.fillRect(-21,-38,42,7);
+  ctx.fillStyle='#dfe3ea'; 둥근사각(-4,-40,26,8,4); ctx.fill();
+  // 눈
+  ctx.fillStyle='#2b2b3a';
+  ctx.beginPath(); ctx.arc(-7,-29,3.2,0,7); ctx.arc(7,-29,3.2,0,7); ctx.fill();
+  // 체력바
+  const bw=88, bh=15;
+  둥근사각(-bw/2, -76, bw, bh, 7); ctx.fillStyle='rgba(0,0,0,.32)'; ctx.fill();
+  const 비율 = Math.max(0, S.기지체력/BALANCE.기지체력);
+  둥근사각(-bw/2+2, -74, (bw-4)*비율, bh-4, 5);
+  ctx.fillStyle = 비율>0.5 ? '#6ddc7a' : (비율>0.25 ? '#f5c33b' : '#e05a5a'); ctx.fill();
+  ctx.font='bold 12px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillStyle='#fff'; ctx.fillText(Math.ceil(S.기지체력)+' / '+BALANCE.기지체력, 0, -68);
+  ctx.restore();
+}
+
+/* 펫 그리기 */
+function 펫그리기(펫, x, y, 배율, 반투명){
+  const t = 펫종류[펫.종류];
+  const s = (0.9 + 펫.레벨*0.028) * (배율||1) * (0.6 + 0.4*(펫.등장!==undefined?펫.등장:1));
+  const 튐 = 펫.흔들>0 ? Math.sin(펫.흔들*70)*3 : 0;
+  ctx.save();
+  ctx.translate(x, y+튐);
+  ctx.scale(s,s);
+  if(반투명) ctx.globalAlpha = 0.75;
+
+  // 그림자
+  ctx.fillStyle='rgba(0,0,0,.18)'; ctx.beginPath(); ctx.ellipse(0,30,26,8,0,0,7); ctx.fill();
+  // 귀
+  ctx.fillStyle=t.색2;
+  ctx.beginPath(); ctx.moveTo(-24,-14); ctx.lineTo(-13,-34); ctx.lineTo(-4,-16); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(24,-14);  ctx.lineTo(13,-34);  ctx.lineTo(4,-16);  ctx.closePath(); ctx.fill();
+  // 몸통
+  const g = ctx.createLinearGradient(0,-26,0,28);
+  g.addColorStop(0,t.색1); g.addColorStop(1,t.색2);
+  ctx.fillStyle=g;
+  ctx.beginPath(); ctx.ellipse(0,2,28,26,0,0,7); ctx.fill();
+  // 배
+  ctx.fillStyle='rgba(255,255,255,.55)';
+  ctx.beginPath(); ctx.ellipse(0,10,16,13,0,0,7); ctx.fill();
+  // 눈
+  ctx.fillStyle='#232338';
+  ctx.beginPath(); ctx.ellipse(-9,-3,4.2,5.4,0,0,7); ctx.ellipse(9,-3,4.2,5.4,0,0,7); ctx.fill();
+  ctx.fillStyle='#fff';
+  ctx.beginPath(); ctx.arc(-10.4,-5,1.6,0,7); ctx.arc(7.6,-5,1.6,0,7); ctx.fill();
+  // 볼
+  ctx.fillStyle='rgba(255,120,120,.45)';
+  ctx.beginPath(); ctx.arc(-17,4,4.5,0,7); ctx.arc(17,4,4.5,0,7); ctx.fill();
+  // 입
+  ctx.strokeStyle='#232338'; ctx.lineWidth=1.6; ctx.beginPath();
+  ctx.arc(0,3,4.5,0.15*Math.PI,0.85*Math.PI); ctx.stroke();
+  // 속성 아이콘
+  ctx.font='16px "Apple Color Emoji","Segoe UI Emoji",sans-serif';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(t.아이콘, 0, -30);
+  // 레벨 뱃지
+  둥근사각(-30, 14, 26, 16, 8); ctx.fillStyle='rgba(35,35,56,.85)'; ctx.fill();
+  ctx.fillStyle='#fff'; ctx.font='bold 11px sans-serif';
+  ctx.fillText('Lv'+펫.레벨, -17, 22);
+  ctx.restore();
+}
+
+/* 적 그리기 */
+function 적그리기(e){
+  const t = 적종류[e.종];
+  const 튐 = Math.sin(S.시간*8 + e.튐)*2;
+  const 흔 = e.흔들>0 ? 랜덤(-2,2) : 0;
+  ctx.save();
+  ctx.translate(e.x+흔, e.y+튐);
+  ctx.fillStyle='rgba(0,0,0,.18)';
+  ctx.beginPath(); ctx.ellipse(0,t.크기*0.95,t.크기*0.85,t.크기*0.28,0,0,7); ctx.fill();
+  const g = ctx.createLinearGradient(0,-t.크기,0,t.크기);
+  g.addColorStop(0,t.색1); g.addColorStop(1,t.색2);
+  ctx.fillStyle = e.둔화>0 ? '#9fd8ff' : g;
+  ctx.beginPath(); ctx.ellipse(0,0,t.크기,t.크기*0.92,0,0,7); ctx.fill();
+  if(e.화상>0){ ctx.fillStyle='rgba(255,120,40,.35)'; ctx.beginPath(); ctx.ellipse(0,0,t.크기,t.크기*0.92,0,0,7); ctx.fill(); }
+  // 눈
+  const 눈 = t.크기*0.28;
+  ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(-눈,-4,t.크기*0.24,0,7); ctx.arc(눈,-4,t.크기*0.24,0,7); ctx.fill();
+  ctx.fillStyle='#222'; ctx.beginPath(); ctx.arc(-눈,-3,t.크기*0.12,0,7); ctx.arc(눈,-3,t.크기*0.12,0,7); ctx.fill();
+  // 입
+  ctx.strokeStyle='#222'; ctx.lineWidth=1.8; ctx.beginPath();
+  ctx.arc(0, t.크기*0.28, t.크기*0.26, 1.15*Math.PI, 1.85*Math.PI); ctx.stroke();
+  // 체력바
+  const bw = t.크기*2.1, bh = 6;
+  둥근사각(-bw/2, -t.크기-16, bw, bh, 3); ctx.fillStyle='rgba(0,0,0,.4)'; ctx.fill();
+  둥근사각(-bw/2, -t.크기-16, bw*Math.max(0,e.체력/e.최대체력), bh, 3);
+  ctx.fillStyle = e.종==='보스' ? '#ff6b6b' : '#7ee081'; ctx.fill();
+  ctx.restore();
+}
+
+/* 총알(검) 그리기 */
+function 총알그리기(b){
+  const t = 펫종류[b.종류];
+  ctx.save();
+  ctx.translate(b.x,b.y); ctx.rotate(b.각도);
+  const L = 20 + b.레벨*1.6;
+  ctx.fillStyle = t.색1;                    // 칼날
+  ctx.beginPath(); ctx.moveTo(L,0); ctx.lineTo(L-9,-5); ctx.lineTo(-6,-4);
+  ctx.lineTo(-6,4); ctx.lineTo(L-9,5); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#f5d67a'; ctx.fillRect(-9,-8,4,16);   // 손잡이 가드
+  ctx.fillStyle='#9a6b3f'; ctx.fillRect(-16,-3,7,6);   // 손잡이
+  ctx.restore();
+}
+
+function 그리기(){
+  ctx.save();
+  if(S.흔들림>0) ctx.translate(랜덤(-6,6)*S.흔들림, 랜덤(-6,6)*S.흔들림);
+  배경그리기();
+
+  // 사거리 표시(드래그 중인 펫)
+  if(드래그.칸 >= 0){
+    const 펫 = 드래그.펫;
+    const c = 칸중심(드래그.칸);
+    ctx.strokeStyle='rgba(255,255,255,.75)'; ctx.lineWidth=3; ctx.setLineDash([9,7]);
+    ctx.beginPath(); ctx.arc(드래그.x, 드래그.y, 펫사거리(펫), 0, 7); ctx.stroke();
+    ctx.setLineDash([]);
+    // 놓을 칸 강조
+    const 대상 = 좌표에서칸(드래그.x, 드래그.y);
+    if(대상 >= 0){
+      const 상대 = S.칸[대상];
+      const 합체가능 = 상대 && 상대!==펫 && 상대.종류===펫.종류 && 상대.레벨===펫.레벨 && 펫.레벨<BALANCE.최대레벨;
+      const cc = 칸중심(대상);
+      둥근사각(cc.x-격자.칸/2+4, cc.y-격자.칸/2+4, 격자.칸-8, 격자.칸-8, 12);
+      ctx.strokeStyle = 합체가능 ? '#ffd34d' : '#ffffff'; ctx.lineWidth=4; ctx.stroke();
+      if(합체가능){
+        ctx.fillStyle='rgba(255,211,77,.28)'; ctx.fill();
+      }
+    }
+  }
+
+  for(let i=0;i<S.칸.length;i++){
+    const 펫 = S.칸[i];
+    if(!펫 || 펫===드래그.펫) continue;
+    const c = 칸중심(i);
+    펫그리기(펫, c.x, c.y, 1, false);
+  }
+  for(const e of S.적) 적그리기(e);
+  for(const b of S.총알) 총알그리기(b);
+
+  // 조각
+  for(const p of S.조각){
+    ctx.globalAlpha = Math.max(0, p.수명/0.6);
+    ctx.fillStyle=p.색; ctx.beginPath(); ctx.arc(p.x,p.y,p.크기,0,7); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // 드래그 중인 펫은 손가락 위에
+  if(드래그.펫) 펫그리기(드래그.펫, 드래그.x, 드래그.y, 1.15, true);
+
+  // 떠오르는 글자
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  for(const f of S.글자){
+    ctx.globalAlpha = Math.min(1, f.수명*1.6);
+    ctx.font = 'bold '+f.크기+'px "Apple SD Gothic Neo","Malgun Gothic",sans-serif';
+    ctx.lineWidth = 5; ctx.strokeStyle='rgba(30,30,40,.85)';
+    ctx.strokeText(f.글, f.x, f.y); ctx.fillStyle=f.색; ctx.fillText(f.글, f.x, f.y);
+  }
+  ctx.globalAlpha=1;
+
+  // 준비 시간 안내
+  if(S.진행==='준비'){
+    const 남 = Math.ceil(S.준비타이머);
+    둥근사각(W/2-140, 62, 280, 54, 16); ctx.fillStyle='rgba(30,50,25,.55)'; ctx.fill();
+    ctx.fillStyle='#fff'; ctx.font='bold 24px "Apple SD Gothic Neo","Malgun Gothic",sans-serif';
+    ctx.fillText('웨이브 '+S.웨이브+' 까지 '+남+'초', W/2, 89);
+  }
+  // 기지 피격 붉은 테두리
+  if(S.피격>0){
+    ctx.strokeStyle='rgba(224,90,90,'+(S.피격*0.8)+')'; ctx.lineWidth=14;
+    ctx.strokeRect(7,7,W-14,H-14);
+  }
+  ctx.restore();
+}
+
+/* ─── ⑬ 드래그(펫 옮기기 · 합치기) ─── */
+const 드래그 = {펫:null, 칸:-1, x:0, y:0};
+function 캔버스좌표(ev){
+  const r = cv.getBoundingClientRect();
+  return {x:(ev.clientX-r.left) * (W/r.width), y:(ev.clientY-r.top) * (H/r.height)};
+}
+cv.addEventListener('pointerdown', ev=>{
+  if(S.진행!=='준비' && S.진행!=='전투') return;
+  const p = 캔버스좌표(ev);
+  const i = 좌표에서칸(p.x,p.y);
+  if(i>=0 && S.칸[i]){
+    드래그.펫 = S.칸[i]; 드래그.칸 = i; 드래그.x = p.x; 드래그.y = p.y;
+    cv.setPointerCapture(ev.pointerId);
+  }
+});
+cv.addEventListener('pointermove', ev=>{
+  if(!드래그.펫) return;
+  const p = 캔버스좌표(ev);
+  드래그.x = p.x; 드래그.y = p.y;
+});
+function 드래그끝(){
+  if(!드래그.펫) return;
+  const 대상 = 좌표에서칸(드래그.x, 드래그.y);
+  const 펫 = 드래그.펫, 원래 = 드래그.칸;
+  if(대상 >= 0 && 대상 !== 원래){
+    const 상대 = S.칸[대상];
+    if(!상대){                                   // 빈 칸으로 이동
+      S.칸[원래] = null; S.칸[대상] = 펫;
+    }else if(상대.종류===펫.종류 && 상대.레벨===펫.레벨 && 펫.레벨 < BALANCE.최대레벨){
+      S.칸[원래] = null;                          // 합체!
+      상대.레벨 += 1; 상대.등장 = 0.3; 상대.흔들 = 0.3;
+      const c = 칸중심(대상);
+      띄우기(c.x, c.y-46, 'Lv'+상대.레벨+' 합체!', '#ffd34d', 28);
+      for(let i=0;i<14;i++){
+        S.조각.push({x:c.x, y:c.y, vx:랜덤(-180,180), vy:랜덤(-260,-60), 색:펫종류[상대.종류].색1, 수명:0.6, 크기:랜덤(2,5)});
+      }
+      삑(520+상대.레벨*70, 0.14, 'triangle', 0.06);
+    }else{                                        // 자리 바꾸기
+      S.칸[원래] = 상대; S.칸[대상] = 펫;
+    }
+  }
+  드래그.펫 = null; 드래그.칸 = -1;
+  화면갱신();
+}
+cv.addEventListener('pointerup', 드래그끝);
+cv.addEventListener('pointercancel', ()=>{ 드래그.펫=null; 드래그.칸=-1; });
+
+/* ─── ⑭ 화면(HTML) 갱신 ─── */
+const $ = id=>document.getElementById(id);
+function 화면갱신(){
+  $('uiGold').textContent = Math.floor(S.코인);
+  $('uiWave').textContent = S.웨이브;
+  $('uiHp').textContent = Math.ceil(S.기지체력);
+  $('uiSummonCost').textContent = 소환비용()+'코인';
+  $('uiUpCost').textContent = 강화비용()+'코인';
+  $('btnSummon').disabled = S.코인 < 소환비용();
+  $('btnUpgrade').disabled = S.코인 < 강화비용();
+  const 판 = $('uiEggs');
+  판.innerHTML = '';
+  S.대기줄.slice(0,5).forEach((k,i)=>{
+    const t = 펫종류[k];
+    const d = document.createElement('div');
+    d.className = 'egg' + (i===0 ? ' first' : '');
+    d.style.background = 'linear-gradient(160deg,'+t.색1+','+t.색2+')';
+    d.textContent = t.아이콘;
+    d.title = t.이름 + ' — ' + t.특징;
+    판.appendChild(d);
+  });
+}
+function 오버레이(옵션){
+  $('ovTitle').textContent = 옵션.제목;
+  $('ovDesc').textContent = 옵션.설명;
+  $('ovHow').innerHTML = (옵션.큰글씨 ? '<div class="big" style="text-align:center">'+옵션.큰글씨+'</div>' : '') + 옵션.안내;
+  const b = $('ovBtn');
+  b.textContent = 옵션.버튼;
+  b.onclick = 옵션.실행;
+  $('ov').classList.remove('hide');
+}
+function 오버레이숨김(){ $('ov').classList.add('hide'); }
+
+/* ─── ⑮ 버튼 연결 ─── */
+$('btnSummon').onclick = 소환;
+$('btnUpgrade').onclick = 강화;
+$('btnSpeed').onclick = ()=>{
+  S.배속 = S.배속===1 ? 2 : (S.배속===2 ? 3 : 1);
+  $('btnSpeed').firstChild.textContent = 'x'+S.배속;
+};
+$('btnPause').onclick = ()=>{
+  if(S.진행==='멈춤'){ S.진행 = S.이전진행; 오버레이숨김(); return; }
+  if(S.진행!=='준비' && S.진행!=='전투') return;
+  S.이전진행 = S.진행; S.진행 = '멈춤';
+  오버레이({
+    제목:'잠깐 멈춤', 설명:'쉬었다가 이어서 하세요.',
+    안내:'<div><b>합체</b> — 같은 종류·같은 레벨 펫을 끌어다 겹치기</div>'+
+         '<div><b>이동</b> — 빈 칸으로 끌면 자리를 옮깁니다</div>'+
+         '<div><b>바꾸기</b> — 다른 펫 위로 끌면 자리가 바뀝니다</div>',
+    버튼:'이어서 하기', 실행: ()=>{ S.진행 = S.이전진행; 오버레이숨김(); },
+  });
+};
+document.addEventListener('keydown', e=>{
+  if(e.code==='Space'){ e.preventDefault(); 소환(); }
+  if(e.key==='e' || e.key==='E') 강화();
+});
+
+/* ─── ⑯ 크기 맞추기 ─── */
+function 크기맞추기(){
+  const st = document.getElementById('stage');
+  const bw = st.clientWidth, bh = st.clientHeight;
+  const 배 = Math.min(bw/W, bh/H);
+  cv.style.width = Math.floor(W*배)+'px';
+  cv.style.height = Math.floor(H*배)+'px';
+  const dpr = Math.min(2, window.devicePixelRatio||1);
+  cv.width = Math.floor(W*dpr); cv.height = Math.floor(H*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+window.addEventListener('resize', 크기맞추기);
+
+/* ─── ⑰ 메인 루프 ─── */
+let 이전시각 = performance.now();
+function 루프(now){
+  let dt = (now - 이전시각)/1000;
+  이전시각 = now;
+  dt = Math.min(0.05, dt);
+  if(S.진행==='준비' || S.진행==='전투'){
+    for(let i=0;i<S.배속;i++) 갱신(dt);
+    화면갱신();
+  }
+  그리기();
+  requestAnimationFrame(루프);
+}
+
+/* ─── ⑱ 시작 ─── */
+크기맞추기();
+새게임();
+S.진행 = '대기';
+오버레이({
+  제목:'다람쌤 펫 서바이벌',
+  설명:'귀여운 펫을 소환해 격자에 놓고, 같은 펫끼리 합쳐 더 강하게 키우세요.',
+  안내:'<div><b>1. 소환</b> — 아래 <b>소환</b> 버튼을 누르면 빈 칸에 펫이 나타납니다.</div>'+
+       '<div><b>2. 합체</b> — 같은 종류·같은 레벨 펫을 <b>끌어다 겹치면</b> 레벨이 1 오릅니다.</div>'+
+       '<div><b>3. 방어</b> — 펫은 길 위의 적을 자동으로 공격합니다. 길에 가까운 바깥쪽 칸이 유리합니다.</div>'+
+       '<div><b>4. 목표</b> — 적이 오른쪽 아래 <b>기지</b>에 닿으면 체력이 깎입니다. 0이 되면 끝!</div>'+
+       (S.최고기록 ? '<div style="margin-top:6px"><b>최고 기록</b> — 웨이브 '+S.최고기록+' 클리어</div>' : ''),
+  버튼:'게임 시작',
+  실행: ()=>{ 오버레이숨김(); 새게임(); },
+});
+화면갱신();
+requestAnimationFrame(루프);
+</script>
+</body>
+</html>
