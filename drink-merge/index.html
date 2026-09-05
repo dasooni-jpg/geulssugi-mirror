@@ -49,7 +49,7 @@ header.top{display:flex;align-items:center;gap:8px;flex:0 0 auto}
 .mascot{width:36px;height:36px;object-fit:contain;border-radius:10px;flex:0 0 auto}
 .brand{line-height:1.15}
 .brand h1{margin:0;font-size:17px;letter-spacing:-.4px;font-family:"Jua","Noto Sans KR",sans-serif;font-weight:400}
-.brand p{margin:0;font-size:11px;color:var(--ink-2)}
+.brand p{margin:0;font-size:11px;color:var(--ink-2);white-space:nowrap}
 .spacer{flex:1}
 .coin{display:flex;align-items:center;gap:6px;background:var(--paper);border-radius:999px;
   padding:5px 12px 5px 6px;box-shadow:var(--shadow);border:2px solid #fff}
@@ -66,25 +66,32 @@ header.top{display:flex;align-items:center;gap:8px;flex:0 0 auto}
 /* ── 놀이판 ───────────────────────────────── */
 .board{position:relative;flex:1 1 auto;min-height:340px;border-radius:26px;overflow:hidden;
   box-shadow:var(--shadow);--gw:56px;--slot:42px}
+/* 정원 배경: 위 30%에 화단·난간·아치, 그 아래는 테이블이 놓인 바닥 */
 .garden{position:absolute;inset:0;
-  background:
-    radial-gradient(60px 44px at 12% 18%, rgba(255,255,255,.85), rgba(255,255,255,0) 70%),
-    radial-gradient(52px 40px at 86% 12%, rgba(255,255,255,.7), rgba(255,255,255,0) 70%),
-    radial-gradient(90px 60px at 78% 30%, rgba(255,214,232,.85), rgba(255,214,232,0) 72%),
-    radial-gradient(80px 56px at 18% 33%, rgba(255,236,196,.9), rgba(255,236,196,0) 72%),
-    linear-gradient(180deg,#e9f3e2 0%, #dceccf 34%, var(--hedge) 46%, var(--hedge-d) 52%, #cfe3c2 56%, #f3e7d6 100%);
+  background:linear-gradient(180deg,
+    #eef6f0 0%, #e6f1e2 9%, #d8ead0 17%,
+    var(--hedge) 21%, var(--hedge-d) 26%,
+    #e6b9c4 26.5%, #d99aab 29.5%,           /* 분홍 벽돌 화단 테두리 */
+    #efe0cb 30.5%, #e8d5bb 100%);
 }
-/* 울타리 나무 기둥 */
-.garden::after{content:"";position:absolute;left:0;right:0;top:44%;height:3px;
-  background:repeating-linear-gradient(90deg, rgba(255,255,255,.35) 0 22px, rgba(255,255,255,0) 22px 46px)}
+/* 바닥 돌바닥 결 */
+.garden::after{content:"";position:absolute;left:0;right:0;top:30.5%;bottom:0;
+  background:
+    radial-gradient(22px 12px at 12% 22%, rgba(255,255,255,.5), rgba(255,255,255,0) 70%),
+    radial-gradient(26px 13px at 88% 46%, rgba(255,255,255,.45), rgba(255,255,255,0) 70%),
+    radial-gradient(18px 10px at 6% 78%, rgba(255,255,255,.4), rgba(255,255,255,0) 70%),
+    radial-gradient(20px 11px at 95% 82%, rgba(255,255,255,.4), rgba(255,255,255,0) 70%)}
+/* 화단 그림(난간·꽃·아치) */
+.flora{position:absolute;left:0;right:0;top:0;height:31%;display:block;pointer-events:none}
 
 /* 빨랫줄 + 주문표 */
-.wire{position:absolute;left:6%;right:6%;top:9%;height:26px;pointer-events:none}
+.wire{position:absolute;left:4%;right:8%;top:9%;height:26px;pointer-events:none}
 .wire svg{width:100%;height:100%;display:block;overflow:visible}
-.tickets{position:absolute;left:6%;right:6%;top:10%;display:flex;justify-content:center;gap:14px}
-.ticket{width:104px;background:var(--paper);border-radius:4px 4px 8px 8px;padding:20px 8px 8px;
+.tickets{position:absolute;left:5%;right:23%;top:10%;display:flex;justify-content:center;gap:12px}
+.ticket{width:98px;background:var(--paper);border-radius:4px 4px 8px 8px;padding:20px 8px 8px;
   text-align:center;box-shadow:0 8px 18px rgba(90,60,30,.22);position:relative;
   transform-origin:50% 0;animation:sway 5.5s ease-in-out infinite}
+.ticket:first-child{z-index:2}
 .ticket:nth-child(2){animation-delay:-2.4s;transform:scale(.9);opacity:.94}
 @keyframes sway{0%,100%{rotate:-1.4deg}50%{rotate:1.4deg}}
 .ticket .head{position:absolute;left:0;right:0;top:0;background:var(--ticket);color:#fff;
@@ -96,6 +103,10 @@ header.top{display:flex;align-items:center;gap:8px;flex:0 0 auto}
 .ticket .total{border-top:1px dashed #c9b49a;padding-top:4px;font-size:11px;color:var(--ink-2);
   display:flex;justify-content:space-between;align-items:baseline;gap:4px}
 .ticket .total b{font-family:"Jua",sans-serif;font-weight:400;font-size:16px;color:var(--ink)}
+.ticket .bars{height:13px;margin-top:5px;border-radius:1px;
+  background:repeating-linear-gradient(90deg,
+    #3d2c20 0 1.5px, #fff 1.5px 3px, #3d2c20 3px 4px, #fff 4px 7px,
+    #3d2c20 7px 8.5px, #fff 8.5px 10px)}
 .ticket.done{animation:paid .5s ease forwards}
 @keyframes paid{to{transform:translateY(-26px) scale(.7);opacity:0}}
 
@@ -108,18 +119,22 @@ header.top{display:flex;align-items:center;gap:8px;flex:0 0 auto}
   background:rgba(74,53,39,.66);border-radius:999px;padding:1px 11px 2px}
 
 /* 나무 테이블 */
-.table{position:absolute;left:3%;right:3%;top:30%;bottom:5%;border-radius:16px;
+.table{position:absolute;left:5%;right:5%;top:30%;bottom:6%;border-radius:14px;
   background:
-    repeating-linear-gradient(90deg, rgba(0,0,0,0) 0 13%, rgba(190,120,50,.18) 13% 13.6%, rgba(0,0,0,0) 13.6% 14%),
-    linear-gradient(180deg, var(--wood) 0%, var(--wood-2) 100%);
-  box-shadow:inset 0 -10px 0 rgba(139,88,32,.22), 0 12px 0 var(--wood-lip), 0 18px 24px rgba(110,70,30,.28);
+    linear-gradient(90deg, rgba(255,255,255,.14), rgba(255,255,255,0) 20%,
+      rgba(0,0,0,0) 80%, rgba(120,70,20,.12)),
+    repeating-linear-gradient(90deg, rgba(0,0,0,0) 0 11.9%,
+      rgba(160,98,38,.24) 11.9% 12.2%, rgba(255,247,230,.18) 12.2% 12.5%),
+    linear-gradient(180deg, #f5c179 0%, var(--wood) 22%, var(--wood-2) 100%);
+  box-shadow:inset 0 7px 0 rgba(255,255,255,.18), inset 0 -12px 0 rgba(139,88,32,.20),
+    0 14px 0 var(--wood-lip), 0 20px 26px rgba(110,70,30,.3);
 }
-/* 나사못 */
-.table::before{content:"";position:absolute;left:5%;right:5%;bottom:9%;height:6px;
-  background:repeating-linear-gradient(90deg, rgba(150,95,40,.5) 0 5px, rgba(0,0,0,0) 5px 25%);
-  border-radius:3px;opacity:.5}
+/* 상판 나사못 */
+.table::before{content:"";position:absolute;left:6%;right:6%;bottom:7%;height:5px;
+  background:repeating-linear-gradient(90deg, rgba(150,95,40,.55) 0 5px, rgba(0,0,0,0) 5px 25%);
+  border-radius:3px;opacity:.45}
 /* 발사선 */
-.dash{position:absolute;left:4%;right:4%;height:0;border-top:5px dashed rgba(255,255,255,.9);
+.dash{position:absolute;left:7%;right:7%;height:0;border-top:5px dashed rgba(255,255,255,.9);
   border-radius:3px;pointer-events:none}
 /* 조준선 */
 .guide{position:absolute;width:5px;border-radius:3px;pointer-events:none;opacity:0;
@@ -204,6 +219,15 @@ header.top{display:flex;align-items:center;gap:8px;flex:0 0 auto}
 .hint{font-size:11px;color:var(--ink-2);margin:2px 0 12px}
 .big{font-family:"Jua",sans-serif;font-size:38px;line-height:1;margin:6px 0 2px}
 .tut{display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;font-size:13px}
+/* 난이도 고르기 */
+.levels{display:flex;gap:7px;margin:14px 0 12px}
+.lv{flex:1;border:2px solid #e8d9c0;background:#fff;border-radius:14px;padding:9px 2px 8px;
+  cursor:pointer;font-family:inherit;color:var(--ink);transition:.15s;line-height:1.25}
+.lv b{display:block;font-family:"Jua",sans-serif;font-weight:400;font-size:16px}
+.lv i{font-style:normal;font-size:10px;color:var(--ink-2)}
+.lv.on{border-color:var(--gold);background:#fff5e0;box-shadow:0 3px 0 var(--gold-d)}
+.lv:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
+
 .tut .n{width:24px;height:24px;border-radius:50%;background:var(--gold);color:#5d3c11;display:grid;
   place-items:center;font-family:"Jua",sans-serif;flex:0 0 auto}
 .chain{position:absolute;left:50%;top:44%;translate:-50% -50%;font-family:"Jua",sans-serif;
@@ -227,7 +251,7 @@ header.top{display:flex;align-items:center;gap:8px;flex:0 0 auto}
     <img class="mascot" src="mascot.png" alt="다람쌤" onerror="this.style.display='none'" />
     <div class="brand">
       <h1>다람쌤 음료 카페</h1>
-      <p>같은 잔끼리 붙이면 합쳐져요</p>
+      <p id="lvTxt">같은 잔끼리 붙이면 합쳐져요</p>
     </div>
     <div class="spacer"></div>
     <div class="coin"><span class="c"></span><b class="num" id="coinTxt">0</b></div>
@@ -237,6 +261,59 @@ header.top{display:flex;align-items:center;gap:8px;flex:0 0 auto}
 
   <div class="board" id="board" tabindex="0" aria-label="음료 놀이판. 좌우 방향키로 겨냥하고 스페이스로 발사">
     <div class="garden"></div>
+    <svg class="flora" viewBox="0 0 400 150" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+      <defs>
+        <pattern id="balu" width="27" height="26" patternUnits="userSpaceOnUse">
+          <path d="M13.5 0 q4.5 4 4.5 13 q0 9 -4.5 13 q-4.5 -4 -4.5 -13 q0 -9 4.5 -13 Z" fill="#efe9e0"/>
+        </pattern>
+        <g id="dz">
+          <g fill="#ffffff">
+            <ellipse rx="2.8" ry="6.4" cy="-6"/><ellipse rx="2.8" ry="6.4" cy="-6" transform="rotate(45)"/>
+            <ellipse rx="2.8" ry="6.4" cy="-6" transform="rotate(90)"/><ellipse rx="2.8" ry="6.4" cy="-6" transform="rotate(135)"/>
+            <ellipse rx="2.8" ry="6.4" cy="-6" transform="rotate(180)"/><ellipse rx="2.8" ry="6.4" cy="-6" transform="rotate(225)"/>
+            <ellipse rx="2.8" ry="6.4" cy="-6" transform="rotate(270)"/><ellipse rx="2.8" ry="6.4" cy="-6" transform="rotate(315)"/>
+          </g>
+          <circle r="3.2" fill="#f7c948"/>
+        </g>
+        <g id="rs">
+          <circle r="8.6" fill="#f9b8cd"/><circle r="6.2" cx="1" cy="1" fill="#f18fb2"/>
+          <circle r="3.4" cx="-.5" cy="-.5" fill="#e5729b"/><circle r="1.5" cx="-1.5" cy="-1.5" fill="#fbd5e2"/>
+        </g>
+        <g id="tl">
+          <path d="M0 4 V20" stroke="#4e8b46" stroke-width="2.4" fill="none"/>
+          <path d="M0 19 q-10 -2 -12 -12 q10 1 12 9 Z" fill="#5aa04f"/>
+          <path d="M-7 2 q0 -12 7 -14 q7 2 7 14 q-7 6 -14 0 Z" fill="#f0709a"/>
+        </g>
+        <g id="lf">
+          <ellipse rx="15" ry="8.5" fill="#69a75d"/><ellipse rx="11" ry="6" cx="11" cy="-5" fill="#7cba6b"/>
+          <ellipse rx="10" ry="5.5" cx="-12" cy="-4" fill="#5c9852"/>
+        </g>
+      </defs>
+      <!-- 돌난간 -->
+      <rect x="0" y="2" width="400" height="7" rx="3" fill="#f4efe7"/>
+      <rect x="0" y="9" width="400" height="26" fill="url(#balu)"/>
+      <rect x="0" y="34" width="400" height="6" rx="3" fill="#e7dfd3"/>
+      <!-- 오른쪽 나무 아치 -->
+      <g fill="#e2a55f">
+        <rect x="360" y="0" width="13" height="150" rx="4"/><rect x="386" y="0" width="11" height="150" rx="4"/>
+        <rect x="352" y="30" width="48" height="8" rx="3" fill="#d1914c"/>
+        <rect x="352" y="72" width="48" height="8" rx="3" fill="#d1914c"/>
+        <rect x="352" y="114" width="48" height="8" rx="3" fill="#d1914c"/>
+      </g>
+      <g fill="#d1914c"><rect x="4" y="46" width="9" height="104" rx="4"/><rect x="0" y="70" width="34" height="7" rx="3"/></g>
+      <!-- 화단 -->
+      <g opacity=".95">
+        <use href="#lf" x="52" y="96"/><use href="#lf" x="168" y="88"/><use href="#lf" x="286" y="98"/>
+        <use href="#lf" x="112" y="118"/><use href="#lf" x="230" y="120"/><use href="#lf" x="336" y="126"/>
+        <use href="#lf" x="20" y="124"/>
+      </g>
+      <use href="#tl" x="36" y="82"/><use href="#tl" x="262" y="76"/><use href="#tl" x="150" y="112"/>
+      <use href="#rs" x="88" y="86"/><use href="#rs" x="196" y="104"/><use href="#rs" x="318" y="84"/>
+      <use href="#rs" x="248" y="132"/><use href="#rs" x="8" y="104"/>
+      <use href="#dz" x="66" y="110"/><use href="#dz" x="126" y="94"/><use href="#dz" x="182" y="128"/>
+      <use href="#dz" x="216" y="90"/><use href="#dz" x="296" y="120"/><use href="#dz" x="350" y="102"/>
+      <use href="#dz" x="102" y="134"/><use href="#dz" x="380" y="136"/><use href="#dz" x="44" y="140"/>
+    </svg>
     <div class="dangerbar" id="dangerBar"></div>
     <div class="wire">
       <svg viewBox="0 0 300 26" preserveAspectRatio="none" aria-hidden="true">
@@ -265,6 +342,7 @@ header.top{display:flex;align-items:center;gap:8px;flex:0 0 auto}
     <div class="tut"><span class="n">2</span><div>같은 음료가 <b>2잔 이상 나란히</b> 붙으면 한 단계 위 음료로 합쳐집니다. 연쇄로 이어지면 보너스!</div></div>
     <div class="tut"><span class="n">3</span><div>빨랫줄의 <b>주문서</b>와 같은 음료를 만들면 배달되고 코인을 받습니다.</div></div>
     <div class="tut"><span class="n">4</span><div>테이블이 가득 차면 끝. 코인은 <b>상점</b>에서 도우미 기능에 씁니다.</div></div>
+    <div class="levels" data-lv-pick></div>
     <button class="btn primary full" id="btnStart">가게 문 열기</button>
   </div>
 </div>
@@ -276,7 +354,8 @@ header.top{display:flex;align-items:center;gap:8px;flex:0 0 auto}
     <div class="big num" id="overCoin">0</div>
     <p class="lead">모은 코인</p>
     <p style="font-size:13px;margin:0 0 4px">가장 높이 만든 음료 <b id="overTop">-</b></p>
-    <p style="font-size:13px;margin:0 0 16px;color:var(--ink-2)">최고 기록 <b class="num" id="overBest">0</b> 코인</p>
+    <p style="font-size:13px;margin:0 0 4px;color:var(--ink-2)">최고 기록 <b class="num" id="overBest">0</b> 코인</p>
+    <div class="levels" data-lv-pick></div>
     <button class="btn primary full" id="btnAgain">다시 열기</button>
   </div>
 </div>
@@ -341,12 +420,50 @@ const DEFAULT_CFG = {
   priceSwap: 30, priceTrash: 60, priceBomb: 150, priceOrder: 90,
   sound: true
 };
+/* 난이도 프리셋 — 칸 수·등장 등급·손님 간격·보상만 바꿈 */
+const LV_KEY = 'drinkmerge.level.v1';
+const LEVELS = {
+  easy  :{label:'쉬움', tip:'여유롭게',      slots:10, spawnMax:3, pushEvery:9, reward:1.2},
+  normal:{label:'보통', tip:'기본',          slots:8,  spawnMax:3, pushEvery:6, reward:1.0},
+  hard  :{label:'도전', tip:'빨리 조여옴',   slots:8,  spawnMax:4, pushEvery:4, reward:0.9}
+};
+let level = 'normal';
+try{ const s=localStorage.getItem(LV_KEY); if(s && (LEVELS[s]||s==='custom')) level=s; }catch(e){}
+
 let cfg = loadCfg();
 function loadCfg(){
   try{ return Object.assign({}, DEFAULT_CFG, JSON.parse(localStorage.getItem(CFG_KEY)||'{}')); }
   catch(e){ return Object.assign({}, DEFAULT_CFG); }
 }
 function saveCfg(){ try{ localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); }catch(e){} }
+function saveLevel(){ try{ localStorage.setItem(LV_KEY, level); }catch(e){} }
+
+/* 난이도 적용 — 프리셋 값만 덮어쓰고 상점 가격·소리는 그대로 둠 */
+function applyLevel(k, restart){
+  level = k;
+  if(LEVELS[k]) Object.assign(cfg, {slots:LEVELS[k].slots, spawnMax:LEVELS[k].spawnMax,
+    pushEvery:LEVELS[k].pushEvery, reward:LEVELS[k].reward});
+  saveCfg(); saveLevel(); paintLevels(); showLevel(); updateBell();
+  if(restart) reset();
+}
+function levelName(){ return LEVELS[level] ? LEVELS[level].label : '직접 설정'; }
+function paintLevels(){
+  document.querySelectorAll('[data-lv-pick]').forEach(box=>{
+    box.innerHTML = Object.entries(LEVELS).map(([k,v])=>
+      `<button class="lv${k===level?' on':''}" data-lv="${k}" aria-pressed="${k===level}">
+         <b>${v.label}</b><i>${v.tip}</i></button>`).join('')
+      + (LEVELS[level] ? '' : `<button class="lv on" data-lv="custom" aria-pressed="true"><b>직접</b><i>선생님 설정</i></button>`);
+  });
+}
+document.addEventListener('click', e=>{
+  const b = e.target.closest('.lv'); if(!b) return;
+  if(b.dataset.lv==='custom') return;
+  applyLevel(b.dataset.lv, false);
+});
+function showLevel(){
+  const p = document.getElementById('lvTxt');
+  if(p) p.textContent = levelName()+' 난이도';
+}
 
 /* ═══════════════════════════════════════════
    2. 음료 도감 (10단계)
@@ -467,7 +584,7 @@ const clamp = (v,a,b)=> v<a?a : v>b?b : v;
 /* ── 크기 계산 ─────────────────────────────── */
 function measure(){
   const w = board.clientWidth, h = board.clientHeight;
-  SLOT = (w*0.94)/(cfg.slots+1);
+  SLOT = (w*0.84)/(cfg.slots+1);   // 테이블 상판 안쪽에 들어가도록
   GW = SLOT*1.36;                  // 잔 그림은 뷰박스 안쪽만 차지하므로 칸보다 크게 그림
   board.style.setProperty('--gw', GW+'px');
   board.style.setProperty('--slot', SLOT+'px');
@@ -477,7 +594,7 @@ function measure(){
   dashEl.style.top = (LAUNCH_Y + GW*0.42)+'px';
   guideEl.style.top = (ROW_Y + GW*0.4)+'px';
   guideEl.style.height = Math.max(10, LAUNCH_Y - ROW_Y - GW*0.5)+'px';
-  slotMark.style.top = (ROW_Y - GW*0.78)+'px';
+  slotMark.style.top = (ROW_Y + GW*0.66)+'px';   // 잔이 끼워질 자리를 상판 위에 표시
   layout(); placeCur(); updateGuide();
 }
 const glassH = ()=> GW*1.22;
@@ -510,6 +627,7 @@ function drawTickets(){
       <span class="peg"></span><span class="head">TO-GO ORDERS</span>
       <div class="art">${drinkSVG(o.tier)}</div>
       <div class="total"><span>TOTAL</span><b class="num">${o.reward}</b></div>
+      <div class="bars"></div>
     </div>`).join('');
 }
 function refillOrders(){
@@ -812,7 +930,8 @@ document.getElementById('cfgSave').onclick = ()=>{
   cfg.spawnMax = clamp(Math.round(cfg.spawnMax), 1, 6);
   cfg.pushEvery = clamp(Math.round(cfg.pushEvery), 2, 30);
   cfg.sound = document.getElementById('cSound').checked;
-  saveCfg();
+  level = 'custom';                      // 값을 직접 고치면 '직접 설정'이 됨
+  saveCfg(); saveLevel(); paintLevels(); showLevel();
   veil('veilCfg').classList.remove('on');
   veil('veilOver').classList.remove('on');
   reset();
@@ -822,10 +941,13 @@ document.getElementById('cfgSave').onclick = ()=>{
    11. 시작
    ═══════════════════════════════════════════ */
 buildRecipes(); markRecipes(); updateBell();
+applyLevel(level, false);   // 저장된 난이도(없으면 보통)를 설정에 반영
 nextArt.innerHTML = drinkSVG(2);
 orders = [{tier:5, reward:rewardOf(5)},{tier:6, reward:rewardOf(6)}]; drawTickets();
-new ResizeObserver(()=>{ if(playing||row.length) measure(); }).observe(board);
-window.addEventListener('resize', ()=>{ if(playing||row.length) measure(); });
+/* 글꼴 로딩·화면 회전으로 판 크기가 바뀌면 항상 다시 계산 (잔 위치 어긋남 방지) */
+new ResizeObserver(()=> measure()).observe(board);
+window.addEventListener('resize', measure);
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(measure);
 </script>
 </body>
 </html>
