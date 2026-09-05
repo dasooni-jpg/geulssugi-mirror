@@ -78,7 +78,7 @@
     <img class="mascot" src="mascot.png" alt="" />
     <div class="title">
       <h1>다람쌤 펫 서바이벌</h1>
-      <p>펫을 합쳐 키우고, 몰려오는 적을 막아라!</p>
+      <p>펫을 합쳐 키우고, 다람쌤을 지켜라!</p>
     </div>
     <div class="hud">
       <div class="stat g"><div class="v" id="uiGold">0</div><div class="k">코인</div></div>
@@ -91,12 +91,12 @@
     <canvas id="cv"></canvas>
     <div class="overlay" id="ov">
       <h2 id="ovTitle">다람쌤 펫 서바이벌</h2>
-      <p id="ovDesc">귀여운 펫을 소환해 격자에 놓고, 같은 펫끼리 합쳐 더 강하게 키우세요.</p>
+      <p id="ovDesc">귀여운 펫 6종을 소환해 격자에 놓고, 같은 펫끼리 합쳐 더 강하게 키우세요.</p>
       <div class="howto" id="ovHow">
         <div><b>1. 소환</b> — 아래 <b>소환</b> 버튼을 누르면 빈 칸에 펫이 나타납니다.</div>
         <div><b>2. 합체</b> — 같은 종류·같은 레벨 펫을 <b>끌어다 겹치면</b> 레벨이 1 오릅니다.</div>
         <div><b>3. 방어</b> — 펫은 길 위의 적을 자동으로 공격합니다. 길 가까운 칸이 유리합니다.</div>
-        <div><b>4. 목표</b> — 적이 오른쪽 아래 <b>기지</b>에 닿으면 체력이 깎입니다. 0이 되면 끝!</div>
+        <div><b>4. 목표</b> — 적이 오른쪽 아래 <b>다람쌤</b>에게 닿으면 체력이 깎입니다. 0이 되면 끝!</div>
       </div>
       <button class="btn primary" id="ovBtn" style="max-width:220px">게임 시작</button>
     </div>
@@ -145,12 +145,21 @@ const BALANCE = {
 
 /* ─── ② 펫 종류 ─── */
 const 펫종류 = {
-  풀:   {이름:'풀펫',   아이콘:'🌿', 색1:'#b6e86f', 색2:'#4e9a2f', 공격력:6,  공속:1.0,  사거리:235, 특징:'기본기가 좋음'},
-  불:   {이름:'불펫',   아이콘:'🔥', 색1:'#ffa77a', 색2:'#d8381f', 공격력:11, 공속:0.7,  사거리:215, 특징:'화상 피해'},
-  얼음: {이름:'얼음펫', 아이콘:'❄',  색1:'#a9e2ff', 색2:'#2f8fd6', 공격력:5,  공속:0.95, 사거리:255, 특징:'적을 느리게'},
-  어둠: {이름:'어둠펫', 아이콘:'🌙', 색1:'#8f90b8', 색2:'#33334d', 공격력:4,  공속:1.7,  사거리:205, 특징:'가끔 치명타'},
+  풀:   {이름:'풀펫',   아이콘:'🌿', 색1:'#b6e86f', 색2:'#4e9a2f', 공격력:6,  공속:1.0,  사거리:235, 가중치:3, 특징:'기본기가 좋음'},
+  불:   {이름:'불펫',   아이콘:'🔥', 색1:'#ffa77a', 색2:'#d8381f', 공격력:11, 공속:0.7,  사거리:215, 가중치:3, 특징:'화상 피해를 남김'},
+  얼음: {이름:'얼음펫', 아이콘:'❄',  색1:'#a9e2ff', 색2:'#2f8fd6', 공격력:5,  공속:0.95, 사거리:255, 가중치:3, 특징:'적을 느리게 만듦'},
+  어둠: {이름:'어둠펫', 아이콘:'🌙', 색1:'#8f90b8', 색2:'#33334d', 공격력:4,  공속:1.7,  사거리:205, 가중치:3, 특징:'가끔 치명타'},
+  전기: {이름:'전기펫', 아이콘:'⚡', 색1:'#ffe680', 색2:'#e0a900', 공격력:7,  공속:1.15, 사거리:230, 가중치:2, 특징:'번개가 옆 적에게 튐'},
+  바람: {이름:'바람펫', 아이콘:'💨', 색1:'#d3f0e4', 색2:'#3fa88a', 공격력:6,  공속:1.05, 사거리:305, 가중치:2, 특징:'멀리 쏘고 적을 밀어냄'},
 };
 const 펫키 = Object.keys(펫종류);
+/* 가중치가 낮은 전기·바람은 조금 드물게 나옵니다 */
+function 랜덤펫종류(){
+  const 총합 = 펫키.reduce((a,k)=> a + 펫종류[k].가중치, 0);
+  let r = Math.random() * 총합;
+  for(const k of 펫키){ r -= 펫종류[k].가중치; if(r <= 0) return k; }
+  return 펫키[0];
+}
 
 /* ─── ③ 적 종류 ─── */
 const 적종류 = {
@@ -199,7 +208,7 @@ const S = {
   소환횟수:0, 강화횟수:0,
   배속:1,
   칸:[],              // 격자 25칸 (펫 또는 null)
-  적:[], 총알:[], 글자:[], 조각:[],
+  적:[], 총알:[], 글자:[], 조각:[], 번개:[],
   대기줄:[],          // 다음 소환 미리보기
   남은소환:0, 소환간격:0, 준비타이머:0,
   시간:0, 흔들림:0, 피격:0,
@@ -210,6 +219,12 @@ const S = {
 function 저장읽기(){ try{ return Number(localStorage.getItem('petsurvival.best')||0)||0; }catch(e){ return 0; } }
 function 저장쓰기(v){ try{ localStorage.setItem('petsurvival.best', String(v)); }catch(e){} }
 S.최고기록 = 저장읽기();
+
+/* 다람쌤 마스코트 — 기지를 지키는 캐릭터로 사용합니다 */
+const 마스코트 = new Image();
+let 마스코트준비 = false;
+마스코트.onload = ()=>{ 마스코트준비 = true; };
+마스코트.src = 'mascot.png';
 
 const cv = document.getElementById('cv');
 const ctx = cv.getContext('2d');
@@ -256,9 +271,9 @@ function 새게임(){
   S.기지체력 = BALANCE.기지체력;
   S.소환횟수 = 0; S.강화횟수 = 0;
   S.칸 = new Array(격자.열*격자.행).fill(null);
-  S.적 = []; S.총알 = []; S.글자 = []; S.조각 = [];
+  S.적 = []; S.총알 = []; S.글자 = []; S.조각 = []; S.번개 = [];
   S.대기줄 = [];
-  for(let i=0;i<5;i++) S.대기줄.push(펫키[정수랜덤(0,펫키.length-1)]);
+  for(let i=0;i<5;i++) S.대기줄.push(랜덤펫종류());
   S.남은소환 = 0; S.소환간격 = 0;
   S.준비타이머 = BALANCE.준비시간;
   S.피격 = 0; S.흔들림 = 0;
@@ -291,7 +306,7 @@ function 소환(){
   if(!빈칸찾기().length){ 알림('빈 칸이 없어요! 펫을 합쳐 보세요'); return; }
   S.코인 -= 비용; S.소환횟수++;
   const 종류 = S.대기줄.shift();
-  S.대기줄.push(펫키[정수랜덤(0,펫키.length-1)]);
+  S.대기줄.push(랜덤펫종류());
   펫놓기(종류);
   삑(660, 0.08, 'triangle', 0.05);
   화면갱신();
@@ -450,12 +465,14 @@ function 갱신(dt){
   // 떠오르는 글자 / 조각
   for(const f of S.글자){ f.수명 -= dt; f.y -= 42*dt; }
   for(const p of S.조각){ p.수명 -= dt; p.x += p.vx*dt; p.y += p.vy*dt; p.vy += 420*dt; }
+  for(const z of S.번개) z.수명 -= dt;
 
   // 정리
   S.적 = S.적.filter(e=>!e.죽음);
   S.총알 = S.총알.filter(b=>!b.죽음);
   S.글자 = S.글자.filter(f=>f.수명>0);
   S.조각 = S.조각.filter(p=>p.수명>0);
+  S.번개 = S.번개.filter(z=>z.수명>0);
 
   // 웨이브 종료 판정
   if(S.진행==='전투' && !S.남은소환.length && !S.적.length) 웨이브클리어();
@@ -466,6 +483,22 @@ function 명중(b, e){
   if(b.종류==='어둠' && Math.random() < 0.22){ 피해 *= 2; 치명 = true; }
   if(b.종류==='얼음') e.둔화 = 1.6;
   if(b.종류==='불'){ e.화상 = 2.0; e.화상피해 = b.피해*0.25; }
+  if(b.종류==='바람'){                       // 적을 길 뒤쪽으로 밀어냅니다
+    e.이동 = Math.max(0, e.이동 - (e.종==='보스' ? 10 : 30));
+    const p = 길좌표(e.이동); e.x = p.x; e.y = p.y;
+  }
+  if(b.종류==='전기'){                        // 번개가 가까운 적에게 최대 2번 튑니다
+    let 남은 = 2, 앞 = e;
+    for(const 옆 of S.적){
+      if(남은 <= 0) break;
+      if(옆 === e || 옆.죽음) continue;
+      if(Math.hypot(옆.x-앞.x, 옆.y-앞.y) < 135){
+        S.번개.push({x1:앞.x, y1:앞.y, x2:옆.x, y2:옆.y, 수명:0.18});
+        피해주기(옆, b.피해*0.55, false, false);
+        앞 = 옆; 남은--;
+      }
+    }
+  }
   피해주기(e, 피해, 치명, false);
   for(let i=0;i<4;i++){
     S.조각.push({x:e.x, y:e.y, vx:랜덤(-80,80), vy:랜덤(-140,-30), 색:펫종류[b.종류].색1, 수명:0.4, 크기:랜덤(2,4)});
@@ -560,28 +593,34 @@ function 배경그리기(){
 
 function 기지그리기(){
   const x=기지.x, y=기지.y;
-  ctx.save(); ctx.translate(x,y);
+  const 흔 = S.피격>0 ? 랜덤(-3,3)*S.피격 : 0;      // 맞으면 살짝 떨림
+  const 둥실 = Math.sin(S.시간*2)*2;                 // 숨 쉬듯 위아래로
+  ctx.save(); ctx.translate(x+흔, y);
   // 발밑 빛
-  ctx.fillStyle='rgba(255,240,140,.55)'; ctx.beginPath(); ctx.ellipse(0,26,34,11,0,0,7); ctx.fill();
-  // 몸
-  ctx.fillStyle='#4a7fd6'; 둥근사각(-20,-14,40,40,12); ctx.fill();
-  // 얼굴
-  ctx.fillStyle='#ffe0bd'; ctx.beginPath(); ctx.arc(0,-30,21,0,7); ctx.fill();
-  // 모자
-  ctx.fillStyle='#f2f4f8'; ctx.beginPath(); ctx.arc(0,-36,21,Math.PI,0); ctx.fill();
-  ctx.fillRect(-21,-38,42,7);
-  ctx.fillStyle='#dfe3ea'; 둥근사각(-4,-40,26,8,4); ctx.fill();
-  // 눈
-  ctx.fillStyle='#2b2b3a';
-  ctx.beginPath(); ctx.arc(-7,-29,3.2,0,7); ctx.arc(7,-29,3.2,0,7); ctx.fill();
+  ctx.fillStyle='rgba(255,240,140,.55)'; ctx.beginPath(); ctx.ellipse(0,26,36,11,0,0,7); ctx.fill();
+
+  if(마스코트준비){
+    // 다람쌤 마스코트가 기지를 지킵니다
+    const 높이 = 122, 폭 = 높이 * (마스코트.width/마스코트.height);
+    ctx.drawImage(마스코트, -폭/2, -98+둥실, 폭, 높이);
+  }else{
+    // 그림 파일을 못 읽어도 게임은 그대로 돌아갑니다(대체 캐릭터)
+    ctx.fillStyle='#4a7fd6'; 둥근사각(-20,-14+둥실,40,40,12); ctx.fill();
+    ctx.fillStyle='#ffe0bd'; ctx.beginPath(); ctx.arc(0,-30+둥실,21,0,7); ctx.fill();
+    ctx.fillStyle='#f2f4f8'; ctx.beginPath(); ctx.arc(0,-36+둥실,21,Math.PI,0); ctx.fill();
+    ctx.fillRect(-21,-38+둥실,42,7);
+    ctx.fillStyle='#2b2b3a';
+    ctx.beginPath(); ctx.arc(-7,-29+둥실,3.2,0,7); ctx.arc(7,-29+둥실,3.2,0,7); ctx.fill();
+  }
+
   // 체력바
-  const bw=88, bh=15;
-  둥근사각(-bw/2, -76, bw, bh, 7); ctx.fillStyle='rgba(0,0,0,.32)'; ctx.fill();
+  const bw=92, bh=16, by = 마스코트준비 ? -118 : -76;
+  둥근사각(-bw/2, by, bw, bh, 8); ctx.fillStyle='rgba(0,0,0,.38)'; ctx.fill();
   const 비율 = Math.max(0, S.기지체력/BALANCE.기지체력);
-  둥근사각(-bw/2+2, -74, (bw-4)*비율, bh-4, 5);
+  둥근사각(-bw/2+2, by+2, (bw-4)*비율, bh-4, 6);
   ctx.fillStyle = 비율>0.5 ? '#6ddc7a' : (비율>0.25 ? '#f5c33b' : '#e05a5a'); ctx.fill();
   ctx.font='bold 12px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillStyle='#fff'; ctx.fillText(Math.ceil(S.기지체력)+' / '+BALANCE.기지체력, 0, -68);
+  ctx.fillStyle='#fff'; ctx.fillText(Math.ceil(S.기지체력)+' / '+BALANCE.기지체력, 0, by+bh/2);
   ctx.restore();
 }
 
@@ -674,6 +713,17 @@ function 총알그리기(b){
   ctx.restore();
 }
 
+/* 지그재그 번개 모양 */
+function 번개선(z){
+  ctx.beginPath(); ctx.moveTo(z.x1, z.y1);
+  const 마디 = 4;
+  for(let i=1;i<마디;i++){
+    const k = i/마디;
+    ctx.lineTo(z.x1 + (z.x2-z.x1)*k + 랜덤(-9,9), z.y1 + (z.y2-z.y1)*k + 랜덤(-9,9));
+  }
+  ctx.lineTo(z.x2, z.y2);
+}
+
 function 그리기(){
   ctx.save();
   if(S.흔들림>0) ctx.translate(랜덤(-6,6)*S.흔들림, 랜덤(-6,6)*S.흔들림);
@@ -708,6 +758,17 @@ function 그리기(){
   }
   for(const e of S.적) 적그리기(e);
   for(const b of S.총알) 총알그리기(b);
+
+  // 번개 (전기펫의 연쇄 공격)
+  ctx.lineCap='round';
+  for(const z of S.번개){
+    ctx.globalAlpha = Math.max(0, z.수명/0.18);
+    ctx.strokeStyle='#fff2a8'; ctx.lineWidth=6;
+    번개선(z); ctx.stroke();
+    ctx.strokeStyle='#ffd12e'; ctx.lineWidth=2.5;
+    번개선(z); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
 
   // 조각
   for(const p of S.조각){
@@ -881,11 +942,11 @@ function 루프(now){
 S.진행 = '대기';
 오버레이({
   제목:'다람쌤 펫 서바이벌',
-  설명:'귀여운 펫을 소환해 격자에 놓고, 같은 펫끼리 합쳐 더 강하게 키우세요.',
+  설명:'귀여운 펫 6종을 소환해 격자에 놓고, 같은 펫끼리 합쳐 더 강하게 키우세요.',
   안내:'<div><b>1. 소환</b> — 아래 <b>소환</b> 버튼을 누르면 빈 칸에 펫이 나타납니다.</div>'+
        '<div><b>2. 합체</b> — 같은 종류·같은 레벨 펫을 <b>끌어다 겹치면</b> 레벨이 1 오릅니다.</div>'+
        '<div><b>3. 방어</b> — 펫은 길 위의 적을 자동으로 공격합니다. 길에 가까운 바깥쪽 칸이 유리합니다.</div>'+
-       '<div><b>4. 목표</b> — 적이 오른쪽 아래 <b>기지</b>에 닿으면 체력이 깎입니다. 0이 되면 끝!</div>'+
+       '<div><b>4. 목표</b> — 적이 오른쪽 아래 <b>다람쌤</b>에게 닿으면 체력이 깎입니다. 0이 되면 끝!</div>'+
        (S.최고기록 ? '<div style="margin-top:6px"><b>최고 기록</b> — 웨이브 '+S.최고기록+' 클리어</div>' : ''),
   버튼:'게임 시작',
   실행: ()=>{ 오버레이숨김(); 새게임(); },
