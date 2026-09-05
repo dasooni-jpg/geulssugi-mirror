@@ -30,6 +30,8 @@
   .btn.ghost{background:linear-gradient(180deg,#7e86ad,#626a90);color:#fff;box-shadow:0 4px 0 #474e6d}
   .btn.ghost:active{box-shadow:0 1px 0 #474e6d}
   .btn.sm{padding:7px 12px;font-size:13px;border-radius:12px}
+  .btn.ico{padding:7px 10px;font-size:16px;border-radius:12px;line-height:1.1}
+  .btn.off{opacity:.55;text-decoration:line-through}
 
   /* ── 시작 화면 ── */
   #home{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center}
@@ -139,10 +141,12 @@
       <b>②</b> 손칸의 가방을 누르면 그림판 아래 트랙으로 나가, <b>같은 색 픽셀</b>을 숫자만큼 빨아들입니다.<br/>
       <b>③</b> 그 색이 다 떨어지면 남은 숫자는 그냥 버려집니다. <b>정해진 가방 개수 안에</b> 그림을 다 비워야 성공!<br/>
       <b>④</b> 요령 — <b>숫자가 큰 가방</b>을, 그 색이 <b>많이 남았을 때</b> 쓰면 한 번에 많이 지워집니다.<br/>
-      <b>⑤</b> 당장 쓸모없는 가방은 손칸에 <b>세워 두면</b> 안 써도 됩니다. 적은 개수로 끝낼수록 ★이 늘어납니다.
+      <b>⑤</b> 당장 쓸모없는 가방은 손칸에 <b>세워 두면</b> 안 써도 됩니다. 적은 개수로 끝낼수록 ★이 늘어납니다.<br/>
+      <b>⑥</b> 앞 단계는 순서대로만 해도 넘어가지만, <b>뒤로 갈수록</b> 가방 제한이 빡빡해져 골라 쓰는 요령이 필요합니다.
     </div>
     <div class="mrow">
       <button class="btn" id="btnStart">시작하기</button>
+      <button class="btn ghost" id="btnSound2" title="효과음 켜기/끄기">♪ 효과음</button>
       <button class="btn ghost" id="btnReset">기록 지우기</button>
     </div>
   </section>
@@ -164,6 +168,7 @@
       <button class="btn ghost sm" id="btnBack">←</button>
       <div class="lvname" id="lvName">1단계<small>하트</small></div>
       <div class="gauge" id="gauge"><i></i><span></span></div>
+      <button class="btn ghost ico" id="btnSound" title="효과음">♪</button>
       <button class="btn ghost sm" id="btnRetry">↺</button>
     </div>
     <canvas id="stage"></canvas>
@@ -306,7 +311,7 @@ function buildLevel(n){
   }
 
   /* 3-1) 미끼 가방을 섞어 넣는다 — 골라 쓰는 재미와 '안 쓰고 세워 두기'를 만든다 */
-  const decoys = Math.max(3, Math.round(seq.length * 0.45));
+  const decoys = Math.max(3, Math.round(seq.length * (0.35 + 0.55 * t)));
   for (let k = 0; k < decoys; k++){
     const c = colors[ri(rnd, 0, colors.length - 1)];
     const bag = { c, n: ri(rnd, Math.round(chunkMin * 0.5), chunkMax) };
@@ -316,10 +321,20 @@ function buildLevel(n){
 
   /* 4) 최소 몇 개의 가방으로 비울 수 있는지 탐색 → 가방 제한을 정한다 */
   const L0 = { colors, remain, stacks };
-  const par = minBags(L0, (n * 77771) >>> 0, 600);
-  const plain = greedyBags(L0, 0);                 // "가장 많이 지우는 가방" — 가장 자연스러운 전략
-  const margin = Math.max(2, Math.round(4 - 2 * t));
-  const limit = Math.max(par + margin, plain + 1); // 상식적인 플레이는 반드시 통과하도록
+  const par   = minBags(L0, (n * 77771) >>> 0, 600);   // 여러 번 시도하면 도달 가능한 최소 개수
+  const plain = greedyBags(L0, 0);                     // 그냥 많이 지우는 가방부터 (가장 단순한 전략)
+  const margin = Math.max(2, Math.round(4 - 2 * t));   // 4 → 2
+  const ease   = Math.max(0, 1 - t * 1.15);            // 후반부는 단순 전략을 봐주지 않는다
+  let limit = par + margin + Math.round(Math.max(0, plain - par) * ease);
+
+  /* 5) 너무 가혹하지 않도록 — 여덟 번 안에 성공하는 판이 나올 때까지만 아주 조금 완화 */
+  const rnd2 = mulberry32((n * 1103515245 + 12345) >>> 0);
+  for (let bump = 0; bump < 4; bump++){
+    let ok = false;
+    for (let k = 0; k < 8; k++) if (rollBags(L0, rnd2) <= limit){ ok = true; break; }
+    if (ok) break;
+    limit++;
+  }
 
   return { n, sprite: sp, pal, board, remain, colors, total, stacks, par, limit };
 }
@@ -389,6 +404,54 @@ function loadProg(){ try{ return JSON.parse(localStorage.getItem(SAVE_KEY)) || {
 function saveProg(p){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(p)); }catch(e){} }
 let PROG = loadProg();
 
+/* ── 효과음 (파일 없이 즉석 합성) ── */
+const SFX = {
+  on: (function(){ try{ return localStorage.getItem('pixelflow.sound') !== '0'; }catch(e){ return true; } })(),
+  ctx: null, lastSuck: 0,
+  ac(){
+    if (!this.ctx){
+      try{ this.ctx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){ this.ctx = null; }
+    }
+    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+    return this.ctx;
+  },
+  tone(o){
+    if (!this.on) return;
+    const a = this.ac(); if (!a) return;
+    const t0 = a.currentTime + (o.when || 0);
+    const osc = a.createOscillator(), g = a.createGain();
+    osc.type = o.type || 'triangle';
+    osc.frequency.setValueAtTime(o.f, t0);
+    if (o.f2) osc.frequency.exponentialRampToValueAtTime(Math.max(30, o.f2), t0 + (o.dur || 0.1));
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(o.vol || 0.05, t0 + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + (o.dur || 0.1));
+    osc.connect(g); g.connect(a.destination);
+    osc.start(t0); osc.stop(t0 + (o.dur || 0.1) + 0.03);
+  },
+  suck(i){
+    const now = performance.now();
+    if (now - this.lastSuck < 55) return;
+    this.lastSuck = now;
+    this.tone({ f: 480 + (i % 7) * 55, f2: 980, type: 'triangle', dur: 0.055, vol: 0.03 });
+  },
+  tap(){ this.tone({ f: 720, f2: 920, type: 'triangle', dur: 0.04, vol: 0.04 }); },
+  launch(){ this.tone({ f: 200, f2: 640, type: 'sawtooth', dur: 0.17, vol: 0.045 }); },
+  waste(){ this.tone({ f: 210, f2: 110, type: 'square', dur: 0.22, vol: 0.05 }); },
+  bye(){ this.tone({ f: 620, f2: 300, type: 'sine', dur: 0.16, vol: 0.035 }); },
+  sparkle(k){ this.tone({ f: 620 + (k % 8) * 95, type: 'sine', dur: 0.13, vol: 0.028 }); },
+  clear(){ [523, 659, 784, 1047, 1319].forEach((f, k) =>
+    this.tone({ f, type: 'triangle', dur: 0.3, vol: 0.055, when: k * 0.1 })); },
+  fail(){ [440, 349, 262].forEach((f, k) =>
+    this.tone({ f, type: 'square', dur: 0.22, vol: 0.05, when: k * 0.13 })); },
+  toggle(){
+    this.on = !this.on;
+    try{ localStorage.setItem('pixelflow.sound', this.on ? '1' : '0'); }catch(e){}
+    if (this.on) this.tap();
+    return this.on;
+  }
+};
+
 /* ── DOM ── */
 const $ = id => document.getElementById(id);
 const homeEl = $('home'), selEl = $('select'), gameEl = $('game');
@@ -409,48 +472,91 @@ function show(which){
 /* ── 게임 상태 ── */
 let G = null;
 let COMPACT = false;
-let LAY = { cell: 12, bx: 0, by: 0, laneY: 0, laneH: 42 };
+let LAY = { cell: 10, bx: 0, by: 0, w: 360, h: 400 };
+let PATH = { pts: [], cum: [], len: 1 };
 
 function startLevel(n){
   const L = buildLevel(n);
   G = {
     lv: n, sprite: L.sprite, pal: L.pal,
-    board: L.board, remain: Object.assign({}, L.remain), colors: L.colors,
+    board: L.board, art: Int8Array.from(L.board),
+    remain: Object.assign({}, L.remain), colors: L.colors,
     total: L.total, par: L.par, limit: L.limit, used: 0,
     stacks: L.stacks.map(a => a.map(b => ({ c: b.c, n: b.n }))),
     hand: new Array(HAND).fill(null),
-    lane: [], over: false
+    lane: [], exit: [], reveal: null, over: false
   };
+  particles = [];
   $('lvName').innerHTML = n + '단계<small>' + L.sprite.ko + ' · ' + L.total + '칸</small>';
   maskEl.classList.add('hide');
   show('game'); layout(); renderUI();
 }
 
-/* ── 캔버스 크기 ── */
+/* ── 캔버스 크기와 트랙 경로 ── */
+const SIDE = 22, TOPM = 26, BOTM = 48;
 function layout(){
   const wrapW = gameEl.clientWidth || 360;
   COMPACT = window.innerHeight < 700;
   document.body.classList.toggle('compact', COMPACT);
   const otherUI = COMPACT ? (44 + 22 + 56 + 16 + 64 + 16)
-                          : (44 + 28 + 6 + 74 + 18 + 80 + 16);   // 헤더+범례+손칸+더미
-  const availH = Math.max(240, window.innerHeight - otherUI);
+                          : (44 + 28 + 6 + 74 + 18 + 80 + 16);
+  const availH = Math.max(230, window.innerHeight - otherUI);
   const cell = Math.max(8, Math.min(
-    Math.floor((wrapW - 22) / COLS),
-    Math.floor((availH - LAY.laneH - 14) / ROWS), 17));
+    Math.floor((wrapW - SIDE * 2 - 4) / COLS),
+    Math.floor((availH - TOPM - BOTM) / ROWS), 17));
   LAY.cell = cell;
-  const w = wrapW;
   const bw = cell * COLS, bh = cell * ROWS;
-  LAY.bx = Math.round((w - bw) / 2);
-  LAY.by = 12;
-  LAY.laneY = LAY.by + bh + 12;
-  const h = LAY.laneY + LAY.laneH + 6;
+  LAY.bx = Math.round((wrapW - bw) / 2);
+  LAY.by = TOPM;
+  LAY.w = wrapW;
+  LAY.h = TOPM + bh + BOTM;
   const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
-  cv.style.height = h + 'px';
-  cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+  cv.style.height = LAY.h + 'px';
+  cv.width = Math.round(LAY.w * dpr); cv.height = Math.round(LAY.h * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  LAY.w = w; LAY.h = h;
+  buildPath();
 }
 window.addEventListener('resize', () => { if (G){ layout(); renderUI(); } });
+
+/* 트랙: 왼쪽 아래로 들어와 → 아래를 지나 → 오른쪽을 타고 올라가 → 위로 빠져나간다 */
+function rail(){
+  const r = 17;
+  return { L: 14, R: LAY.w - 14, T: 13, B: LAY.h - 20, r };
+}
+function buildPath(){
+  const { L, R, T, B, r } = rail();
+  const pts = [];
+  const arc = (cx, cy, a0, a1) => {
+    for (let i = 0; i <= 8; i++){
+      const a = a0 + (a1 - a0) * (i / 8);
+      pts.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]);
+    }
+  };
+  pts.push([-34, B]);
+  pts.push([R - r, B]);
+  arc(R - r, B - r, Math.PI / 2, 0);
+  pts.push([R, T + r]);
+  arc(R - r, T + r, 0, -Math.PI / 2);
+  pts.push([L + r, T]);
+  pts.push([-34, T]);
+  const cum = [0];
+  for (let i = 1; i < pts.length; i++){
+    cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  }
+  PATH = { pts, cum, len: cum[cum.length - 1] };
+}
+function pointAt(d){
+  const { pts, cum, len } = PATH;
+  if (d <= 0) return { x: pts[0][0], y: pts[0][1] };
+  if (d >= len) return { x: pts[pts.length - 1][0], y: pts[pts.length - 1][1] };
+  let lo = 0, hi = cum.length - 1;
+  while (lo + 1 < hi){ const m = (lo + hi) >> 1; if (cum[m] <= d) lo = m; else hi = m; }
+  const k = (d - cum[lo]) / Math.max(0.001, cum[lo + 1] - cum[lo]);
+  return { x: pts[lo][0] + (pts[lo + 1][0] - pts[lo][0]) * k,
+           y: pts[lo][1] + (pts[lo + 1][1] - pts[lo][1]) * k };
+}
+const dForX = x => x + 34;              // 아래쪽 직선 구간의 거리
+const WORK_END = () => PATH.cum[1];     // 아래 직선이 끝나는 거리
 
 /* ── 그리기 헬퍼 ── */
 function rr(g, x, y, w, h, r){
@@ -462,7 +568,7 @@ function rr(g, x, y, w, h, r){
 }
 function block(g, x, y, s, fill, empty){
   const p = Math.max(0.6, s * 0.07);
-  if (empty){                                   // 빈 칸: 움푹 팬 구멍처럼
+  if (empty){
     g.fillStyle = '#2a2b33';
     rr(g, x + p, y + p, s - p * 2, s - p * 2, s * 0.24); g.fill();
     g.fillStyle = '#383a44';
@@ -480,72 +586,118 @@ function block(g, x, y, s, fill, empty){
 }
 function bagShape(g, cx, cy, w, h, fill, txt){
   g.fillStyle = fill;
-  rr(g, cx - w * 0.20, cy - h * 0.62, w * 0.16, h * 0.22, 3); g.fill();
-  rr(g, cx + w * 0.04, cy - h * 0.62, w * 0.16, h * 0.22, 3); g.fill();
-  rr(g, cx - w / 2, cy - h / 2, w, h, w * 0.22); g.fill();
+  rr(g, cx - w * 0.21, cy - h * 0.63, w * 0.17, h * 0.24, 3); g.fill();
+  rr(g, cx + w * 0.04, cy - h * 0.63, w * 0.17, h * 0.24, 3); g.fill();
+  rr(g, cx - w / 2, cy - h / 2, w, h, w * 0.24); g.fill();
   g.fillStyle = 'rgba(0,0,0,.22)';
-  rr(g, cx - w / 2, cy + h * 0.18, w, h * 0.32, w * 0.20); g.fill();
+  rr(g, cx - w / 2, cy + h * 0.16, w, h * 0.34, w * 0.22); g.fill();
   g.fillStyle = 'rgba(255,255,255,.28)';
   rr(g, cx - w * 0.34, cy - h * 0.40, w * 0.68, h * 0.20, 4); g.fill();
   if (txt != null){
-    g.font = '900 ' + Math.round(h * 0.44) + 'px system-ui, sans-serif';
+    g.font = '900 ' + Math.round(h * 0.46) + 'px system-ui, sans-serif';
     g.textAlign = 'center'; g.textBaseline = 'middle';
     g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.55)';
     g.strokeText(txt, cx, cy + h * 0.02);
     g.fillStyle = '#fff'; g.fillText(txt, cx, cy + h * 0.02);
   }
 }
+function drawRail(g){
+  const { L, R, T, B, r } = rail();
+  g.lineJoin = 'round'; g.lineCap = 'round';
+  rr(g, L, T, R - L, B - T, r);
+  g.strokeStyle = 'rgba(178,187,220,.42)'; g.lineWidth = 26; g.stroke();
+  g.strokeStyle = 'rgba(58,62,88,.55)';    g.lineWidth = 19; g.stroke();
+  g.strokeStyle = 'rgba(198,206,236,.30)'; g.lineWidth = 2;  g.stroke();
+  // 진행 방향 화살표
+  g.strokeStyle = 'rgba(210,218,245,.30)'; g.lineWidth = 2.5;
+  const chev = (x, y, dx, dy) => {
+    g.beginPath();
+    g.moveTo(x - dy * 4 - dx * 4, y + dx * 4 - dy * 4);
+    g.lineTo(x + dx * 4, y + dy * 4);
+    g.lineTo(x + dy * 4 - dx * 4, y - dx * 4 - dy * 4);
+    g.stroke();
+  };
+  for (let x = L + 34; x < R - 24; x += 52) chev(x, B, 1, 0);
+  for (let y = B - 40; y > T + 26; y -= 52) chev(R, y, 0, -1);
+  for (let x = R - 34; x > L + 24; x -= 52) chev(x, T, -1, 0);
+  // 가방이 들어오는 출입구
+  g.save();
+  rr(g, L - 12, B - 14, 26, 28, 7); g.clip();
+  g.fillStyle = 'rgba(226,232,252,.55)';
+  g.fillRect(L - 12, B - 14, 26, 28);
+  g.fillStyle = 'rgba(96,104,140,.55)';
+  for (let i = 0; i < 7; i++) g.fillRect(L - 12 + i * 4, B - 14, 2, 28);
+  g.restore();
+  g.strokeStyle = 'rgba(210,218,245,.55)'; g.lineWidth = 2;
+  rr(g, L - 12, B - 14, 26, 28, 7); g.stroke();
+}
 
 /* ── 화면 그리기 ── */
 let particles = [];
+const easeOutBack = k => 1 + 2.2 * Math.pow(k - 1, 3) + 1.6 * Math.pow(k - 1, 2);
+
 function draw(){
   if (!G) return;
-  const g = ctx, { cell, bx, by, w, h, laneY, laneH } = LAY;
+  const g = ctx, { cell, bx, by, w, h } = LAY;
   g.clearRect(0, 0, w, h);
+  drawRail(g);
 
-  // 레일(장식)
-  g.strokeStyle = 'rgba(174,182,214,.55)'; g.lineWidth = 5;
-  rr(g, 3, 4, w - 6, h - 8, 20); g.stroke();
-  g.strokeStyle = 'rgba(124,133,173,.5)'; g.lineWidth = 2;
-  rr(g, 8, 9, w - 16, h - 18, 16); g.stroke();
-
-  // 보드 바탕
   g.fillStyle = '#2f313a';
   rr(g, bx - 4, by - 4, cell * COLS + 8, cell * ROWS + 8, 8); g.fill();
 
-  // 픽셀
-  for (let r = 0; r < ROWS; r++){
-    for (let c = 0; c < COLS; c++){
-      const v = G.board[r * COLS + c];
-      block(g, bx + c * cell, by + r * cell, cell, v ? G.pal[v - 1] : null, !v);
+  if (G.reveal){
+    // 완성 애니메이션 — 그림이 가운데부터 퍼지며 되살아난다
+    const rt = G.reveal.t / G.reveal.dur;
+    const ccx = (COLS - 1) / 2, ccy = (ROWS - 1) / 2;
+    const maxD = Math.hypot(ccx, ccy);
+    for (let r = 0; r < ROWS; r++){
+      for (let c = 0; c < COLS; c++){
+        const v = G.art[r * COLS + c];
+        const x = bx + c * cell, y = by + r * cell;
+        if (!v){ block(g, x, y, cell, null, true); continue; }
+        const dd = Math.hypot(c - ccx, r - ccy) / maxD;
+        const k = Math.max(0, Math.min(1, (rt - dd * 0.62) / 0.30));
+        if (k <= 0){ block(g, x, y, cell, null, true); continue; }
+        const s = cell * Math.max(0.05, easeOutBack(k));
+        block(g, x + (cell - s) / 2, y + (cell - s) / 2, s, G.pal[v - 1], false);
+      }
+    }
+    const flash = Math.max(0, 1 - Math.abs(rt - 0.62) * 4);
+    if (flash > 0){
+      g.fillStyle = 'rgba(255,255,255,' + (flash * 0.22) + ')';
+      rr(g, bx - 4, by - 4, cell * COLS + 8, cell * ROWS + 8, 8); g.fill();
+    }
+  } else {
+    for (let r = 0; r < ROWS; r++){
+      for (let c = 0; c < COLS; c++){
+        const v = G.board[r * COLS + c];
+        block(g, bx + c * cell, by + r * cell, cell, v ? G.pal[v - 1] : null, !v);
+      }
     }
   }
 
-  // 트랙
-  g.fillStyle = 'rgba(0,0,0,.20)';
-  rr(g, 14, laneY, w - 28, laneH, 14); g.fill();
-  g.strokeStyle = 'rgba(174,182,214,.35)'; g.lineWidth = 2;
-  rr(g, 14, laneY, w - 28, laneH, 14); g.stroke();
-
-  // 트랙 위 가방들
-  const bw = Math.min(40, laneH * 0.86), bh = bw * 1.05;
+  // 트랙 위 가방
+  const bw = 30, bh = 32;
+  for (const a of G.exit){
+    const p = pointAt(a.d);
+    bagShape(g, p.x, p.y, bw * 0.9, bh * 0.9, G.pal[a.bag.c - 1], a.left);
+  }
   for (let i = G.lane.length - 1; i >= 0; i--){
-    const a = G.lane[i];
-    const cy = laneY + laneH / 2;
-    bagShape(g, a.x, cy, bw, bh, G.pal[a.bag.c - 1], a.left);
+    const a = G.lane[i], p = pointAt(a.d);
+    bagShape(g, p.x, p.y, i === 0 ? bw : bw * 0.86, i === 0 ? bh : bh * 0.86,
+             G.pal[a.bag.c - 1], a.left);
   }
 
-  // 날아가는 픽셀
   for (const p of particles){
     const k = Math.min(1, p.t / p.dur), e = k * k * (3 - 2 * k);
     const x = p.x + (p.tx - p.x) * e;
-    const y = p.y + (p.ty - p.y) * e - Math.sin(Math.PI * k) * 26;
+    const y = p.y + (p.ty - p.y) * e - Math.sin(Math.PI * k) * 24;
     const s = cell * (1 - 0.45 * k);
     block(g, x - s / 2, y - s / 2, s, p.col, false);
   }
 }
 
-/* ── 물리: 중력 ── */
+/* ── 물리 ── */
 function gravityCol(col){
   const vals = [];
   for (let r = 0; r < ROWS; r++){ const v = G.board[r * COLS + col]; if (v) vals.push(v); }
@@ -568,53 +720,66 @@ function pickCell(color, preferCol){
 }
 
 /* ── 진행 루프 ── */
-let last = 0;
+let last = 0, suckCount = 0, revealNote = 0;
 function tick(ts){
   requestAnimationFrame(tick);
-  if (!G){ return; }
+  if (!G){ last = ts; return; }
   const dt = Math.min(0.05, (ts - last) / 1000 || 0); last = ts;
 
-  // 파티클
   for (const p of particles) p.t += dt;
   particles = particles.filter(p => p.t < p.dur);
 
-  const { cell, bx, by, laneY, laneH } = LAY;
+  // 퇴장하는 가방은 트랙을 따라 계속 달린다
+  for (const e of G.exit) e.d += 340 * dt;
+  G.exit = G.exit.filter(e => e.d < PATH.len - 4);
+
+  if (G.reveal){
+    G.reveal.t += dt;
+    const step = Math.floor(G.reveal.t / 0.12);
+    if (step > revealNote && step < 9){ revealNote = step; SFX.sparkle(step); }
+    if (G.reveal.t >= G.reveal.dur){ G.reveal = null; win(); }
+    draw(); return;
+  }
+
+  const { cell, bx } = LAY;
   const a = G.lane[0];
   if (a){
-    // 이동
-    a.x += (a.tx - a.x) * Math.min(1, dt * 9);
-    // 흡입
+    a.d += (a.td - a.d) * Math.min(1, dt * 8);
     a.acc += dt * a.rate;
     while (a.acc >= 1 && a.left > 0){
       a.acc -= 1;
-      const preferCol = Math.max(0, Math.min(COLS - 1, Math.round((a.x - bx) / cell)));
+      const px = pointAt(a.d);
+      const preferCol = Math.max(0, Math.min(COLS - 1, Math.round((px.x - bx) / cell)));
       const hit = pickCell(a.bag.c, preferCol);
-      if (!hit){ a.left = 0; a.starved = true; break; }
+      if (!hit){ a.left = 0; break; }
       G.board[hit.r * COLS + hit.c] = 0;
       gravityCol(hit.c);
       G.remain[a.bag.c]--;
       a.left--; a.got++;
-      a.tx = bx + hit.c * cell + cell / 2;
+      const tx = bx + hit.c * cell + cell / 2;
+      a.td = Math.max(20, Math.min(WORK_END(), dForX(tx)));
       particles.push({
-        x: bx + hit.c * cell + cell / 2, y: by + hit.r * cell + cell / 2,
-        tx: a.x, ty: laneY + laneH / 2, t: 0, dur: 0.34, col: G.pal[a.bag.c - 1]
+        x: tx, y: LAY.by + hit.r * cell + cell / 2,
+        tx: px.x, ty: px.y, t: 0, dur: 0.32, col: G.pal[a.bag.c - 1]
       });
+      SFX.suck(suckCount++);
       if (particles.length > 240) particles.splice(0, 60);
     }
     if (a.left <= 0){
+      const wasted = a.bag.n - a.got;
       G.lane.shift();
-      if (G.lane[0]) G.lane[0].tx = G.lane[0].x;
+      G.exit.push({ bag: a.bag, left: wasted, d: a.d });
+      if (wasted >= 12) SFX.waste(); else SFX.bye();
       renderUI();
       checkEnd(a.got, a.bag.n);
     } else {
       updateGauge();
     }
   }
-  // 대기 가방 배치
   for (let i = 1; i < G.lane.length; i++){
     const b = G.lane[i];
-    b.tx = 26 + (i - 1) * 34;
-    b.x += (b.tx - b.x) * Math.min(1, dt * 7);
+    b.td = 58 + (i - 1) * 36;
+    b.d += (b.td - b.d) * Math.min(1, dt * 6);
   }
   draw();
 }
@@ -625,18 +790,22 @@ function boardEmpty(){ return G.colors.every(c => G.remain[c] === 0); }
 
 function checkEnd(got, cap){
   if (G.over) return;
-  if (boardEmpty()){ G.over = true; win(); return; }
-  if (G.used >= G.limit){ G.over = true; lose('가방을 모두 썼어요'); return; }
-  const bagsLeft = G.hand.filter(Boolean).length + G.stacks.reduce((s, a) => s + a.length, 0) + G.lane.length;
-  if (bagsLeft === 0){ G.over = true; lose('남은 가방이 없어요'); return; }
+  if (boardEmpty()){
+    G.over = true; G.lane = []; particles = [];
+    revealNote = 0; G.reveal = { t: 0, dur: 1.5 };
+    SFX.clear();
+    return;
+  }
+  if (G.used >= G.limit){ G.over = true; SFX.fail(); lose('가방을 모두 썼어요'); return; }
+  const bagsLeft = G.hand.filter(Boolean).length + G.stacks.reduce((s, x) => s + x.length, 0) + G.lane.length;
+  if (bagsLeft === 0){ G.over = true; SFX.fail(); lose('남은 가방이 없어요'); return; }
   if (cap - got >= 12) toast('가방이 ' + (cap - got) + '칸 남아서 버렸어요');
 }
 
 function starGoal(){ return G.par + Math.max(1, Math.round((G.limit - G.par) * 0.25)); }
 function stars(){
-  const gap = G.limit - G.par;
   if (G.used <= starGoal()) return 3;
-  if (G.used <= G.par + Math.round(gap * 0.7)) return 2;
+  if (G.used <= G.par + Math.round((G.limit - G.par) * 0.7)) return 2;
   return 1;
 }
 function win(){
@@ -666,6 +835,7 @@ function lose(why){
 }
 modalEl.addEventListener('click', e => {
   const a = e.target.dataset && e.target.dataset.a; if (!a) return;
+  SFX.tap();
   if (a === 'next') startLevel(Math.min(LEVELS, G.lv + 1));
   else if (a === 'retry') startLevel(G.lv);
   else { maskEl.classList.add('hide'); openSelect(); }
@@ -682,7 +852,6 @@ function updateGauge(){
 }
 function renderUI(){
   updateGauge();
-  // 범례
   const lg = $('legend'); lg.innerHTML = '';
   for (const c of G.colors){
     const d = document.createElement('div');
@@ -690,7 +859,6 @@ function renderUI(){
     d.innerHTML = '<i style="background:' + G.pal[c - 1] + '"></i>' + G.remain[c];
     lg.appendChild(d);
   }
-  // 손칸
   const sl = $('slots'); sl.innerHTML = '';
   G.hand.forEach((b, i) => {
     const box = document.createElement('div'); box.className = 'slot';
@@ -702,11 +870,10 @@ function renderUI(){
     }
     sl.appendChild(box);
   });
-  // 더미
   const tr = $('tray'); tr.innerHTML = '';
+  const depth = COMPACT ? 1 : 2;
   G.stacks.forEach((st, si) => {
     const col = document.createElement('div'); col.className = 'stack';
-    const depth = COMPACT ? 1 : 2;
     st.slice(0, depth).forEach((b, k) => {
       const btn = document.createElement('button');
       btn.className = 'bag' + (k === 1 ? ' dim' : '');
@@ -729,6 +896,7 @@ function takeStack(si){
   const idx = G.hand.indexOf(null);
   if (idx < 0){ toast('손칸이 가득 찼어요'); return; }
   G.hand[idx] = st.shift();
+  SFX.tap();
   renderUI();
 }
 function playHand(i){
@@ -740,8 +908,9 @@ function playHand(i){
   G.lane.push({
     bag: b, left: b.n, got: 0, acc: 0,
     rate: Math.max(26, Math.min(130, b.n / 0.85)),
-    x: 26, tx: LAY.bx + (LAY.cell * COLS) / 2
+    d: 0, td: dForX(LAY.bx + (LAY.cell * COLS) / 2)
   });
+  SFX.launch();
   renderUI();
 }
 
@@ -757,7 +926,7 @@ function openSelect(){
     const sp = SPRITES[(n * 7) % SPRITES.length];
     b.innerHTML = '<div class="st">' + (st ? '★'.repeat(st) : '') + '</div>' +
                   n + '<div class="nm">' + (unlocked ? sp.ko : '???') + '</div>';
-    if (unlocked) b.onclick = () => startLevel(n);
+    if (unlocked) b.onclick = () => { SFX.tap(); startLevel(n); };
     else b.onclick = () => toast('앞 단계를 먼저 깨야 해요');
     grid.appendChild(b);
   }
@@ -766,13 +935,23 @@ function openSelect(){
 }
 
 /* ── 버튼 ── */
-$('btnStart').onclick = openSelect;
+function syncSound(){
+  for (const id of ['btnSound', 'btnSound2']){
+    const el = $(id); if (!el) continue;
+    el.textContent = id === 'btnSound' ? '♪' : '♪ 효과음';
+    el.classList.toggle('off', !SFX.on);
+  }
+}
+$('btnStart').onclick = () => { SFX.tap(); openSelect(); };
 $('btnHome').onclick  = () => show('home');
 $('btnBack').onclick  = () => { G = null; openSelect(); };
-$('btnRetry').onclick = () => startLevel(G.lv);
+$('btnRetry').onclick = () => { SFX.tap(); startLevel(G.lv); };
+$('btnSound').onclick = () => { SFX.toggle(); syncSound(); };
+$('btnSound2').onclick = () => { SFX.toggle(); syncSound(); };
 $('btnReset').onclick = () => {
   if (confirm('모든 진행 기록을 지울까요?')){ PROG = {}; saveProg(PROG); toast('기록을 지웠어요'); }
 };
+syncSound();
 show('home');
 </script>
 </body>
