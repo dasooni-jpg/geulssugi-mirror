@@ -15,6 +15,9 @@
 # ↓ 쉬는시간 게임: 타자 연습 (낱말 비)
 !/typing-rain/
 
+# ↓ 쉬는시간 게임: 음료 잔 합치기 (다람쌤 음료 카페)
+!/drink-merge/
+
 # ↓ 어린이 체스 교실
 !/chess/
 !/chess-online-worker.js
