@@ -1,0 +1,8 @@
+# Cloudflare Workers 정적 배포 설정 (git 연동으로 자동배포할 때만 사용)
+# 드래그 앤 드롭으로 올릴 때는 이 파일이 필요 없습니다.
+name = "drink-merge"
+compatibility_date = "2026-07-21"
+
+# 이 폴더의 파일(index.html, mascot.png)을 그대로 정적 파일로 서비스합니다.
+[assets]
+directory = "."
