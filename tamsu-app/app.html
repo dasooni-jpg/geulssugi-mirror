@@ -80,6 +80,8 @@ h1,h2,h3{margin:0}
 .gbtn.on{background:linear-gradient(135deg,var(--mint),var(--sky));border-color:transparent;color:#fff;box-shadow:0 6px 16px rgba(110,190,220,.45)}
 
 /* ── 단원 선택 ── */
+.semrow{display:flex;align-items:center;gap:10px;margin-top:12px}
+.semlabel{font-size:12.5px;font-weight:800;color:var(--ink-soft);flex:none}
 .units{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:10px}
 .ubtn{
   display:flex;align-items:center;gap:10px;text-align:left;
@@ -578,6 +580,7 @@ h1,h2,h3{margin:0}
     <div class="card">
       <h2>📚 학년 고르기</h2>
       <div class="grades" id="gradeList"></div>
+      <div class="semrow"><span class="semlabel">학기</span><div class="grades" id="semList"></div></div>
     </div>
 
     <div class="card">
@@ -1031,27 +1034,27 @@ const Q = (text, rest) => Object.assign({ text }, rest);
 
 /* ───────── 초1 ───────── */
 const G1 = [
-  { id: 'g1u1', name: '모으기와 가르기', emoji: '🍎', gen() {
+  { id: 'g1u1', sem: 1, name: '모으기와 가르기', emoji: '🍎', gen() {
       const t = ri(4, 9), a = ri(1, t - 1);
       return Math.random() < .5
         ? Q(`${a}${gwa(a)} ${bl()} 를 모으면 ${t}`, N(t - a, [t + a]))
         : Q(`${t}${eun(t)} ${a}${gwa(a)} ${bl()}`, N(t - a, [t + a]));
     } },
-  { id: 'g1u2', name: '덧셈 (9까지)', emoji: '➕', gen() {
+  { id: 'g1u2', sem: 1, name: '덧셈 (9까지)', emoji: '➕', gen() {
       const a = ri(1, 8), b = ri(1, 9 - a);
       return Q(`${a} + ${b} = ${bl()}`, N(a + b, [Math.abs(a - b)]));
     } },
-  { id: 'g1u3', name: '뺄셈 (9까지)', emoji: '➖', gen() {
+  { id: 'g1u3', sem: 1, name: '뺄셈 (9까지)', emoji: '➖', gen() {
       const a = ri(3, 9), b = ri(1, a - 1);
       return Q(`${a} − ${b} = ${bl()}`, N(a - b, [a + b]));
     } },
-  { id: 'g1u4', name: '10 만들기', emoji: '🔟', gen() {
+  { id: 'g1u4', sem: 2, name: '10 만들기', emoji: '🔟', gen() {
       const a = ri(1, 9);
       return Math.random() < .5
         ? Q(`${a} + ${bl()} = 10`, N(10 - a, [10 + a]))
         : Q(`10 − ${bl()} = ${a}`, N(10 - a, [10 + a]));
     } },
-  { id: 'g1u5', name: '받아올림·받아내림', emoji: '🎈', gen() {
+  { id: 'g1u5', sem: 2, name: '받아올림·받아내림', emoji: '🎈', gen() {
       if (Math.random() < .5) {
         const a = ri(5, 9), b = ri(11 - a, 9);          // 합이 10을 넘도록
         return Q(`${a} + ${b} = ${bl()}`, N(a + b, [a + b - 10]));   // 받아올림 빠뜨림
@@ -1059,57 +1062,131 @@ const G1 = [
       const a = ri(11, 18), b = ri(a - 9, 9);            // 받아내림 필요
       return Q(`${a} − ${b} = ${bl()}`, N(a - b, [Math.abs((a % 10) - b)])); // 자리끼리 빼기
     } },
-  { id: 'g1u6', name: '100까지의 수', emoji: '💯', gen() {
+  { id: 'g1u6', sem: 2, name: '100까지의 수', emoji: '💯', gen() {
       const t = ri(2, 9), o = ri(1, 9), v = t * 10 + o;
       const k = ri(0, 2);
       if (k === 0) return Q(`10개씩 ${t}묶음과 낱개 ${o}개는 ${bl()}`, N(v, [t + o]));
       if (k === 1) return Q(`${v} 보다 10 큰 수는 ${bl()}`, N(v + 10, [v + 1]));
       return Q(`${v} 보다 1 작은 수는 ${bl()}`, N(v - 1, [v - 10]));
     } },
+
+  { id: 'g1u7', sem: 1, name: '9까지의 수', emoji: '🔢', gen() {
+      const k = ri(0, 2);
+      if (k === 0) { const a = ri(1, 8); return Q(`${a} 바로 뒤의 수는 ${bl()}`, N(a + 1, [a - 1])); }
+      if (k === 1) { const a = ri(2, 9); return Q(`${a} 바로 앞의 수는 ${bl()}`, N(a - 1, [a + 1])); }
+      const a = ri(1, 9); let b = ri(1, 9); while (b === a) b = ri(1, 9);
+      return Q(`${a}${gwa(a)} ${b} 중 더 큰 수는 ${bl()}`, N(Math.max(a, b), [Math.min(a, b)]));
+    } },
+  { id: 'g1u8', sem: 1, name: '50까지의 수', emoji: '🧮', gen() {
+      const t = ri(1, 4), o = ri(1, 9), v = t * 10 + o, k = ri(0, 2);
+      if (k === 0) return Q(`10개씩 ${t}묶음과 낱개 ${o}개는 ${bl()}`, N(v, [t + o]));
+      if (k === 1) return Q(`${v}${eun(v)} 10개씩 ${bl()}묶음과 낱개 ${o}개예요`, N(t, [v]));
+      return Q(`${v} 보다 1 큰 수는 ${bl()}`, N(v + 1, [v + 10]));
+    } },
+  { id: 'g1u9', sem: 1, name: '비교하기', emoji: '📏', gen() {
+      if (Math.random() < .5) {
+        const a = ri(2, 9); let b = ri(2, 9); while (b === a) b = ri(2, 9);
+        return Q(`${a}cm 막대와 ${b}cm 막대 중 더 긴 것은 ${bl()}cm`, N(Math.max(a, b), [Math.min(a, b)]));
+      }
+      const a = ri(2, 9); let b = ri(2, 9); while (b === a) b = ri(2, 9);
+      return Q(`${a}kg 상자와 ${b}kg 상자 중 더 가벼운 것은 ${bl()}kg`, N(Math.min(a, b), [Math.max(a, b)]));
+    } },
+  { id: 'g1u10', sem: 2, name: '세 수의 계산', emoji: '🧺', gen() {
+      if (Math.random() < .5) { const a = ri(1, 4), b = ri(1, 4), c = ri(1, 4);
+        return Q(`${a} + ${b} + ${c} = ${bl()}`, N(a + b + c, [a + b - c])); }
+      const a = ri(6, 9), b = ri(1, 3), c = ri(1, 2);
+      return Q(`${a} − ${b} − ${c} = ${bl()}`, N(a - b - c, [a - b + c], '앞에서부터 차례로 빼요'));
+    } },
+  { id: 'g1u11', sem: 2, name: '시계 보기', emoji: '🕐', gen() {
+      const h = ri(1, 12);
+      if (Math.random() < .5) return Q(`짧은바늘이 ${h}, 긴바늘이 12를 가리키면 ${bl()}시예요`, N(h, [12]));
+      return Q(`${h}시 30분일 때 긴바늘이 가리키는 숫자는 ${bl()}`, N(6, [12, h]));
+    } },
+  { id: 'g1u12', sem: 2, name: '규칙 찾기', emoji: '🔁', gen() {
+      const s0 = ri(1, 9), d = pick([2, 3, 5, 10]);
+      return Q(`${[s0, s0 + d, s0 + 2 * d, s0 + 3 * d].join(', ')}, ${bl()}`, N(s0 + 4 * d, [s0 + 3 * d + 1], '몇씩 뛰어 세는지 찾아요'));
+    } },
 ];
 
 /* ───────── 초2 ───────── */
 const G2 = [
-  { id: 'g2u1', name: '세 자리 수', emoji: '🔢', gen() {
+  { id: 'g2u1', sem: 1, name: '세 자리 수', emoji: '🔢', gen() {
       const h = ri(1, 9), t = ri(1, 9), o = ri(1, 9), v = h * 100 + t * 10 + o;
       const k = ri(0, 2);
       if (k === 0) return Q(`100이 ${h}개, 10이 ${t}개, 1이 ${o}개인 수는 ${bl()}`, N(v, [h + t + o]));
       if (k === 1) return Q(`${v} 에서 십의 자리 숫자가 나타내는 값은 ${bl()}`, N(t * 10, [t]));
       return Q(`${v} 보다 100 큰 수는 ${bl()}`, N(v + 100, [v + 10]));
     } },
-  { id: 'g2u2', name: '덧셈 (받아올림)', emoji: '➕', gen() {
+  { id: 'g2u2', sem: 1, name: '덧셈 (받아올림)', emoji: '➕', gen() {
       let a, b;
       do { a = ri(13, 89); b = ri(13, 89); } while ((a % 10) + (b % 10) < 10);  // 일의 자리에서 받아올림
       const noCarry = Math.floor(a / 10 + b / 10) * 10 + ((a % 10) + (b % 10)) % 10;
       return Q(`${a} + ${b} = ${bl()}`, N(a + b, [a + b - 10, noCarry]));
     } },
-  { id: 'g2u3', name: '뺄셈 (받아내림)', emoji: '➖', gen() {
+  { id: 'g2u3', sem: 1, name: '뺄셈 (받아내림)', emoji: '➖', gen() {
       let a, b;
       do { a = ri(31, 98); b = ri(12, a - 10); } while ((a % 10) >= (b % 10));  // 받아내림 필요
       const digitAbs = Math.abs(Math.floor(a / 10) - Math.floor(b / 10)) * 10 + Math.abs((a % 10) - (b % 10));
       return Q(`${a} − ${b} = ${bl()}`, N(a - b, [a - b + 10, digitAbs]));
     } },
-  { id: 'g2u4', name: '곱셈구구', emoji: '✖️', gen() {
+  { id: 'g2u4', sem: 2, name: '곱셈구구', emoji: '✖️', gen() {
       const a = ri(2, 9), b = ri(2, 9);
       return Q(`${a} × ${b} = ${bl()}`, N(a * b, [a * b + a, a * b - a, a + b]));
     } },
-  { id: 'g2u5', name: '곱셈구구 거꾸로', emoji: '🔁', gen() {
+  { id: 'g2u5', sem: 2, name: '곱셈구구 거꾸로', emoji: '🔁', gen() {
       const a = ri(2, 9), b = ri(2, 9), p = a * b;
       return Math.random() < .5
         ? Q(`${a} × ${bl()} = ${p}`, N(b, [p - a]))
         : Q(`${bl()} × ${b} = ${p}`, N(a, [p - b]));
     } },
-  { id: 'g2u6', name: '길이 재기', emoji: '📏', gen() {
+  { id: 'g2u6', sem: 1, name: '길이 재기', emoji: '📏', gen() {
       const c = ri(2, 9), m = ri(1, 9);
       return Math.random() < .5
         ? Q(`${c}cm ${m}mm = ${bl()} mm`, N(c * 10 + m, [c + m]))
         : Q(`${c * 10 + m}mm 는 ${c}cm ${bl()} mm`, N(m, [c * 10 + m]));
     } },
+
+  { id: 'g2u7', sem: 1, name: '세 수의 계산', emoji: '🧺', gen() {
+      const a = ri(40, 90), b = ri(10, 30), c = ri(10, 30);
+      if (Math.random() < .5) return Q(`${a} + ${b} − ${c} = ${bl()}`, N(a + b - c, [a - b + c]));
+      return Q(`${a} − ${b} + ${c} = ${bl()}`, N(a - b + c, [a - b - c], '앞에서부터 차례로 계산해요'));
+    } },
+  { id: 'g2u8', sem: 1, name: '곱셈 알아보기', emoji: '🍬', gen() {
+      const a = ri(2, 9), b = ri(2, 5);
+      if (Math.random() < .5) return Q(`${a}${eul(a)} ${b}번 더하면 ${bl()}`, N(a * b, [a + b]));
+      return Q(`${a}씩 ${b}묶음은 모두 ${bl()}개`, N(a * b, [a + b]));
+    } },
+  { id: 'g2u9', sem: 2, name: '네 자리 수', emoji: '🔢', gen() {
+      const th = ri(1, 9), h = ri(1, 9), t = ri(1, 9), o = ri(1, 9), v = th * 1000 + h * 100 + t * 10 + o, k = ri(0, 2);
+      if (k === 0) return Q(`1000이 ${th}개, 100이 ${h}개, 10이 ${t}개, 1이 ${o}개인 수는 ${bl()}`, N(v, [th + h + t + o]));
+      if (k === 1) return Q(`${v} 에서 백의 자리 숫자는 ${bl()}`, N(h, [t, th]));
+      return Q(`${v} 보다 100 큰 수는 ${bl()}`, N(v + 100, [v + 1]));
+    } },
+  { id: 'g2u10', sem: 2, name: '길이의 합과 차', emoji: '📐', gen() {
+      let A = ri(1, 4) * 100 + ri(10, 99), B = ri(1, 4) * 100 + ri(10, 99);
+      while (A === B) B = ri(1, 4) * 100 + ri(10, 99);
+      if (Math.random() < .5)
+        return Q(`${Math.floor(A / 100)}m ${A % 100}cm + ${Math.floor(B / 100)}m ${B % 100}cm 는 모두 ${bl()}cm`, N(A + B, [Math.abs(A - B)]));
+      const x = Math.max(A, B), y = Math.min(A, B);
+      return Q(`${Math.floor(x / 100)}m ${x % 100}cm − ${Math.floor(y / 100)}m ${y % 100}cm 는 ${bl()}cm`, N(x - y, [x + y], '1m 는 100cm 예요'));
+    } },
+  { id: 'g2u11', sem: 2, name: '시각과 시간', emoji: '🕐', gen() {
+      const k = ri(0, 2);
+      if (k === 0) { const h = ri(2, 9); return Q(`${h}시간은 ${bl()}분`, N(h * 60, [h * 100])); }
+      if (k === 1) { const d = ri(2, 9); return Q(`${d}일은 ${bl()}시간`, N(d * 24, [d * 12])); }
+      const m = ri(2, 9); return Q(`${m}시간 30분은 ${bl()}분`, N(m * 60 + 30, [m * 60]));
+    } },
+  { id: 'g2u12', sem: 2, name: '규칙 찾기', emoji: '🔁', gen() {
+      if (Math.random() < .5) { const s0 = ri(2, 9), d = pick([3, 4, 5, 6]);
+        return Q(`${[s0, s0 + d, s0 + 2 * d, s0 + 3 * d].join(', ')}, ${bl()}`, N(s0 + 4 * d, [s0 + 3 * d + 1])); }
+      const a = ri(2, 9);
+      return Q(`${[a, a * 2, a * 3, a * 4].join(', ')}, ${bl()}`, N(a * 5, [a * 4 + 1], `${a}씩 커지는 규칙이에요`));
+    } },
 ];
 
 /* ───────── 초3 ───────── */
 const G3 = [
-  { id: 'g3u1', name: '세 자리 덧셈·뺄셈', emoji: '🧮', gen() {
+  { id: 'g3u1', sem: 1, name: '세 자리 덧셈·뺄셈', emoji: '🧮', gen() {
       if (Math.random() < .5) {
         let a, b;
         do { a = ri(135, 869); b = ri(135, 869); } while ((a % 10) + (b % 10) < 10);
@@ -1119,23 +1196,23 @@ const G3 = [
       do { a = ri(312, 987); b = ri(128, a - 100); } while ((a % 10) >= (b % 10));
       return Q(`${a} − ${b} = ${bl()}`, N(a - b, [a - b + 10, a - b + 100]));
     } },
-  { id: 'g3u2', name: '나눗셈', emoji: '➗', gen() {
+  { id: 'g3u2', sem: 1, name: '나눗셈', emoji: '➗', gen() {
       const b = ri(2, 9), q = ri(2, 9);
       return Q(`${b * q} ÷ ${b} = ${bl()}`, N(q, [b * q - b, b * q + b]));
     } },
-  { id: 'g3u3', name: '나머지가 있는 나눗셈', emoji: '🍪', gen() {
+  { id: 'g3u3', sem: 2, name: '나머지가 있는 나눗셈', emoji: '🍪', gen() {
       const b = ri(3, 9), q = ri(3, 9), r = ri(1, b - 1), a = b * q + r;
       return Math.random() < .5
         ? Q(`${a} ÷ ${b} 의 나머지는 ${bl()}`, N(r, [q]))
         : Q(`${a} ÷ ${b} 의 몫은 ${bl()}`, N(q, [r]));
     } },
-  { id: 'g3u4', name: '(두 자리)×(한 자리)', emoji: '✖️', gen() {
+  { id: 'g3u4', sem: 1, name: '(두 자리)×(한 자리)', emoji: '✖️', gen() {
       let a, b;
       do { a = ri(13, 79); b = ri(3, 9); } while ((a % 10) * b < 10);   // 받아올림 발생
       const noCarry = Math.floor(a / 10) * 10 * b + ((a % 10) * b) % 10;
       return Q(`${a} × ${b} = ${bl()}`, N(a * b, [noCarry, Math.floor(a / 10) * b]));
     } },
-  { id: 'g3u5', name: '분수 알아보기', emoji: '🍕', gen() {
+  { id: 'g3u5', sem: 1, name: '분수 알아보기', emoji: '🍕', gen() {
       const k = ri(0, 2);
       if (k === 0) { const d = ri(2, 6), q = ri(2, 8);
         return Q(`${d * q} 의 ${fr(1, d)} 은 ${bl()}`, N(q, [d, d * q - d])); }
@@ -1145,7 +1222,7 @@ const G3 = [
       const d = ri(3, 9), n = ri(1, d - 1);
       return Q(`${fr(n, d)} 에서 색칠하지 않은 부분은 ${bl()}${'/'}${d}`, N(d - n, [n]));
     } },
-  { id: 'g3u6', name: '소수 · 들이/무게', emoji: '💧', gen() {
+  { id: 'g3u6', sem: 2, name: '소수 · 들이/무게', emoji: '💧', gen() {
       const k = ri(0, 2);
       if (k === 0) { const a = ri(2, 8), b = ri(2, 8);
         return Q(`0.${a} + 0.${b} = ${bl()}`, N(rnd2((a + b) / 10), [a + b, (a + b) / 100])); }
@@ -1154,11 +1231,42 @@ const G3 = [
       const kg = ri(1, 8), g = ri(1, 9) * 100;
       return Q(`${kg}kg ${g}g = ${bl()} g`, N(kg * 1000 + g, [kg + g, kg * 100 + g]));
     } },
+
+  { id: 'g3u7', sem: 1, name: '길이와 시간', emoji: '⏱️', gen() {
+      const k = ri(0, 2);
+      if (k === 0) { const c = ri(2, 9); return Q(`${c}cm 는 ${bl()}mm`, N(c * 10, [c * 100])); }
+      if (k === 1) { const km = ri(2, 9), m = ri(100, 900); return Q(`${km}km ${m}m 는 ${bl()}m`, N(km * 1000 + m, [km + m])); }
+      const m = ri(2, 9), sec = ri(10, 50); return Q(`${m}분 ${sec}초는 ${bl()}초`, N(m * 60 + sec, [m * 100 + sec]));
+    } },
+  { id: 'g3u8', sem: 1, name: '소수 알아보기', emoji: '💧', gen() {
+      const k = ri(0, 2);
+      if (k === 0) { const n = ri(1, 9); return Q(`${fr(n, 10)} 을 소수로 나타내면 ${bl()}`, N(n / 10, [n])); }
+      if (k === 1) { const a = ri(1, 9), b = ri(1, 9); return Q(`${a}와 ${fr(b, 10)} 를 소수 하나로 쓰면 ${bl()}`, N(a + b / 10, [a + b])); }
+      const a = ri(1, 9) / 10; let b = ri(1, 9) / 10; while (Math.abs(a - b) < 1e-9) b = ri(1, 9) / 10;
+      return Q(`${rnd2(a)} 과 ${rnd2(b)} 중 더 큰 수는 ${bl()}`, N(Math.max(a, b), [Math.min(a, b)]));
+    } },
+  { id: 'g3u9', sem: 2, name: '(세 자리)×(한 자리)', emoji: '✖️', gen() {
+      const a = ri(102, 987), b = ri(2, 9);
+      return Q(`${a} × ${b} = ${bl()}`, N(a * b, [a + b]));
+    } },
+  { id: 'g3u10', sem: 2, name: '(두 자리)÷(한 자리)', emoji: '➗', gen() {
+      const b = ri(2, 9), q = ri(11, Math.floor(99 / b)), a = b * q;
+      return Q(`${a} ÷ ${b} = ${bl()}`, N(q, [a - b]));
+    } },
+  { id: 'g3u11', sem: 2, name: '분수의 크기 비교', emoji: '🍕', gen() {
+      const d = ri(4, 12); const a = ri(1, d - 1); let b = ri(1, d - 1); while (b === a) b = ri(1, d - 1);
+      return Q(`${fr(a, d)} 와 ${fr(b, d)} 중 더 큰 분수의 분자는 ${bl()}`, N(Math.max(a, b), [Math.min(a, b)], '분모가 같으면 분자가 클수록 커요'));
+    } },
+  { id: 'g3u12', sem: 2, name: '원의 지름과 반지름', emoji: '⭕', gen() {
+      const r = ri(2, 20);
+      if (Math.random() < .5) return Q(`반지름이 ${r}cm 인 원의 지름은 ${bl()}cm`, N(r * 2, [r / 2]));
+      return Q(`지름이 ${r * 2}cm 인 원의 반지름은 ${bl()}cm`, N(r, [r * 4]));
+    } },
 ];
 
 /* ───────── 초4 ───────── */
 const G4 = [
-  { id: 'g4u1', name: '큰 수', emoji: '🌌', gen() {
+  { id: 'g4u1', sem: 1, name: '큰 수', emoji: '🌌', gen() {
       const k = ri(0, 2);
       if (k === 0) { const a = ri(2, 9), b = ri(1, 9), c = ri(1, 9);
         return Q(`10000이 ${a}개, 1000이 ${b}개, 100이 ${c}개인 수는 ${bl()}`,
@@ -1168,18 +1276,18 @@ const G4 = [
       const a = ri(2, 9);
       return Q(`${a}억 은 1000만이 ${bl()} 개`, N(a * 10, [a, a * 100]));
     } },
-  { id: 'g4u2', name: '(세 자리)×(두 자리)', emoji: '✖️', gen() {
+  { id: 'g4u2', sem: 1, name: '(세 자리)×(두 자리)', emoji: '✖️', gen() {
       const a = ri(112, 468), b = ri(12, 39);
       // 부분곱 하나를 빠뜨리는 실수를 덫으로 둔다
       return Q(`${a} × ${b} = ${bl()}`, N(a * b, [a * Math.floor(b / 10) * 10, a * (b % 10)]));
     } },
-  { id: 'g4u3', name: '나눗셈 (두 자리로)', emoji: '➗', gen() {
+  { id: 'g4u3', sem: 1, name: '나눗셈 (두 자리로)', emoji: '➗', gen() {
       const b = ri(12, 39), q = ri(3, 9), r = ri(0, b - 1), a = b * q + r;
       return r === 0 || Math.random() < .5
         ? Q(`${a} ÷ ${b} 의 몫은 ${bl()}`, N(q, [r]))
         : Q(`${a} ÷ ${b} 의 나머지는 ${bl()}`, N(r, [q]));
     } },
-  { id: 'g4u4', name: '분수의 덧셈과 뺄셈', emoji: '🍕', gen() {
+  { id: 'g4u4', sem: 2, name: '분수의 덧셈과 뺄셈', emoji: '🍕', gen() {
       const k = ri(0, 2);
       if (k === 0) { const d = ri(5, 11), n1 = ri(1, d - 2), n2 = ri(1, d - n1 - 1);
         return Q(`${fr(n1, d)} + ${fr(n2, d)} = ${bl()}`,
@@ -1190,13 +1298,13 @@ const G4 = [
       return Q(`${mx(w, n, d)}${eul(n)} 가분수로 나타내면 ${bl()}${'/'}${d}`,
                N(w * d + n, [w * n, w + n]));
     } },
-  { id: 'g4u5', name: '소수의 덧셈과 뺄셈', emoji: '💧', gen() {
+  { id: 'g4u5', sem: 2, name: '소수의 덧셈과 뺄셈', emoji: '💧', gen() {
       const a = rnd2(ri(11, 89) / 10), b = rnd2(ri(105, 899) / 100);
       return Math.random() < .5
         ? Q(`${a} + ${b} = ${bl()}`, N(rnd2(a + b), [rnd2(a * 10 + b), rnd2(a + b * 10)], '소수점 자리를 맞춰 계산해요'))
         : Q(`${rnd2(a + b)} − ${b} = ${bl()}`, N(a, []));
     } },
-  { id: 'g4u6', name: '각도', emoji: '📐', gen() {
+  { id: 'g4u6', sem: 1, name: '각도', emoji: '📐', gen() {
       const k = ri(0, 2);
       if (k === 0) { const a = ri(30, 80), b = ri(30, 140 - a);
         return Q(`삼각형의 두 각이 ${a}°, ${b}° 일 때 나머지 한 각은 ${bl()}°`,
@@ -1207,11 +1315,49 @@ const G4 = [
       const a = ri(20, 70);
       return Q(`${a}° 의 보각(더해서 180°가 되는 각)은 ${bl()}°`, N(180 - a, [90 - a, 360 - a]));
     } },
+
+  { id: 'g4u7', sem: 1, name: '수의 배열 규칙', emoji: '🔁', gen() {
+      if (Math.random() < .5) { const s0 = ri(100, 900), d = pick([100, 200, 300]);
+        return Q(`${[s0, s0 + d, s0 + 2 * d].join(', ')}, ${bl()}`, N(s0 + 3 * d, [s0 + 2 * d + 1])); }
+      const s0 = ri(2, 5), r = pick([2, 3, 10]);
+      return Q(`${[s0, s0 * r, s0 * r * r].join(', ')}, ${bl()}`, N(s0 * r * r * r, [s0 * r * r + r], `${r}배씩 커지는 규칙이에요`));
+    } },
+  { id: 'g4u8', sem: 1, name: '막대그래프', emoji: '📊', gen() {
+      const a = ri(4, 15), b = ri(4, 15), c = ri(4, 15);
+      if (Math.random() < .5)
+        return Q(`좋아하는 운동 — 축구 ${a}명, 야구 ${b}명, 농구 ${c}명. 조사한 학생은 모두 ${bl()}명`, N(a + b + c, [a * b]));
+      const hi = Math.max(a, b, c), lo = Math.min(a, b, c);
+      return Q(`축구 ${a}명, 야구 ${b}명, 농구 ${c}명일 때 가장 많은 종목과 가장 적은 종목의 차는 ${bl()}명`, N(hi - lo, [hi + lo]));
+    } },
+  { id: 'g4u9', sem: 2, name: '삼각형의 각', emoji: '📐', gen() {
+      const k = ri(0, 2);
+      if (k === 0) { const a = ri(30, 80), b = ri(30, 80);
+        return Q(`삼각형의 두 각이 ${a}°, ${b}° 일 때 나머지 한 각은 ${bl()}°`, N(180 - a - b, [360 - a - b], '삼각형 세 각의 합은 180°')); }
+      if (k === 1) { const a = 2 * ri(10, 40);
+        return Q(`이등변삼각형의 꼭지각이 ${a}° 일 때 한 밑각은 ${bl()}°`, N((180 - a) / 2, [180 - a])); }
+      return Q(`정삼각형의 한 각의 크기는 ${bl()}°`, N(60, [180, 90]));
+    } },
+  { id: 'g4u10', sem: 2, name: '사각형의 각', emoji: '🔷', gen() {
+      if (Math.random() < .5) { const a = ri(60, 110), b = ri(60, 110), c = ri(60, 110);
+        return Q(`사각형의 세 각이 ${a}°, ${b}°, ${c}° 일 때 나머지 한 각은 ${bl()}°`, N(360 - a - b - c, [180 - a - b], '사각형 네 각의 합은 360°')); }
+      const a = ri(40, 140);
+      return Q(`평행사변형의 한 각이 ${a}° 일 때 이웃한 각은 ${bl()}°`, N(180 - a, [360 - a]));
+    } },
+  { id: 'g4u11', sem: 2, name: '다각형', emoji: '🔶', gen() {
+      const n = ri(3, 8), side = ri(3, 15);
+      if (Math.random() < .5) return Q(`한 변이 ${side}cm 인 정${n}각형의 둘레는 ${bl()}cm`, N(n * side, [n + side]));
+      return Q(`둘레가 ${n * side}cm 인 정${n}각형의 한 변은 ${bl()}cm`, N(side, [n * side - n]));
+    } },
+  { id: 'g4u12', sem: 2, name: '꺾은선그래프', emoji: '📈', gen() {
+      const a = ri(10, 25), d1 = ri(2, 8), d2 = ri(2, 8), b = a + d1, c = b - d2;
+      if (Math.random() < .5) return Q(`기온이 1시 ${a}℃, 2시 ${b}℃ 였어요. 오른 기온은 ${bl()}℃`, N(d1, [a + b]));
+      return Q(`기온이 2시 ${b}℃, 3시 ${c}℃ 였어요. 내린 기온은 ${bl()}℃`, N(d2, [b + c]));
+    } },
 ];
 
 /* ───────── 초5 ───────── */
 const G5 = [
-  { id: 'g5u1', name: '자연수의 혼합 계산', emoji: '🧩', gen() {
+  { id: 'g5u1', sem: 1, name: '자연수의 혼합 계산', emoji: '🧩', gen() {
       const k = ri(0, 2);
       if (k === 0) { const a = ri(5, 20), b = ri(2, 9), c = ri(2, 9), d = ri(2, 15);
         return Q(`${a} + ${b} × ${c} − ${d} = ${bl()}`,
@@ -1221,7 +1367,7 @@ const G5 = [
       const a = ri(2, 9), b = ri(2, 9), c = ri(2, 6);
       return Q(`${a} × ( ${b} + ${c} ) = ${bl()}`, N(a * (b + c), [a * b + c]));
     } },
-  { id: 'g5u2', name: '약수와 배수', emoji: '🔍', gen() {
+  { id: 'g5u2', sem: 1, name: '약수와 배수', emoji: '🔍', gen() {
       let g, m, n;
       do { g = ri(2, 9); m = ri(2, 7); n = ri(2, 9); } while (m === n || gcd(m, n) !== 1);
       const a = g * m, b = g * n;
@@ -1230,7 +1376,7 @@ const G5 = [
         ? Q(`${a}${gwa(a)} ${b}의 최대공약수는 ${bl()}`, N(g, [L, a * b]))
         : Q(`${a}${gwa(a)} ${b}의 최소공배수는 ${bl()}`, N(L, [g, a * b]));
     } },
-  { id: 'g5u3', name: '약분과 통분', emoji: '⚖️', gen() {
+  { id: 'g5u3', sem: 1, name: '약분과 통분', emoji: '⚖️', gen() {
       if (Math.random() < .5) {
         const [n0, d0] = red(ri(1, 8), ri(9, 15)), k = ri(2, 6);
         const n = n0 * k, d = d0 * k;
@@ -1241,7 +1387,7 @@ const G5 = [
       return Q(`${fr(1, a)} 과 ${fr(1, b)} 를 통분할 때 가장 작은 공통분모는 ${bl()}`,
                N(a * b / gcd(a, b), [a + b, a * b]));
     } },
-  { id: 'g5u4', name: '분수의 덧셈과 뺄셈', emoji: '🍰', gen() {
+  { id: 'g5u4', sem: 1, name: '분수의 덧셈과 뺄셈', emoji: '🍰', gen() {
       let n1, d1, n2, d2;
       do { [n1, d1] = pf(9); [n2, d2] = pf(9); } while (d1 === d2);   // 분모가 달라야 통분 연습이 된다
       const L = d1 * d2 / gcd(d1, d2);
@@ -1251,7 +1397,7 @@ const G5 = [
                F(rn, rd, [(n1 + n2) / (d1 + d2)], false,
                  rn > rd ? '통분해서 계산하고, 1보다 크면 가분수로 써요' : '분모가 다르면 통분해요'));
     } },
-  { id: 'g5u5', name: '분수·소수의 곱셈', emoji: '✖️', gen() {
+  { id: 'g5u5', sem: 2, name: '분수·소수의 곱셈', emoji: '✖️', gen() {
       if (Math.random() < .5) {
         const [n1, d1] = pf(7), [n2, d2] = pf(7);
         const [rn, rd] = red(n1 * n2, d1 * d2);
@@ -1262,7 +1408,7 @@ const G5 = [
       return Q(`0.${a} × 0.${b} = ${bl()}`,
                N(rnd2(a * b / 100), [rnd2(a * b / 10), a * b], '소수점 아래 자리 수를 세어 보세요'));
     } },
-  { id: 'g5u6', name: '평균', emoji: '📊', gen() {
+  { id: 'g5u6', sem: 2, name: '평균', emoji: '📊', gen() {
       const n = ri(3, 4), base = ri(4, 20);
       const xs = []; let sum = 0;
       for (let i = 0; i < n - 1; i++) { const v = base + ri(-3, 3); xs.push(v); sum += v; }
@@ -1271,22 +1417,62 @@ const G5 = [
       xs.push(last); sum += last;
       return Q(`${xs.join(', ')} 의 평균은 ${bl()}`, N(sum / n, [sum], '모두 더한 뒤 개수로 나눠요'));
     } },
+
+  { id: 'g5u7', sem: 1, name: '규칙과 대응', emoji: '🔗', gen() {
+      const a = ri(2, 9), b = ri(1, 9), x = ri(2, 12);
+      if (Math.random() < .5) return Q(`△ = ○ × ${a} + ${b} 일 때, ○ 가 ${x} 이면 △ 는 ${bl()}`, N(a * x + b, [a * x]));
+      return Q(`△ = ○ × ${a} + ${b} 일 때, △ 가 ${a * x + b} 이면 ○ 는 ${bl()}`, N(x, [a * x + b - b], '거꾸로 빼고 나눠요'));
+    } },
+  { id: 'g5u8', sem: 1, name: '다각형의 넓이', emoji: '🟦', gen() {
+      const k = ri(0, 2);
+      if (k === 0) { const b = ri(3, 15), h = ri(3, 15);
+        return Q(`밑변 ${b}cm, 높이 ${h}cm 인 평행사변형의 넓이는 ${bl()}cm²`, N(b * h, [b * h / 2])); }
+      if (k === 1) { const b = ri(3, 15), h = 2 * ri(2, 8);
+        return Q(`밑변 ${b}cm, 높이 ${h}cm 인 삼각형의 넓이는 ${bl()}cm²`, N(b * h / 2, [b * h], '밑변 × 높이 ÷ 2')); }
+      const a = ri(3, 12), b = ri(3, 12), h = 2 * ri(2, 8);
+      return Q(`윗변 ${a}cm, 아랫변 ${b}cm, 높이 ${h}cm 인 사다리꼴의 넓이는 ${bl()}cm²`, N((a + b) * h / 2, [(a + b) * h]));
+    } },
+  { id: 'g5u9', sem: 2, name: '어림하기', emoji: '🎯', gen() {
+      const v = ri(1000, 9999), k = ri(0, 2);
+      if (k === 0) return Q(`${v} 를 반올림하여 백의 자리까지 나타내면 ${bl()}`, N(Math.round(v / 100) * 100, [Math.floor(v / 100) * 100]));
+      if (k === 1) return Q(`${v} 를 올림하여 천의 자리까지 나타내면 ${bl()}`, N(Math.ceil(v / 1000) * 1000, [Math.floor(v / 1000) * 1000]));
+      return Q(`${v} 를 버림하여 십의 자리까지 나타내면 ${bl()}`, N(Math.floor(v / 10) * 10, [Math.ceil(v / 10) * 10]));
+    } },
+  { id: 'g5u10', sem: 2, name: '합동과 대칭', emoji: '🪞', gen() {
+      const k = ri(0, 2);
+      if (k === 0) { const a = ri(3, 20); return Q(`합동인 두 삼각형에서 한 변이 ${a}cm 이면 대응하는 변은 ${bl()}cm`, N(a, [a * 2], '대응변의 길이는 같아요')); }
+      if (k === 1) { const a = ri(30, 120); return Q(`합동인 두 도형에서 한 각이 ${a}° 이면 대응하는 각은 ${bl()}°`, N(a, [180 - a])); }
+      const n = ri(3, 10); return Q(`정${n}각형의 대칭축은 모두 ${bl()}개`, N(n, [n - 1]));
+    } },
+  { id: 'g5u11', sem: 2, name: '직육면체', emoji: '📦', gen() {
+      const k = ri(0, 3);
+      if (k === 0) return Q(`직육면체의 면은 모두 ${bl()}개`, N(6, [8, 12]));
+      if (k === 1) return Q(`직육면체의 모서리는 모두 ${bl()}개`, N(12, [6, 8]));
+      if (k === 2) return Q(`직육면체의 꼭짓점은 모두 ${bl()}개`, N(8, [6, 12]));
+      const a = ri(2, 9), b = ri(2, 9), c = ri(2, 9);
+      return Q(`가로 ${a}cm, 세로 ${b}cm, 높이 ${c}cm 인 직육면체의 모든 모서리 길이의 합은 ${bl()}cm`, N(4 * (a + b + c), [a + b + c]));
+    } },
+  { id: 'g5u12', sem: 2, name: '가능성', emoji: '🎲', gen() {
+      if (Math.random() < .5) { const r = ri(1, 5), b = ri(1, 5); const [n, d] = red(r, r + b);
+        return Q(`빨간 구슬 ${r}개와 파란 구슬 ${b}개가 든 주머니에서 빨간 구슬을 꺼낼 가능성은 ${bl()}`, F(n, d, [r / b], true, '(빨간 구슬 수) / (전체 구슬 수)')); }
+      return Q(`주사위를 한 번 던져 ${ri(1, 6)} 의 눈이 나올 가능성은 ${bl()}`, F(1, 6, [6], true));
+    } },
 ];
 
 /* ───────── 초6 ───────── */
 const G6 = [
-  { id: 'g6u1', name: '분수의 나눗셈', emoji: '➗', gen() {
+  { id: 'g6u1', sem: 1, name: '분수의 나눗셈', emoji: '➗', gen() {
       const [n1, d1] = pf(7), [n2, d2] = pf(7);
       const [rn, rd] = red(n1 * d2, d1 * n2);
       return Q(`${fr(n1, d1)} ÷ ${fr(n2, d2)} = ${bl()}`,
                F(rn, rd, [(n1 * n2) / (d1 * d2)], false, '나누는 수를 뒤집어 곱해요'));
     } },
-  { id: 'g6u2', name: '소수의 나눗셈', emoji: '💧', gen() {
+  { id: 'g6u2', sem: 1, name: '소수의 나눗셈', emoji: '💧', gen() {
       const b = ri(2, 9) / 10, q = ri(2, 12), a = rnd2(b * q);
       return Q(`${a} ÷ ${rnd2(b)} = ${bl()}`,
                N(q, [rnd2(q / 10), rnd2(q * 10)], '나누는 수와 나누어지는 수의 소수점을 같이 옮겨요'));
     } },
-  { id: 'g6u3', name: '비와 비율', emoji: '⚗️', gen() {
+  { id: 'g6u3', sem: 1, name: '비와 비율', emoji: '⚗️', gen() {
       const k = ri(0, 1);
       // 분모는 비율을 소수 두 자리 안에서 딱 떨어지게 만드는 수만 쓴다
       if (k === 0) { const b = pick([2, 4, 5, 10, 20, 25]), a = ri(1, b - 1);
@@ -1296,7 +1482,7 @@ const G6 = [
       if (gcd(m, n) !== 1) return Q(`6 : 8을 가장 간단한 자연수의 비로 나타내면 3 : ${bl()}`, N(4, [8]));
       return Q(`${g * m} : ${g * n}${eul(g * n)} 가장 간단한 자연수의 비로 나타내면 ${m} : ${bl()}`, N(n, [g * n]));
     } },
-  { id: 'g6u4', name: '백분율', emoji: '💯', gen() {
+  { id: 'g6u4', sem: 1, name: '백분율', emoji: '💯', gen() {
       const k = ri(0, 2);
       if (k === 0) { const p = pick([10, 20, 25, 40, 50, 60, 75, 80]), t = pick([20, 40, 60, 80, 200, 400]);
         return Q(`${t} 의 ${p}% 는 ${bl()}`, N(rnd2(t * p / 100), [p, rnd2(t * p)])); }
@@ -1306,7 +1492,7 @@ const G6 = [
       return Q(`${price.toLocaleString()}원인 물건을 ${d}% 할인하면 ${bl()} 원`,
                N(price * (100 - d) / 100, [price * d / 100], '할인 금액이 아니라 내는 돈이에요'));
     } },
-  { id: 'g6u5', name: '비례식과 비례배분', emoji: '⚖️', gen() {
+  { id: 'g6u5', sem: 2, name: '비례식과 비례배분', emoji: '⚖️', gen() {
       if (Math.random() < .5) {
         const a = ri(2, 9), b = ri(2, 9), k = ri(2, 7);
         return Q(`${a} : ${b} = ${a * k} : ${bl()}`, N(b * k, [b + k, b * k / 2]));
@@ -1319,7 +1505,7 @@ const G6 = [
       return Q(`${total.toLocaleString()}원을 ${a} : ${b} 로 나눌 때 ${big === a ? '앞' : '뒤'}쪽 몫은 ${bl()} 원`,
                N(total * big / (a + b), [total * small / (a + b), total / (a + b)]));
     } },
-  { id: 'g6u6', name: '원의 둘레와 넓이', emoji: '⭕', gen() {
+  { id: 'g6u6', sem: 2, name: '원의 둘레와 넓이', emoji: '⭕', gen() {
       const r = ri(2, 10);
       return Math.random() < .5
         ? Q(`반지름 ${r}cm 인 원의 둘레는 ${bl()} cm`,
@@ -1327,11 +1513,46 @@ const G6 = [
         : Q(`반지름 ${r}cm 인 원의 넓이는 ${bl()} cm²`,
             N(rnd2(3.14 * r * r), [rnd2(2 * 3.14 * r), rnd2(3.14 * r)], '원주율은 3.14'));
     } },
+
+  { id: 'g6u7', sem: 1, name: '각기둥과 각뿔', emoji: '🔺', gen() {
+      const n = ri(3, 8), k = ri(0, 3);
+      if (k === 0) return Q(`${n}각기둥의 면은 모두 ${bl()}개`, N(n + 2, [n]));
+      if (k === 1) return Q(`${n}각기둥의 모서리는 모두 ${bl()}개`, N(3 * n, [2 * n]));
+      if (k === 2) return Q(`${n}각뿔의 꼭짓점은 모두 ${bl()}개`, N(n + 1, [n]));
+      return Q(`${n}각뿔의 면은 모두 ${bl()}개`, N(n + 1, [n + 2]));
+    } },
+  { id: 'g6u8', sem: 1, name: '부피와 겉넓이', emoji: '📦', gen() {
+      const a = ri(2, 9), b = ri(2, 9), c = ri(2, 9);
+      if (Math.random() < .5)
+        return Q(`가로 ${a}cm, 세로 ${b}cm, 높이 ${c}cm 인 직육면체의 부피는 ${bl()}cm³`, N(a * b * c, [a + b + c], '가로 × 세로 × 높이'));
+      return Q(`가로 ${a}cm, 세로 ${b}cm, 높이 ${c}cm 인 직육면체의 겉넓이는 ${bl()}cm²`, N(2 * (a * b + b * c + a * c), [a * b * c]));
+    } },
+  { id: 'g6u9', sem: 2, name: '자연수 ÷ 분수', emoji: '🍰', gen() {
+      const [n, d] = pf(7), a = ri(2, 9); const [rn, rd] = red(a * d, n);
+      return Q(`${a} ÷ ${fr(n, d)} = ${bl()}`, F(rn, rd, [a * n / d], false, '나누는 분수를 뒤집어 곱해요'));
+    } },
+  { id: 'g6u10', sem: 2, name: '몫을 반올림하기', emoji: '💧', gen() {
+      const a = ri(10, 99), b = ri(3, 9);
+      return Q(`${a} ÷ ${b} 의 몫을 반올림하여 소수 첫째 자리까지 나타내면 ${bl()}`,
+               N(Math.round(a / b * 10) / 10, [Math.floor(a / b)], '소수 둘째 자리에서 반올림해요'));
+    } },
+  { id: 'g6u11', sem: 2, name: '원기둥과 원뿔', emoji: '🥫', gen() {
+      const r = ri(2, 10), h = ri(3, 12), k = ri(0, 2);
+      if (k === 0) return Q(`반지름 ${r}cm 인 원의 넓이는 ${bl()}cm² (원주율 3.14)`, N(r * r * 3.14, [2 * r * 3.14]));
+      if (k === 1) return Q(`반지름 ${r}cm 인 원기둥의 옆면을 펼친 직사각형의 가로는 ${bl()}cm (원주율 3.14)`, N(2 * r * 3.14, [r * 3.14]));
+      return Q(`반지름 ${r}cm, 높이 ${h}cm 인 원기둥의 부피는 ${bl()}cm³ (원주율 3.14)`, N(r * r * 3.14 * h, [2 * r * 3.14 * h]));
+    } },
+  { id: 'g6u12', sem: 2, name: '공간과 입체', emoji: '🧱', gen() {
+      const a = ri(2, 5), b = ri(2, 5), c = ri(2, 5);
+      if (Math.random() < .5)
+        return Q(`가로 ${a}개, 세로 ${b}개, 높이 ${c}층으로 빈틈없이 쌓은 쌓기나무는 모두 ${bl()}개`, N(a * b * c, [a + b + c]));
+      return Q(`한 모서리에 ${a}개씩 놓아 정육면체 모양으로 쌓은 쌓기나무는 모두 ${bl()}개`, N(a * a * a, [a * a]));
+    } },
 ];
 
 /* ───────── 중1 ───────── */
 const M1 = [
-  { id: 'm1u1', name: '정수와 유리수', emoji: '🌡️', gen() {
+  { id: 'm1u1', sem: 1, name: '정수와 유리수', emoji: '🌡️', gen() {
       const k = ri(0, 2);
       if (k === 0) { const a = -ri(2, 15), b = ri(2, 20);
         return Q(`${neg(a)} + ${b} = ${bl()}`, N(a + b, [a - b, -(a + b)])); }
@@ -1340,7 +1561,7 @@ const M1 = [
       const a = ri(2, 15), b = ri(2, 15);
       return Q(`${neg(-a)} − ${neg(-b)} = ${bl()}`, N(-a + b, [-a - b], '− (−b) 는 + b'));
     } },
-  { id: 'm1u2', name: '소인수분해', emoji: '🔍', gen() {
+  { id: 'm1u2', sem: 1, name: '소인수분해', emoji: '🔍', gen() {
       const k = ri(0, 1);
       if (k === 0) { const p = pick([2, 3, 5, 7]), e = ri(2, 4), q = pick([3, 5, 7].filter(x => x !== p));
         const v = Math.pow(p, e) * q;
@@ -1349,7 +1570,7 @@ const M1 = [
       const maxP = (n => { let m = 2; for (let i = 2; i <= n; i++) while (n % i === 0) { m = i; n /= i; } return m; })(v);
       return Q(`${v}의 소인수 중 가장 큰 수는 ${bl()}`, N(maxP, [2, v]));
     } },
-  { id: 'm1u3', name: '문자와 식', emoji: '🔤', gen() {
+  { id: 'm1u3', sem: 1, name: '문자와 식', emoji: '🔤', gen() {
       const k = ri(0, 1);
       if (k === 0) { const x = -ri(2, 6), a = ri(2, 5), b = ri(3, 12);
         return Q(`x = ${neg(x)} 일 때 ${a}x + ${b} 의 값은 ${bl()}`,
@@ -1358,13 +1579,13 @@ const M1 = [
       return Q(`x = ${x} 일 때 ${a}x² − ${b} 의 값은 ${bl()}`,
                N(a * x * x - b, [Math.pow(a * x, 2) - b], 'x 만 제곱해요'));
     } },
-  { id: 'm1u4', name: '일차방정식', emoji: '⚖️', gen() {
+  { id: 'm1u4', sem: 1, name: '일차방정식', emoji: '⚖️', gen() {
       const a = ri(2, 6), x = ri(2, 12), b = ri(2, 15);
       return Math.random() < .5
         ? Q(`${a}x − ${b} = ${a * x - b} 일 때 x = ${bl()}`, N(x, [(a * x - b - b) / a]))
         : Q(`${a}x + ${b} = ${a * x + b} 일 때 x = ${bl()}`, N(x, [(a * x + b + b) / a]));
     } },
-  { id: 'm1u5', name: '정비례와 반비례', emoji: '📈', gen() {
+  { id: 'm1u5', sem: 2, name: '정비례와 반비례', emoji: '📈', gen() {
       const k = ri(2, 9), x1 = ri(2, 6);
       let x2 = ri(2, 9);
       while (x2 === x1) x2 = ri(2, 9);       // 묻는 x 가 주어진 x 와 같으면 답이 이미 문제 안에 있다
@@ -1374,17 +1595,66 @@ const M1 = [
         : Q(`y 가 x 에 반비례하고 x = ${x1} 일 때 y = ${k * x2} 이면, x = ${x2} 일 때 y = ${bl()}`,
             N(x1 * k, [k * x2], 'x × y 값이 항상 같아요'));
     } },
-  { id: 'm1u6', name: '일차식의 계산', emoji: '🧮', gen() {
+  { id: 'm1u6', sem: 1, name: '일차식의 계산', emoji: '🧮', gen() {
       const a = ri(2, 6), b = ri(2, 9), c = ri(2, 6);
       return Math.random() < .5
         ? Q(`${a}( ${c}x − ${b} ) 를 전개했을 때 x 의 계수는 ${bl()}`, N(a * c, [c, a + c]))
         : Q(`${a}( ${c}x − ${b} ) 를 전개했을 때 상수항은 ${bl()}`, N(-a * b, [-b, a * b], '부호도 함께 곱해요'));
     } },
+
+  { id: 'm1u7', sem: 1, name: '최대공약수와 최소공배수', emoji: '🔗', gen() {
+      const g = ri(2, 9), m = ri(2, 9), n = ri(2, 9);
+      if (gcd(m, n) !== 1 || m === n) return Q(`12와 18의 최대공약수는 ${bl()}`, N(6, [36]));
+      const a = g * m, b = g * n;
+      if (Math.random() < .5) return Q(`${a}${gwa(a)} ${b}의 최대공약수는 ${bl()}`, N(g, [g * m * n]));
+      return Q(`${a}${gwa(a)} ${b}의 최소공배수는 ${bl()}`, N(g * m * n, [g], '(최대공약수) × (남은 두 수)'));
+    } },
+  { id: 'm1u8', sem: 2, name: '좌표평면과 그래프', emoji: '📍', gen() {
+      const k = ri(0, 2);
+      if (k === 0) { const x = ri(1, 9) * pick([1, -1]), y = ri(1, 9) * pick([1, -1]);
+        const q = x > 0 ? (y > 0 ? 1 : 4) : (y > 0 ? 2 : 3);
+        return Q(`점 (${x}, ${y}) 는 제 ${bl()} 사분면 위의 점이에요`, N(q, [q === 1 ? 3 : 1])); }
+      if (k === 1) { const a = ri(2, 9), x = ri(2, 9);
+        return Q(`정비례 y = ${a}x 에서 x = ${x} 일 때 y 는 ${bl()}`, N(a * x, [a + x])); }
+      const x = pick([2, 3, 4]), q = ri(2, 9), a = x * q;
+      return Q(`반비례 y = ${a} ÷ x 에서 x = ${x} 일 때 y 는 ${bl()}`, N(q, [a * x]));
+    } },
+  { id: 'm1u9', sem: 2, name: '다각형의 내각', emoji: '📐', gen() {
+      if (Math.random() < .5) { const n = ri(3, 12);
+        return Q(`${n}각형의 내각의 크기의 합은 ${bl()}°`, N(180 * (n - 2), [180 * n], '180° × (n − 2)')); }
+      const n = pick([3, 4, 5, 6, 8, 9, 10, 12]);
+      return Q(`정${n}각형의 한 내각의 크기는 ${bl()}°`, N(180 * (n - 2) / n, [180 * (n - 2)]));
+    } },
+  { id: 'm1u10', sem: 2, name: '원과 부채꼴', emoji: '⭕', gen() {
+      const r = 2 * ri(1, 6), a = pick([90, 180]);
+      if (Math.random() < .5)
+        return Q(`반지름 ${r}, 중심각 ${a}° 인 부채꼴의 호의 길이는 ${bl()}π`, N(2 * r * a / 360, [r * r * a / 360]));
+      return Q(`반지름 ${r}, 중심각 ${a}° 인 부채꼴의 넓이는 ${bl()}π`, N(r * r * a / 360, [2 * r * a / 360]));
+    } },
+  { id: 'm1u11', sem: 2, name: '입체도형의 부피', emoji: '🧊', gen() {
+      const k = ri(0, 2);
+      if (k === 0) { const a = ri(2, 9), b = ri(2, 9), h = ri(2, 9);
+        return Q(`밑면이 가로 ${a}, 세로 ${b} 인 직사각형이고 높이가 ${h} 인 사각기둥의 부피는 ${bl()}`, N(a * b * h, [a * b])); }
+      if (k === 1) { const a = ri(2, 9), b = ri(2, 9), h = 3 * ri(1, 4);
+        return Q(`밑면이 가로 ${a}, 세로 ${b} 인 직사각형이고 높이가 ${h} 인 사각뿔의 부피는 ${bl()}`, N(a * b * h / 3, [a * b * h], '뿔의 부피는 기둥의 1/3')); }
+      const r = ri(2, 9), h = ri(2, 9);
+      return Q(`밑면의 반지름이 ${r}, 높이가 ${h} 인 원기둥의 부피는 ${bl()}π`, N(r * r * h, [2 * r * h]));
+    } },
+  { id: 'm1u12', sem: 2, name: '자료의 정리', emoji: '📊', gen() {
+      const n = pick([4, 5]);
+      const arr = Array.from({ length: n }, () => ri(2, 20));
+      let sum = arr.reduce((t, v) => t + v, 0);
+      const fix = (n - (sum % n)) % n; arr[n - 1] += fix; sum += fix;
+      if (Math.random() < .5) return Q(`${arr.join(', ')} 의 평균은 ${bl()}`, N(sum / n, [sum], '자료의 합 ÷ 자료의 수'));
+      const so = [...arr].sort((x, y) => x - y);
+      const med = n % 2 ? so[(n - 1) / 2] : (so[n / 2 - 1] + so[n / 2]) / 2;
+      return Q(`${arr.join(', ')} 의 중앙값은 ${bl()}`, N(med, [sum / n], '크기 순으로 늘어놓고 가운데 값'));
+    } },
 ];
 
 /* ───────── 중2 ───────── */
 const M2 = [
-  { id: 'm2u1', name: '순환소수', emoji: '🔁', gen() {
+  { id: 'm2u1', sem: 1, name: '순환소수', emoji: '🔁', gen() {
       const k = ri(0, 1);
       if (k === 0) { const a = ri(1, 8);
         const [rn, rd] = red(a, 9);
@@ -1396,7 +1666,7 @@ const M2 = [
       return Q(`순환소수 0.${a}<span style="font-size:.7em">˙˙</span> 를 기약분수로 나타내면 ${bl()}`,
                F(rn, rd, [a / 100], true, '두 자리가 반복되면 분모는 99'));
     } },
-  { id: 'm2u2', name: '지수법칙과 단항식', emoji: '⚡', gen() {
+  { id: 'm2u2', sem: 1, name: '지수법칙과 단항식', emoji: '⚡', gen() {
       const k = ri(0, 2);
       if (k === 0) { const a = ri(2, 5), e = ri(2, 4);
         return Q(`( ${a}x${sup(e)} )² 의 계수는 ${bl()}`, N(a * a, [a, a * 2])); }
@@ -1405,27 +1675,27 @@ const M2 = [
       const e1 = ri(5, 9), e2 = ri(2, 4);
       return Q(`x${sup(e1)} ÷ x${sup(e2)} 에서 x 의 지수는 ${bl()}`, N(e1 - e2, [e1 + e2, e1 / e2]));
     } },
-  { id: 'm2u3', name: '곱셈 공식', emoji: '📦', gen() {
+  { id: 'm2u3', sem: 1, name: '곱셈 공식', emoji: '📦', gen() {
       const a = ri(2, 9);
       const k = ri(0, 2);
       if (k === 0) return Q(`( x + ${a} )² = x² + ${bl()}x + ${a * a}`, N(2 * a, [a, a * a]));
       if (k === 1) return Q(`( x − ${a} )² = x² − ${bl()}x + ${a * a}`, N(2 * a, [a, a * a]));
       return Q(`( x + ${a} )( x − ${a} ) = x² − ${bl()}`, N(a * a, [2 * a, a]));
     } },
-  { id: 'm2u4', name: '일차부등식', emoji: '⚖️', gen() {
+  { id: 'm2u4', sem: 1, name: '일차부등식', emoji: '⚖️', gen() {
       const a = ri(2, 5), b = ri(1, 9), n = ri(2, 7);
       const c = a * n + b + ri(0, a - 1);   // x < n+1 이 되도록
       const bound = (c - b) / a;
       return Q(`${a}x + ${b} &lt; ${c} 를 만족하는 자연수 x 의 개수는 ${bl()} 개`,
                N(Math.ceil(bound) - 1, [Math.floor(bound) + 1], 'x 는 1부터 세어요'));
     } },
-  { id: 'm2u5', name: '연립방정식', emoji: '🔗', gen() {
+  { id: 'm2u5', sem: 1, name: '연립방정식', emoji: '🔗', gen() {
       const x = ri(2, 12), y = ri(1, x - 1);
       return Math.random() < .5
         ? Q(`x + y = ${x + y} , x − y = ${x - y} 일 때 x = ${bl()}`, N(x, [y], '두 식을 더해 보세요'))
         : Q(`x + y = ${x + y} , x − y = ${x - y} 일 때 y = ${bl()}`, N(y, [x]));
     } },
-  { id: 'm2u6', name: '일차함수', emoji: '📈', gen() {
+  { id: 'm2u6', sem: 2, name: '일차함수', emoji: '📈', gen() {
       const a = ri(2, 6), b = ri(1, 12), k = ri(0, 1);
       if (k === 0) { const x = ri(2, 8);
         return Q(`y = ${a}x − ${b} 에서 x = ${x} 일 때 y = ${bl()}`, N(a * x - b, [a * x + b])); }
@@ -1434,51 +1704,141 @@ const M2 = [
       return Q(`두 점 (${x1}, ${y1}) , (${x2}, ${y2}) 를 지나는 직선의 기울기는 ${bl()}`,
                N(a, [(x2 - x1) / (y2 - y1), y2 - y1], '(y 증가량) ÷ (x 증가량)'));
     } },
+
+  { id: 'm2u7', sem: 1, name: '연립방정식의 활용', emoji: '🧩', gen() {
+      const x = ri(2, 15), y = ri(2, 15), a = ri(2, 5);
+      if (Math.random() < .5) return Q(`x + y = ${x + y}, x − y = ${x - y} 일 때 x 는 ${bl()}`, N(x, [y]));
+      return Q(`${a}x + y = ${a * x + y}, x + y = ${x + y} 일 때 x 는 ${bl()}`, N(x, [y], '두 식을 빼면 y 가 없어져요'));
+    } },
+  { id: 'm2u8', sem: 2, name: '일차함수와 일차방정식', emoji: '📉', gen() {
+      const a = ri(1, 6) * pick([1, -1]), b = ri(1, 9) * pick([1, -1]);
+      const body = `y = ${a === 1 ? '' : a === -1 ? '−' : a}x ${b >= 0 ? '+ ' + b : '− ' + (-b)}`;
+      const k = ri(0, 2);
+      if (k === 0) return Q(`${body} 의 기울기는 ${bl()}`, N(a, [b]));
+      if (k === 1) return Q(`${body} 의 y절편은 ${bl()}`, N(b, [a]));
+      const x = ri(1, 6);
+      return Q(`${body} 의 그래프가 점 (${x}, ${bl()}) 를 지나요`, N(a * x + b, [a + b]));
+    } },
+  { id: 'm2u9', sem: 2, name: '도형의 성질', emoji: '📐', gen() {
+      const k = ri(0, 2);
+      if (k === 0) { const a = 2 * ri(15, 40);
+        return Q(`이등변삼각형의 꼭지각이 ${a}° 일 때 한 밑각은 ${bl()}°`, N((180 - a) / 2, [180 - a])); }
+      if (k === 1) { const a = ri(40, 140);
+        return Q(`평행사변형의 한 각이 ${a}° 일 때 이웃한 각은 ${bl()}°`, N(180 - a, [a])); }
+      const a = ri(30, 70), b = ri(30, 70);
+      return Q(`삼각형의 두 내각이 ${a}°, ${b}° 일 때, 이웃하지 않는 외각은 ${bl()}°`, N(a + b, [180 - a - b], '외각 = 이웃하지 않는 두 내각의 합'));
+    } },
+  { id: 'm2u10', sem: 2, name: '도형의 닮음', emoji: '🔍', gen() {
+      const k = ri(2, 5), a = ri(2, 9);
+      if (Math.random() < .5)
+        return Q(`닮음비가 1 : ${k} 인 두 도형에서 작은 도형의 한 변이 ${a} 일 때 대응변은 ${bl()}`, N(a * k, [a + k]));
+      return Q(`닮음비가 1 : ${k} 인 두 도형의 넓이의 비는 1 : ${bl()}`, N(k * k, [k], '넓이의 비는 닮음비의 제곱'));
+    } },
+  { id: 'm2u11', sem: 2, name: '확률', emoji: '🎲', gen() {
+      const k = ri(0, 2);
+      if (k === 0) { const r = ri(1, 6), b = ri(1, 6); const [n, d] = red(r, r + b);
+        return Q(`빨간 공 ${r}개, 파란 공 ${b}개 중 하나를 꺼낼 때 빨간 공일 확률은 ${bl()}`, F(n, d, [r / b], true)); }
+      if (k === 1) return Q(`주사위 한 개를 던져 짝수의 눈이 나올 확률은 ${bl()}`, F(1, 2, [6], true));
+      return Q(`동전 두 개를 던져 모두 앞면이 나올 확률은 ${bl()}`, F(1, 4, [2], true));
+    } },
+  { id: 'm2u12', sem: 2, name: '경우의 수', emoji: '🔢', gen() {
+      const a = ri(2, 6), b = ri(2, 6), k = ri(0, 2);
+      if (k === 0) return Q(`윗옷 ${a}종류와 아래옷 ${b}종류로 옷을 입는 경우의 수는 ${bl()}`, N(a * b, [a + b]));
+      if (k === 1) return Q(`${a + 2}명 중 회장 1명과 부회장 1명을 뽑는 경우의 수는 ${bl()}`, N((a + 2) * (a + 1), [a + 2]));
+      const f = [1, 1, 2, 6, 24, 120, 720, 5040, 40320];
+      return Q(`서로 다른 ${a + 2}권의 책을 한 줄로 놓는 경우의 수는 ${bl()}`, N(f[a + 2], [a + 2]));
+    } },
 ];
 
 /* ───────── 중3 ───────── */
 const M3 = [
-  { id: 'm3u1', name: '제곱근과 실수', emoji: '🔢', gen() {
+  { id: 'm3u1', sem: 1, name: '제곱근과 실수', emoji: '🔢', gen() {
       const k = ri(0, 1);
       if (k === 0) { const a = ri(4, 20);
         return Q(`√${a * a} = ${bl()}`, N(a, [a * a / 2, a * 2])); }
       const a = ri(2, 6), b = pick([2, 3, 5, 6, 7]);
       return Q(`√${a * a * b} = ${bl()}√${b}`, N(a, [a * a, a * b], '제곱인 수를 밖으로 꺼내요'));
     } },
-  { id: 'm3u2', name: '인수분해', emoji: '🧩', gen() {
+  { id: 'm3u2', sem: 1, name: '인수분해', emoji: '🧩', gen() {
       const p = ri(1, 8), q = ri(1, 8);
       return Math.random() < .5
         ? Q(`x² + ${p + q}x + ${p * q} = ( x + ${p} )( x + ${bl()} )`, N(q, [p * q - p, p + q]))
         : Q(`x² − ${p + q}x + ${p * q} = ( x − ${p} )( x − ${bl()} )`, N(q, [p * q - p]));
     } },
-  { id: 'm3u3', name: '이차방정식', emoji: '⚖️', gen() {
+  { id: 'm3u3', sem: 1, name: '이차방정식', emoji: '⚖️', gen() {
       const p = ri(1, 8), q = ri(1, 8);
       const b = p + q, c = p * q;
       return Math.random() < .5
         ? Q(`x² − ${b}x + ${c} = 0 의 두 근의 합은 ${bl()}`, N(b, [-b, c], '두 근의 합 = −(x의 계수)'))
         : Q(`x² − ${b}x + ${c} = 0 의 두 근의 곱은 ${bl()}`, N(c, [-c, b]));
     } },
-  { id: 'm3u4', name: '곱셈 공식의 활용', emoji: '📦', gen() {
+  { id: 'm3u4', sem: 1, name: '곱셈 공식의 활용', emoji: '📦', gen() {
       const k = ri(0, 1);
       if (k === 0) { const a = pick([21, 31, 41, 51, 101]);
         return Q(`${a} × ${a - 2} = ${bl()}`, N(a * (a - 2), [(a - 1) * (a - 1)], '(a+1)(a−1) = a²−1 을 써 보세요')); }
       const a = pick([15, 25, 35, 45, 105]);
       return Q(`${a}² = ${bl()}`, N(a * a, [a * a - 25, a * 2]));
     } },
-  { id: 'm3u5', name: '이차함수', emoji: '📈', gen() {
+  { id: 'm3u5', sem: 2, name: '이차함수', emoji: '📈', gen() {
       const p = ri(1, 6), k = ri(0, 1);
       const c = p * p + ri(1, 6);
       if (k === 0) return Q(`y = x² − ${2 * p}x + ${c} 의 대칭축은 x = ${bl()}`,
                             N(p, [2 * p, -p], 'x = −b / 2a'));
       return Q(`y = ( x − ${p} )² + ${c} 의 꼭짓점의 y 좌표는 ${bl()}`, N(c, [p, -c]));
     } },
-  { id: 'm3u6', name: '피타고라스 정리', emoji: '📐', gen() {
+  { id: 'm3u6', sem: 2, name: '피타고라스 정리', emoji: '📐', gen() {
       const [a, b, c] = pick([[3, 4, 5], [6, 8, 10], [5, 12, 13], [9, 12, 15], [8, 15, 17], [7, 24, 25]]);
       return Math.random() < .5
         ? Q(`직각을 낀 두 변이 ${a}, ${b} 인 직각삼각형의 빗변은 ${bl()}`,
             N(c, [a + b, a * b], '빗변² = a² + b²'))
         : Q(`빗변이 ${c}, 한 변이 ${a} 인 직각삼각형의 나머지 변은 ${bl()}`,
             N(b, [c - a, c + a]));
+    } },
+
+  { id: 'm3u7', sem: 1, name: '근과 판별식', emoji: '🧮', gen() {
+      const k = ri(0, 2);
+      if (k === 0) { const p = ri(1, 9), q = ri(1, 9);
+        return Q(`x² − ${p + q}x + ${p * q} = 0 의 두 근의 합은 ${bl()}`, N(p + q, [p * q], '두 근의 합 = −b/a')); }
+      if (k === 1) { const p = ri(1, 9), q = ri(1, 9);
+        return Q(`x² − ${p + q}x + ${p * q} = 0 의 두 근의 곱은 ${bl()}`, N(p * q, [p + q], '두 근의 곱 = c/a')); }
+      const b = ri(2, 9), c = ri(1, 9);
+      return Q(`x² + ${b}x + ${c} = 0 의 판별식 b² − 4ac 의 값은 ${bl()}`, N(b * b - 4 * c, [b * b + 4 * c]));
+    } },
+  { id: 'm3u8', sem: 1, name: '제곱근의 계산', emoji: '🔢', gen() {
+      const k = ri(0, 2);
+      if (k === 0) { const a = ri(2, 9), b = ri(2, 9); return Q(`√${a * a} × √${b * b} = ${bl()}`, N(a * b, [a + b])); }
+      if (k === 1) { const a = ri(2, 12); return Q(`√${a * a} + √${a * a} = ${bl()}`, N(2 * a, [a * a * 2])); }
+      const a = ri(2, 6), b = pick([2, 3, 5, 7]);
+      return Q(`√${a * a * b} 를 a√${b} 꼴로 나타낼 때 a 는 ${bl()}`, N(a, [a * a], '제곱인 인수를 밖으로 꺼내요'));
+    } },
+  { id: 'm3u9', sem: 2, name: '이차함수의 최대·최소', emoji: '📈', gen() {
+      const p = ri(1, 6) * pick([1, -1]), q = ri(1, 9) * pick([1, -1]), a = pick([1, -1]);
+      const body = `y = ${a === 1 ? '' : '−'}(x ${p >= 0 ? '− ' + p : '+ ' + (-p)})² ${q >= 0 ? '+ ' + q : '− ' + (-q)}`;
+      const k = ri(0, 2);
+      if (k === 0) return Q(`${body} 의 꼭짓점의 x좌표는 ${bl()}`, N(p, [-p]));
+      if (k === 1) return Q(`${body} 의 꼭짓점의 y좌표는 ${bl()}`, N(q, [-q]));
+      return Q(`${body} 의 ${a === 1 ? '최솟값' : '최댓값'}은 ${bl()}`, N(q, [p], '꼭짓점의 y좌표가 최댓값·최솟값'));
+    } },
+  { id: 'm3u10', sem: 2, name: '삼각비', emoji: '📐', gen() {
+      const k = ri(0, 2);
+      if (k === 0) { const t = pick([[3, 4, 5], [6, 8, 10], [5, 12, 13]]); const [h, b, c] = t; const [n, d] = red(h, c);
+        return Q(`직각삼각형에서 높이 ${h}, 밑변 ${b}, 빗변 ${c} 일 때 sinA 는 ${bl()}`, F(n, d, [h / b], true, 'sinA = 높이 / 빗변')); }
+      if (k === 1) return Q(`tan45° 의 값은 ${bl()}`, N(1, [0.5, 2]));
+      return Q(`sin30° 을 분수로 나타내면 ${bl()}`, F(1, 2, [3], true));
+    } },
+  { id: 'm3u11', sem: 2, name: '원주각', emoji: '⭕', gen() {
+      const a = 2 * ri(15, 60);
+      if (Math.random() < .5) return Q(`중심각이 ${a}° 인 호에 대한 원주각은 ${bl()}°`, N(a / 2, [a * 2], '원주각 = 중심각의 1/2'));
+      return Q(`원주각이 ${a / 2}° 일 때 같은 호에 대한 중심각은 ${bl()}°`, N(a, [a / 4]));
+    } },
+  { id: 'm3u12', sem: 2, name: '대푯값과 산포도', emoji: '📊', gen() {
+      const n = 5, arr = Array.from({ length: n }, () => ri(1, 20));
+      let sum = arr.reduce((t, v) => t + v, 0);
+      const fix = (n - (sum % n)) % n; arr[n - 1] += fix; sum += fix;
+      const so = [...arr].sort((x, y) => x - y), k = ri(0, 2);
+      if (k === 0) return Q(`${arr.join(', ')} 의 평균은 ${bl()}`, N(sum / n, [sum]));
+      if (k === 1) return Q(`${arr.join(', ')} 의 중앙값은 ${bl()}`, N(so[2], [sum / n]));
+      return Q(`${arr.join(', ')} 의 범위(최댓값 − 최솟값)는 ${bl()}`, N(so[4] - so[0], [so[4] + so[0]]));
     } },
 ];
 
@@ -1493,6 +1853,14 @@ const GRADES = [
   { id: 'm1', label: '중1', units: M1 },
   { id: 'm2', label: '중2', units: M2 },
   { id: 'm3', label: '중3', units: M3 },
+];
+
+/* ───────── 학기 목록 ─────────
+   단원마다 sem(1 또는 2)이 붙어 있고, 공부하기 화면은 고른 학기의 단원만 보여 준다.
+   학년마다 1학기 6단원 · 2학기 6단원 = 12단원, 모두 합쳐 108단원이다. */
+const SEMESTERS = [
+  { id: 1, label: '1학기' },
+  { id: 2, label: '2학기' },
 ];
 
 /* 학년별 제한시간 — 학년이 올라갈수록 한 문제에 필요한 생각 시간이 길어진다.
@@ -1571,6 +1939,69 @@ const CONCEPTS = {
   m3u4: { how: '21×19처럼 가운데 수를 기준으로 ±1인 곱은 (a+1)(a−1)=a²−1 공식으로 빠르게 구해요.', ex: '21×19 = (20+1)(20−1) = 20²−1 = 399.' },
   m3u5: { how: 'y=(x−p)²+q 꼴이면 꼭짓점은 (p, q)예요. y=x²+bx+c 꼴이면 대칭축은 x=−b/2예요.', ex: 'y=(x−3)²+4 → 꼭짓점은 (3, 4).' },
   m3u6: { how: '직각삼각형에서 (빗변)² = (한 변)² + (다른 변)² 이에요.', ex: '두 변이 3, 4인 직각삼각형의 빗변은? → √(3²+4²) = √25 = 5.' },
+
+  g1u7: { how: '수를 순서대로 세면서 하나 앞의 수, 하나 뒤의 수를 찾고 크기를 비교해요.', ex: '5 바로 뒤의 수는 6이에요. 5와 8 중에서는 8이 더 커요.' },
+  g1u8: { how: '10개씩 묶음과 낱개로 50까지의 수를 나타내요.', ex: '10개씩 3묶음과 낱개 4개는 34예요.' },
+  g1u9: { how: '길이·무게·넓이를 견주어 더 길다, 더 무겁다처럼 말해요.', ex: '5cm 막대와 8cm 막대 중 더 긴 것은 8cm 막대예요.' },
+  g1u10: { how: '세 수는 앞에서부터 차례로 더하거나 빼요.', ex: '2 + 3 + 1 = ? → 2 + 3 = 5, 5 + 1 = 6.' },
+  g1u11: { how: '짧은바늘은 몇 시, 긴바늘은 몇 분을 알려 줘요. 긴바늘이 12면 정각, 6이면 30분이에요.', ex: '짧은바늘이 3, 긴바늘이 12를 가리키면 3시예요.' },
+  g1u12: { how: '수가 몇씩 뛰어 세어지는지 규칙을 찾아 다음 수를 구해요.', ex: '2, 5, 8, 11, ? → 3씩 커지므로 14예요.' },
+
+  g2u7: { how: '덧셈과 뺄셈이 섞인 세 수는 앞에서부터 차례로 계산해요.', ex: '50 + 20 − 30 = ? → 50 + 20 = 70, 70 − 30 = 40.' },
+  g2u8: { how: '같은 수를 여러 번 더하는 것을 곱셈으로 나타내요.', ex: '4를 3번 더하면 4 + 4 + 4 = 12, 곧 4 × 3 = 12예요.' },
+  g2u9: { how: '1000이 몇 개, 100이 몇 개, 10이 몇 개, 1이 몇 개인지로 네 자리 수를 나타내요.', ex: '1000이 2개, 100이 5개, 10이 3개, 1이 7개면 2537이에요.' },
+  g2u10: { how: '1m 는 100cm 예요. 단위를 cm 로 맞춘 뒤 더하거나 빼요.', ex: '2m 30cm + 1m 40cm = 230 + 140 = 370cm 예요.' },
+  g2u11: { how: '1시간은 60분, 하루는 24시간이에요.', ex: '3시간은 3 × 60 = 180분이에요.' },
+  g2u12: { how: '몇씩 커지는지, 몇 배씩 커지는지 규칙을 찾아 다음 수를 구해요.', ex: '3, 6, 9, 12, ? → 3씩 커지므로 15예요.' },
+
+  g3u7: { how: '1cm 는 10mm, 1km 는 1000m, 1분은 60초예요.', ex: '3km 500m 는 3 × 1000 + 500 = 3500m 예요.' },
+  g3u8: { how: '1을 10칸으로 나눈 것 중 하나를 0.1이라 쓰고 영 점 일이라 읽어요.', ex: '7/10 은 0.7이에요. 3과 7/10 은 3.7이에요.' },
+  g3u9: { how: '일의 자리부터 차례로 곱하고, 10이 넘으면 윗자리로 올려요.', ex: '234 × 3 = ? → 4 × 3 = 12(1 올림), 3 × 3 + 1 = 10(1 올림), 2 × 3 + 1 = 7 → 702.' },
+  g3u10: { how: '높은 자리부터 나누고, 남은 수를 아래 자리로 내려서 다시 나눠요.', ex: '84 ÷ 4 = ? → 8 ÷ 4 = 2, 4 ÷ 4 = 1 → 21.' },
+  g3u11: { how: '분모가 같으면 분자가 클수록 큰 분수예요.', ex: '3/7 과 5/7 중에서는 분자가 더 큰 5/7 이 커요.' },
+  g3u12: { how: '원의 중심에서 원 위의 한 점까지가 반지름, 원을 가로지르는 가장 긴 선분이 지름이에요. 지름은 반지름의 2배예요.', ex: '반지름이 5cm 이면 지름은 10cm 예요.' },
+
+  g4u7: { how: '수가 얼마씩 커지는지(덧셈 규칙), 몇 배씩 커지는지(곱셈 규칙)를 찾아요.', ex: '3, 6, 12, ? → 2배씩 커지므로 24예요.' },
+  g4u8: { how: '막대의 길이로 자료의 많고 적음을 한눈에 비교해요.', ex: '축구 8명, 야구 5명이면 축구가 3명 더 많아요.' },
+  g4u9: { how: '삼각형 세 각의 합은 180°예요. 이등변삼각형의 두 밑각은 같고, 정삼각형의 한 각은 60°예요.', ex: '두 각이 50°, 60° 이면 나머지 각은 180 − 50 − 60 = 70°예요.' },
+  g4u10: { how: '사각형 네 각의 합은 360°예요. 평행사변형에서 이웃한 두 각의 합은 180°예요.', ex: '세 각이 80°, 90°, 100° 이면 나머지 각은 360 − 270 = 90°예요.' },
+  g4u11: { how: '변의 길이가 모두 같은 다각형이 정다각형이에요. 둘레는 한 변 × 변의 수예요.', ex: '한 변이 4cm 인 정오각형의 둘레는 4 × 5 = 20cm 예요.' },
+  g4u12: { how: '점을 선으로 이어 변화를 나타낸 그래프예요. 선이 올라가면 늘어난 것이에요.', ex: '1시 15℃, 2시 18℃ 이면 3℃ 올랐어요.' },
+
+  g5u7: { how: '두 양 사이의 관계를 ○ 와 △ 를 써서 식으로 나타내요.', ex: '△ = ○ × 3 + 2 에서 ○ 가 4면 △ 는 14예요.' },
+  g5u8: { how: '평행사변형은 밑변 × 높이, 삼각형은 밑변 × 높이 ÷ 2, 사다리꼴은 (윗변 + 아랫변) × 높이 ÷ 2 예요.', ex: '밑변 6cm, 높이 4cm 인 삼각형의 넓이는 6 × 4 ÷ 2 = 12cm² 예요.' },
+  g5u9: { how: '올림은 위로, 버림은 아래로, 반올림은 구하려는 자리 아래 숫자가 5 이상이면 올리고 4 이하면 버려요.', ex: '3271을 반올림하여 백의 자리까지 하면 7이 5 이상이므로 3300이에요.' },
+  g5u10: { how: '포개어 완전히 겹치는 두 도형이 합동이에요. 대응변의 길이와 대응각의 크기는 서로 같아요.', ex: '합동인 삼각형에서 한 변이 7cm 이면 대응하는 변도 7cm 예요.' },
+  g5u11: { how: '직육면체는 면 6개, 모서리 12개, 꼭짓점 8개예요.', ex: '가로·세로·높이가 각각 2, 3, 4cm 이면 모든 모서리의 합은 4 × (2 + 3 + 4) = 36cm 예요.' },
+  g5u12: { how: '일이 일어날 가능성을 (해당하는 경우의 수) / (전체 경우의 수) 인 분수로 나타내요.', ex: '빨간 구슬 2개, 파란 구슬 3개면 빨간 구슬이 나올 가능성은 2/5 예요.' },
+
+  g6u7: { how: 'n각기둥은 면 n + 2개, 모서리 3n개, 꼭짓점 2n개예요. n각뿔은 면 n + 1개, 꼭짓점 n + 1개예요.', ex: '오각기둥의 면은 5 + 2 = 7개예요.' },
+  g6u8: { how: '직육면체의 부피는 가로 × 세로 × 높이, 겉넓이는 세 쌍의 면 넓이를 두 배 해서 더해요.', ex: '2 × 3 × 4 인 직육면체의 부피는 24cm³ 예요.' },
+  g6u9: { how: '분수로 나눌 때는 나누는 분수를 뒤집어 곱해요.', ex: '4 ÷ 2/3 = 4 × 3/2 = 6 이에요.' },
+  g6u10: { how: '몫을 구한 뒤 구하려는 자리 바로 아래에서 반올림해요.', ex: '25 ÷ 7 = 3.571… → 소수 첫째 자리까지면 3.6이에요.' },
+  g6u11: { how: '원의 넓이는 반지름 × 반지름 × 원주율, 원기둥의 부피는 밑면의 넓이 × 높이예요.', ex: '반지름 3cm 인 원의 넓이는 3 × 3 × 3.14 = 28.26cm² 예요.' },
+  g6u12: { how: '쌓기나무의 개수는 가로 × 세로 × 높이로 구해요.', ex: '가로 3개, 세로 2개, 높이 4층이면 3 × 2 × 4 = 24개예요.' },
+
+  m1u7: { how: '두 수를 소인수분해해서 공통인 부분이 최대공약수, 최대공약수에 남은 수를 곱한 것이 최소공배수예요.', ex: '12와 18 → 최대공약수 6, 최소공배수 36이에요.' },
+  m1u8: { how: '좌표평면은 네 사분면으로 나뉘어요. 정비례는 y = ax, 반비례는 y = a ÷ x 예요.', ex: '점 (3, −2) 는 x 가 양수, y 가 음수이므로 제4사분면이에요.' },
+  m1u9: { how: 'n각형의 내각의 합은 180° × (n − 2) 예요. 정n각형의 한 내각은 이를 n 으로 나눠요.', ex: '오각형의 내각의 합은 180 × 3 = 540°, 정오각형의 한 각은 108°예요.' },
+  m1u10: { how: '부채꼴의 호의 길이와 넓이는 중심각의 크기에 정비례해요.', ex: '반지름 4, 중심각 90° 인 부채꼴의 넓이는 4 × 4 × 90/360 = 4π 예요.' },
+  m1u11: { how: '기둥의 부피는 밑넓이 × 높이, 뿔의 부피는 기둥의 1/3 이에요.', ex: '밑넓이 12, 높이 6 인 사각뿔의 부피는 12 × 6 ÷ 3 = 24예요.' },
+  m1u12: { how: '평균은 자료의 합을 자료의 수로 나눈 값, 중앙값은 크기 순으로 늘어놓았을 때 가운데 값이에요.', ex: '4, 6, 8, 10, 12 의 평균은 40 ÷ 5 = 8, 중앙값은 8이에요.' },
+
+  m2u7: { how: '두 식을 더하거나 빼서 한 문자를 없앤 뒤 남은 문자를 구해요(가감법).', ex: 'x + y = 10, x − y = 4 → 두 식을 더하면 2x = 14, x = 7 이에요.' },
+  m2u8: { how: 'y = ax + b 에서 a 는 기울기, b 는 y절편이에요.', ex: 'y = 3x − 2 의 기울기는 3, y절편은 −2예요.' },
+  m2u9: { how: '이등변삼각형의 두 밑각은 같고, 평행사변형의 이웃한 두 각의 합은 180°예요. 삼각형의 한 외각은 이웃하지 않는 두 내각의 합과 같아요.', ex: '두 내각이 40°, 60° 이면 외각은 100°예요.' },
+  m2u10: { how: '닮은 두 도형에서 대응변의 비가 닮음비예요. 넓이의 비는 닮음비의 제곱이에요.', ex: '닮음비가 1 : 3 이면 넓이의 비는 1 : 9 예요.' },
+  m2u11: { how: '확률은 (해당하는 경우의 수) / (모든 경우의 수) 예요.', ex: '주사위에서 짝수가 나올 확률은 3/6 = 1/2 예요.' },
+  m2u12: { how: '동시에 일어나면 곱하고, 둘 중 하나만 일어나면 더해요.', ex: '윗옷 3종류, 아래옷 4종류면 3 × 4 = 12가지예요.' },
+
+  m3u7: { how: 'ax² + bx + c = 0 에서 두 근의 합은 −b/a, 두 근의 곱은 c/a 이고, 판별식은 b² − 4ac 예요.', ex: 'x² − 5x + 6 = 0 → 두 근의 합은 5, 곱은 6이에요.' },
+  m3u8: { how: '근호 안의 제곱인 인수는 밖으로 꺼내요. 같은 근호끼리는 계수를 더해요.', ex: '√12 = √(4 × 3) = 2√3 이에요.' },
+  m3u9: { how: 'y = a(x − p)² + q 의 꼭짓점은 (p, q) 예요. a 가 양수면 q 가 최솟값, 음수면 q 가 최댓값이에요.', ex: 'y = (x − 2)² + 3 의 꼭짓점은 (2, 3), 최솟값은 3이에요.' },
+  m3u10: { how: 'sinA 는 높이 / 빗변, cosA 는 밑변 / 빗변, tanA 는 높이 / 밑변이에요.', ex: '세 변이 3, 4, 5 인 직각삼각형에서 sinA = 3/5 예요.' },
+  m3u11: { how: '한 호에 대한 원주각은 중심각의 1/2 이에요.', ex: '중심각이 80° 이면 원주각은 40°예요.' },
+  m3u12: { how: '평균·중앙값·최빈값은 자료를 대표하는 값이고, 범위는 최댓값에서 최솟값을 뺀 값이에요.', ex: '3, 5, 7, 9, 11 → 평균 7, 중앙값 7, 범위 8이에요.' },
 };
 
 /* ═══════════════════════════════════════════════════════════
@@ -2260,6 +2691,8 @@ const NAV_TABS = {
   dress: $('navDress'), rank: $('navRank'), shop: $('navShop'),
 };
 let curGrade = GRADES[0];
+/* 학기. 3~7월에 열면 1학기, 8월~다음 해 2월에 열면 2학기가 먼저 보이게 한다. */
+let curSem = (m => m >= 3 && m <= 7 ? 1 : 2)(new Date().getMonth() + 1);
 
 function showScreen(name) {
   Object.values(SCREENS).forEach(el => el.classList.add('hide'));
@@ -2276,7 +2709,7 @@ function showScreen(name) {
 function renderScreen(name) {
   if (S) { clearInterval(tickHandle); clearInterval(S.oppTimer); S = null; }
   if (name === 'home')    renderHome();
-  if (name === 'browse')  { renderGrades(); renderUnits(); }
+  if (name === 'browse')  { renderGrades(); renderSems(); renderUnits(); }
   if (name === 'explore') renderExplore();
   if (name === 'battle')  renderBattleTab();
   if (name === 'dress')   renderDress();
@@ -2607,16 +3040,30 @@ function renderGrades() {
     const b = document.createElement('button');
     b.className = 'gbtn' + (g.id === curGrade.id ? ' on' : '');
     b.textContent = g.label;
-    b.onclick = () => { curGrade = g; renderGrades(); renderUnits(); };
+    b.onclick = () => { curGrade = g; renderGrades(); renderUnits(); };   // 고른 학기는 그대로 둔다
     box.appendChild(b);
   });
 }
 
+function renderSems() {
+  const box = $('semList');
+  box.innerHTML = '';
+  SEMESTERS.forEach(sm => {
+    const b = document.createElement('button');
+    b.className = 'gbtn' + (sm.id === curSem ? ' on' : '');
+    b.textContent = sm.label;
+    b.onclick = () => { curSem = sm.id; renderSems(); renderUnits(); };
+    box.appendChild(b);
+  });
+}
+
+function unitsOf(grade, sem) { return grade.units.filter(u => u.sem === sem); }
+
 function renderUnits() {
   const box = $('unitList');
   box.innerHTML = '';
-  $('unitHint').textContent = `${curGrade.label} · ${SECONDS[curGrade.id]}초 / ${QUESTION_COUNT}문제`;
-  curGrade.units.forEach(u => {
+  $('unitHint').textContent = `${curGrade.label} ${curSem}학기 · ${SECONDS[curGrade.id]}초 / ${QUESTION_COUNT}문제`;
+  unitsOf(curGrade, curSem).forEach(u => {
     const done = DB.history.filter(h => h.day === today() && h.unitId === u.id).length;
     const b = document.createElement('button');
     b.className = 'ubtn';
@@ -4571,7 +5018,7 @@ if (IS_TEACHER_PAGE) {
 
 /* 검증 하네스(_test.html)가 엔진을 그대로 불러 쓸 수 있게 열어 둔다 */
 window.TAMSU = {
-  GRADES, SECONDS, QUESTION_COUNT, CONCEPTS, toNum, isCorrect, inputVal, classify, gradeOf, levelInfo, CAUSES,
+  GRADES, SEMESTERS, SECONDS, QUESTION_COUNT, CONCEPTS, toNum, isCorrect, inputVal, classify, gradeOf, levelInfo, CAUSES,
   GAME: {
     CHAR_TYPES, STAGE_DEFS, tiersFor, MAX_LEVEL, expNeed, sutamiLevel, tierOf, nextTierOf, EXP_TABLE,
     AREAS, SLOTS, SHOP, LEAGUES, leagueOf, nextLeagueOf, MISSIONS,
