@@ -57,7 +57,7 @@
 | `chess/` | 어린이 체스 교실 | `chess-online-worker.js` 붙여넣기 |
 | `omok/` | 다람쌤 오목 대회 | 정적 페이지 |
 | `typing-rain/` | 타자 연습 (낱말 비) | 정적 페이지 |
-| `pet-survival/` | 펫 서바이벌 (합체 디펜스 게임) | 정적 페이지 |
+| `pet-survival/` | 펫 서바이벌 (합체 디펜스 게임) | 정적 페이지 — `public/` 폴더만 업로드 |
 | `safety-edu/` | 안전교육 문구 복사기 | **git 연동 자동배포** (아래 참고) |
 
 ### `safety-edu/` 배포 주의
