@@ -1,0 +1,30 @@
+# ══════════════════════════════════════════════════════════════════════
+#  우리 반 카트 그랑프리 — 온라인 방 서버 배포 설정
+#  ────────────────────────────────────────────────────────────────────
+#  Cloudflare 대시보드에서는 '새' Durable Object 클래스를 만들 수 없습니다.
+#  (바인딩 드롭다운이 비어 있는 이유입니다. 마이그레이션이 필요한데,
+#   마이그레이션은 wrangler 명령으로만 적용됩니다.)
+#
+#  이 파일을 kart-online-worker.js 와 같은 폴더에 두고, 그 폴더에서
+#  아래 두 줄을 실행하면 클래스 생성 · 바인딩 연결 · 배포가 한 번에 끝납니다.
+#
+#      npx wrangler login
+#      npx wrangler deploy
+#
+#  name 은 이미 만들어 둔 Worker 이름과 같아야 주소가 바뀌지 않습니다.
+#  (주소가 https://kart.<계정>.workers.dev 이면 name = "kart")
+# ══════════════════════════════════════════════════════════════════════
+
+name = "kart"
+main = "kart-online-worker.js"
+compatibility_date = "2026-07-21"
+
+# 방 하나 = Durable Object 하나
+[[durable_objects.bindings]]
+name = "KART_ROOM"
+class_name = "KartRoom"
+
+# 무료 요금제에서는 SQLite 방식 Durable Object만 됩니다
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["KartRoom"]

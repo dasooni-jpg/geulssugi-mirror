@@ -47,14 +47,27 @@
 
 이 모드만 서버가 필요합니다. Cloudflare Workers 무료 요금제로 충분합니다.
 
-1. Cloudflare → **Workers & Pages → Create → Worker** (이름 예: `kart-rooms`)
-2. 저장소의 `kart-online-worker.js` 내용을 편집기에 그대로 붙여넣고 **Deploy**
-3. **Settings → Durable Objects** 바인딩 추가
-   - Variable name: `KART_ROOM` (반드시 이 이름)
-   - Class name: `KartRoom`
-   - 무료 요금제에서는 **SQLite 방식**(`new_sqlite_classes`)을 골라야 합니다
-4. 배포 주소(예: `https://kart-rooms.내계정.workers.dev`)를 확인
-5. 학생이 주소를 넣지 않아도 되게 하려면 `kart/index.html`에서 아래 한 줄을 고칩니다.
+> ⚠️ **대시보드만으로는 안 됩니다.** 대시보드의 Durable Object 바인딩 화면은
+> *이미 만들어져 있는* 클래스만 목록에 보여 줍니다. 새 클래스는 **마이그레이션**으로
+> 만들어야 하고, 마이그레이션은 `wrangler` 명령으로만 적용됩니다.
+> (드롭다운이 비어 있고 “Durable Object을(를) 찾을 수 없습니다”가 뜨는 이유입니다.)
+
+아래 방법이면 클래스 생성 · 바인딩 연결 · 배포가 **한 번에** 끝납니다.
+
+1. `kart-online-worker.js` 와 `wrangler.toml` 을 **같은 폴더**에 둡니다
+   (둘 다 이 저장소 최상위에 있습니다)
+2. `wrangler.toml` 의 `name` 을 쓰려는 Worker 이름으로 맞춥니다
+   (주소가 `https://kart.내계정.workers.dev` 이면 `name = "kart"`)
+3. 그 폴더에서 명령 프롬프트(또는 PowerShell)를 열고 두 줄을 실행합니다
+   ```
+   npx wrangler login     ← 브라우저가 열리면 허용 클릭
+   npx wrangler deploy
+   ```
+   `node -v` 가 안 되면 [nodejs.org](https://nodejs.org) 에서 LTS를 먼저 설치하세요.
+4. 배포 주소(예: `https://kart.내계정.workers.dev`)를 확인
+5. 주소창에 `배포주소/api/health` 를 넣어 `{"ok":true, ...}` 가 보이면 성공입니다.
+   `durable_object_not_bound` 가 보이면 3번 배포가 안 끝난 것입니다.
+6. 학생이 주소를 넣지 않아도 되게 하려면 `kart/index.html`에서 아래 한 줄을 고칩니다.
    ```js
    const DEFAULT_SERVER = '';   // ← 여기에 배포 주소를 넣으면 학생은 입력할 필요가 없습니다
    ```

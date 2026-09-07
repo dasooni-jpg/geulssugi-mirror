@@ -12,25 +12,21 @@
  *   혼자 달리기 · 둘이 나눠 달리기 · 기록 도전은 이 서버가 없어도 그대로 작동합니다.
  *   이 서버는 "친구들과 함께 달리기"(최대 8명) 하나만을 위한 것입니다.
  *
- * ■ 배포 방법 (Cloudflare 대시보드에서 한 번만)
- *   1. Workers & Pages → Create → Worker 만들기 (이름 예: kart-rooms)
- *   2. 이 파일 내용을 편집기에 그대로 붙여넣기
- *   3. Settings → Durable Objects 바인딩 추가
- *        - Variable name : KART_ROOM   (반드시 이 이름 그대로)
- *        - Class name    : KartRoom
- *      ※ 무료 요금제에서는 SQLite 방식 Durable Object만 됩니다.
- *        대시보드에서 마이그레이션을 물어보면 "new_sqlite_classes"를 고르세요.
- *        wrangler로 배포한다면 wrangler.toml에 아래를 넣습니다.
+ * ■ 배포 방법 — wrangler 로 하세요 (대시보드만으로는 안 됩니다)
  *
- *        [[durable_objects.bindings]]
- *        name = "KART_ROOM"
- *        class_name = "KartRoom"
+ *   대시보드의 Durable Object 바인딩 화면은 '이미 만들어져 있는' 클래스만
+ *   목록에 보여 줍니다. 새 클래스는 마이그레이션으로 만들어야 하고,
+ *   마이그레이션은 wrangler 명령으로만 적용됩니다.
+ *   (드롭다운이 비어 있는 이유가 이것입니다.)
  *
- *        [[migrations]]
- *        tag = "v1"
- *        new_sqlite_classes = ["KartRoom"]
+ *   1. 이 파일과 같은 폴더에 wrangler.toml 을 둡니다 (저장소 최상위에 있음)
+ *   2. 그 폴더에서 명령 프롬프트를 열고 두 줄을 실행합니다
  *
- *   4. Deploy 후 나온 주소(예: https://kart-rooms.내계정.workers.dev)를
+ *        npx wrangler login      ← 브라우저가 열리면 허용
+ *        npx wrangler deploy
+ *
+ *      node -v 가 안 되면 nodejs.org 에서 LTS를 먼저 설치하세요.
+ *   3. 배포 주소(예: https://kart.내계정.workers.dev)를
  *      게임 화면의 [친구들과 함께 달리기 → 접속 서버] 칸에 넣고 "주소 저장"
  *      (또는 kart/index.html 의 DEFAULT_SERVER 상수에 미리 적어 두면
  *       학생은 주소를 입력할 필요가 없습니다.)
