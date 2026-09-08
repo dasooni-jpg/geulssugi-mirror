@@ -57,7 +57,7 @@
 | `chess/` | 어린이 체스 교실 | `chess-online-worker.js` 붙여넣기 |
 | `omok/` | 다람쌤 오목 대회 | 정적 페이지 |
 | `typing-rain/` | 타자 연습 (낱말 비) | 정적 페이지 |
-| `safety-edu/` | 안전교육 문구 복사기 | **git 연동 자동배포** (아래 참고) |
+| `safety-edu/` | 선생님 도구상자 (탭 ①안전교육 문구 ②출결 안내 문자) | **git 연동 자동배포** (아래 참고) |
 
 ### `safety-edu/` 배포 주의
 이 도구만 유일하게 Cloudflare git 연동으로 자동배포됩니다(`safety-edu/wrangler.toml`).
