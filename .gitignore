@@ -31,6 +31,8 @@
 
 # ↓ 안전교육 문구 복사기 (주간학습안내용, Cloudflare Worker 자동배포)
 !/safety-edu/
+/safety-edu/.wrangler/
+/safety-edu/node_modules/
 
 # ↓ 우리 반 카트 그랑프리 (3D 카트 레이싱, 온라인 방은 Worker + Durable Object)
 !/kart/
