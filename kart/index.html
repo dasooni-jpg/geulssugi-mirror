@@ -1356,7 +1356,9 @@ function buildTrack(def, gl, quality) {
     for (let k = -6; k <= 6; k++) s += curv[(((i + k) % count) + count) % count];
     cs[i] = s / 13;
   }
-  for (let i = 0; i < count; i++) bank[i] = clamp(cs[i] * 55, -0.16, 0.16);
+  // 부호가 음수인 이유: 각도(h)가 커지는 쪽이 화면에서는 왼쪽이라,
+  // 그대로 두면 코너 안쪽이 높아지는 역뱅크가 된다.
+  for (let i = 0; i < count; i++) bank[i] = clamp(cs[i] * -55, -0.16, 0.16);
 
   /* ── 4) 빠른 위치 찾기용 격자 ── */
   let minX = 1e9, maxX = -1e9, minZ = 1e9, maxZ = -1e9;
@@ -2891,8 +2893,10 @@ function bindTouch() {
 function readInput(set, useTouch) {
   const K = KEYSETS[set];
   let steer = 0;
-  if (anyKey(K.left)  || (useTouch && touch.left))  steer -= 1;
-  if (anyKey(K.right) || (useTouch && touch.right)) steer += 1;
+  // 방향 각도(h)가 커지는 쪽이 화면에서는 '왼쪽'이라, 화살표를 뒤집어 맞춘다.
+  // (이렇게 해야 → 를 누를 때 화면에서도 오른쪽으로 돈다)
+  if (anyKey(K.left)  || (useTouch && touch.left))  steer += 1;
+  if (anyKey(K.right) || (useTouch && touch.right)) steer -= 1;
   return {
     gas:   anyKey(K.gas)   || (useTouch && touch.gas),
     brake: anyKey(K.brake),
