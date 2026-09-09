@@ -36,6 +36,8 @@
 !/kart/
 !/kart-online-worker.js
 !/wrangler.toml
+!/kart-server-deploy/
+!/kart-server-deploy.zip
 
 # ───────────────────────────────────────────────
 #  안전장치: 아래는 절대 올리지 않음 (비밀·개인정보)
