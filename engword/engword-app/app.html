@@ -702,6 +702,8 @@ function viewHome() {
   const label = dayLabel(S.today);
   // 오늘 친구들에게 받은 응원 (보낸 사람 이름만 모아서 한 줄로)
   const cheerNames = [...new Set((S.data.cheers || []).filter(c => c.day === S.today).map(c => c.fromNick))];
+  // 확인한 쪽지는 '지난 쪽지' 로 내려가므로 홈 안내 띠에서 빠진다.
+  const newMsgCount = (S.data.messages || []).filter(m => !m.read).length;
   render(`
     <div class="home-head">
       <div>
@@ -714,8 +716,8 @@ function viewHome() {
     ${cheerNames.length ? `<div class="card" style="background:var(--green-soft);border-color:var(--green)">
       📣 <b>${esc(cheerNames.join(", "))}</b> 님이 응원을 보냈어요!
     </div>` : ""}
-    ${(S.data.messages || []).length ? `<button class="card" id="btnMsgBanner" style="width:100%;text-align:left;background:var(--blue-soft);border-color:var(--blue)">
-      📮 친구에게 받은 쪽지가 <b>${(S.data.messages || []).length}통</b> 있어요! 눌러서 확인해 보세요.
+    ${newMsgCount ? `<button class="card" id="btnMsgBanner" style="width:100%;text-align:left;background:var(--blue-soft);border-color:var(--blue)">
+      📮 친구에게 온 새 쪽지가 <b>${newMsgCount}통</b> 있어요! 눌러서 확인해 보세요.
     </button>` : ""}
     <div class="card">
       <div class="row">
@@ -1123,8 +1125,19 @@ async function viewFriends() {
   // 서버가 알려 준 '오늘 받은 응원'과 쪽지함을 내 기록에도 반영해 둔다 (홈 화면 안내문에 쓰임)
   S.data.cheers = (S.data.cheers || []).filter(c => c.day !== r.day).concat(r.cheersToday || []);
   S.data.friends = r.friends.map(f => ({ section: f.section, id: f.id }));
-  const messages = r.messages || [];
+  const messages = (r.messages || []).map(m => ({ ...m, read: !!m.read }));
   S.data.messages = messages;
+  const newMsgs = messages.filter(m => !m.read);   // 아직 확인하지 않은 쪽지
+  const oldMsgs = messages.filter(m => m.read);    // 이미 확인한 '지난 쪽지'
+  const msgItem = m => `<div class="wrong-item">
+          <div class="row">
+            <div class="grow">
+              <span class="w">${esc(m.fromNick)}</span> <span class="sub">${esc(m.day)}</span>
+              <div class="m">${esc(m.text)}</div>
+            </div>
+            <button class="mini-x" data-delmsg="${esc(m.id)}" title="쪽지 지우기">✕</button>
+          </div>
+        </div>`;
 
   render(`
     ${topbar("👫 친구", "viewHomeGo")}
@@ -1141,18 +1154,14 @@ async function viewFriends() {
       </div>
     </div>
     <div class="card">
-      <b>📮 받은 쪽지함 ${messages.length ? "(" + messages.length + ")" : ""}</b>
+      <b>📮 새 쪽지 ${newMsgs.length ? "(" + newMsgs.length + ")" : ""}</b>
       <div style="margin-top:10px">
-        ${messages.length === 0 ? `<div class="sub">아직 받은 쪽지가 없어요.</div>` : messages.map(m => `<div class="wrong-item">
-          <div class="row">
-            <div class="grow">
-              <span class="w">${esc(m.fromNick)}</span> <span class="sub">${esc(m.day)}</span>
-              <div class="m">${esc(m.text)}</div>
-            </div>
-            <button class="mini-x" data-delmsg="${esc(m.id)}" title="쪽지 지우기">✕</button>
-          </div>
-        </div>`).join("")}
+        ${newMsgs.length === 0 ? `<div class="sub">새로 온 쪽지가 없어요.</div>` : newMsgs.map(msgItem).join("")}
       </div>
+      ${oldMsgs.length ? `<details style="margin-top:12px">
+        <summary style="cursor:pointer;font-weight:800">🗂 지난 쪽지 (${oldMsgs.length})</summary>
+        <div style="margin-top:10px">${oldMsgs.map(msgItem).join("")}</div>
+      </details>` : ""}
     </div>
     ${r.friends.length === 0 ? `<div class="card loading-box">
       <div style="font-size:36px">👋</div>
@@ -1182,6 +1191,14 @@ async function viewFriends() {
     </div>`}
   `);
   window.viewHomeGo = viewHome;
+
+  // 쪽지함을 열어 봤으니 새 쪽지를 읽음으로 바꾼다.
+  // 지금 보고 있는 화면은 그대로 둔다(방금 읽은 쪽지가 눈앞에서 사라지면 놀라니까).
+  // 홈으로 돌아가면 안내 띠가 사라지고, 다음에 다시 오면 '지난 쪽지' 로 내려가 있다.
+  if (newMsgs.length) {
+    api("/api/friend/message/read", { section: S.login.section, id: S.login.id })
+      .then(rr => { if (rr && rr.ok) (S.data.messages || []).forEach(m => { m.read = true; }); });
+  }
 
   const codeInput = document.getElementById("inFriendCode");
   const addFriend = async () => {

@@ -255,7 +255,8 @@ function newStudentData(nickname, dailyGoal) {
     wrong: [],          // 오답 노트 [{word,pronunciation,meaning,example,synonym,antonym,day,miss,hit}]
     friends: [],        // 함께 공부하는 친구 [{section, id}]
     cheers: [],         // 친구에게 받은 응원 [{fromId, fromNick, day}]
-    messages: [],       // 친구에게 받은 쪽지 [{id, fromSection, fromId, fromNick, text, day}]
+    messages: [],       // 친구에게 받은 쪽지 [{id, fromSection, fromId, fromNick, text, day, read}]
+                        //  read=false 는 아직 안 읽은 새 쪽지, true 는 확인한 '지난 쪽지'
     coins: 300,
     stickerBook: { stickers: {}, mileage: 0, goldTickets: 0, badges: [], completedPages: {} },
     rewardHistory: {},
@@ -269,8 +270,17 @@ function pruneStudent(data) {
     data.wrong = data.wrong.slice(-300);
   if (Array.isArray(data.cheers) && data.cheers.length > MAX_CHEERS)
     data.cheers = data.cheers.slice(-MAX_CHEERS);
-  if (Array.isArray(data.messages) && data.messages.length > MAX_MESSAGES)
-    data.messages = data.messages.slice(-MAX_MESSAGES);
+  if (Array.isArray(data.messages) && data.messages.length > MAX_MESSAGES) {
+    // 이미 확인한 '지난 쪽지'를 오래된 것부터 먼저 비운다.
+    // 그래도 자리가 모자라면 그때 오래된 새 쪽지를 지운다.
+    let over = data.messages.length - MAX_MESSAGES;
+    const kept = [];
+    for (const m of data.messages) {
+      if (over > 0 && m.read) { over--; continue; }
+      kept.push(m);
+    }
+    data.messages = over > 0 ? kept.slice(over) : kept;
+  }
   return data;
 }
 
@@ -1007,8 +1017,10 @@ async function handleApi(env, db, path, d, cf, origin) {
     // 내가 오늘 받은 응원
     const myCheers = (me.cheers || []).filter(c => c.day === day);
     // 내 쪽지함 (최신 순)
-    const messages = (me.messages || []).slice().reverse();
-    return ok({ day, friends: list, myCode: me.code || "", cheersToday: myCheers, messages });
+    // 읽음 표시가 없던 옛 쪽지는 '안 읽음' 으로 본다.
+    const messages = (me.messages || []).slice().reverse().map(m => ({ ...m, read: !!m.read }));
+    const unreadCount = messages.filter(m => !m.read).length;
+    return ok({ day, friends: list, myCode: me.code || "", cheersToday: myCheers, messages, unreadCount });
   }
 
   // ── 친구: 쪽지 보내기 ──
@@ -1031,9 +1043,26 @@ async function handleApi(env, db, path, d, cf, origin) {
     you.messages = Array.isArray(you.messages) ? you.messages : [];
     const todayCount = you.messages.filter(m => m.fromId === id && m.day === day).length;
     if (todayCount >= MSG_DAILY_LIMIT) return fail("오늘은 이 친구에게 쪽지를 충분히 보냈어요. 내일 또 보내 주세요!");
-    you.messages.push({ id: genId(), fromSection: d.section, fromId: id, fromNick: me.nickname, text, day });
+    you.messages.push({ id: genId(), fromSection: d.section, fromId: id, fromNick: me.nickname, text, day, read: false });
     await putStudent(db, d.toSection, toId, you);
     return ok({ nickname: you.nickname });
+  }
+
+  // ── 친구: 받은 쪽지 읽음 표시 ──
+  //  쪽지함을 열어 본 뒤 화면이 부르면, 확인한 쪽지를 '지난 쪽지' 로 내린다.
+  //  messageIds 를 주면 그 쪽지만, 안 주면 받은 쪽지 전체를 읽음으로 바꾼다.
+  if (path === "/api/friend/message/read") {
+    if (!validSection(d.section)) return fail("반(레벨) 정보가 없어요.");
+    const id = validId(d.id);
+    if (!id) return fail("기기 정보가 없어요.");
+    const me = await getStudent(db, d.section, id);
+    if (!me) return fail("등록되지 않은 학생이에요.");
+    const only = Array.isArray(d.messageIds) ? d.messageIds.map(String) : null;
+    me.messages = (me.messages || []).map(m =>
+      (!only || only.includes(String(m.id))) ? { ...m, read: true } : { ...m, read: !!m.read });
+    const unreadCount = me.messages.filter(m => !m.read).length;
+    await putStudent(db, d.section, id, me);
+    return ok({ unreadCount });
   }
 
   // ── 친구: 받은 쪽지 지우기 ──

@@ -495,6 +495,32 @@ try {
   r = await post("/api/friend/list", { section: "g1", id: DEVF });
   check("진행 저장 뒤에도 쪽지 유지", r.messages.length === 4);
 
+  // 6c. 친구: 쪽지 읽음 처리 — 확인한 쪽지는 홈에서 빠지고 '지난 쪽지' 로 보관된다
+  r = await post("/api/friend/list", { section: "g1", id: DEVF });
+  check("안 읽은 쪽지 수를 알려 줌", r.unreadCount === 4 && r.messages.every(m => m.read === false));
+  r = await post("/api/friend/message/read", { section: "g1", id: DEVF });
+  check("쪽지 읽음 처리", r.ok && r.unreadCount === 0);
+  r = await post("/api/friend/list", { section: "g1", id: DEVF });
+  check("읽은 뒤에도 쪽지는 지워지지 않고 남음", r.messages.length === 4 && r.messages.every(m => m.read === true));
+  check("읽은 뒤 안 읽은 쪽지 수는 0", r.unreadCount === 0);
+
+  // 진행 저장(학생 기기 사본)이 읽음 표시를 되돌리지 않아야 한다
+  r = await post("/api/student/join", { section: "g1", id: DEVF });
+  const fdata3 = r.data;
+  fdata3.messages = [];   // 옛 사본을 들고 있는 기기 흉내
+  await post("/api/student/save", { section: "g1", id: DEVF, data: fdata3 });
+  r = await post("/api/friend/list", { section: "g1", id: DEVF });
+  check("진행 저장 뒤에도 읽음 표시 유지", r.messages.length === 4 && r.unreadCount === 0);
+
+  // 읽은 뒤에 새로 온 쪽지는 다시 '안 읽음' 이어야 한다
+  r = await post("/api/friend/message/send", { section: "g1", id: DEVF, toSection: "g3", toId: DEV1, text: "새로 온 쪽지" });
+  check("반대 방향으로 쪽지 보내기", r.ok);
+  r = await post("/api/friend/list", { section: "g3", id: DEV1 });
+  check("새로 온 쪽지는 안 읽음", r.unreadCount === 1 && r.messages[0].read === false);
+  // 고른 쪽지만 읽음으로 바꾸기
+  r = await post("/api/friend/message/read", { section: "g3", id: DEV1, messageIds: ["없는쪽지id"] });
+  check("없는 쪽지 id 로는 아무것도 안 바뀜", r.ok && r.unreadCount === 1);
+
   r = await post("/api/friend/remove", { section: "g3", id: DEV1, toSection: "g1", toId: DEVF });
   check("친구 삭제", r.ok);
   r = await post("/api/friend/list", { section: "g3", id: DEV1 });
