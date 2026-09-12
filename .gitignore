@@ -41,6 +41,13 @@
 !/kart-server-deploy/
 !/kart-server-deploy.zip
 
+# ↓ 매일 영단어 30 (engvoca10, Cloudflare Worker + D1 + Gemini)
+!/engword/
+/engword/engword-app/card/
+/engword/engword-ai-proxy/
+/engword/.wrangler/
+/engword/node_modules/
+
 # ───────────────────────────────────────────────
 #  안전장치: 아래는 절대 올리지 않음 (비밀·개인정보)
 # ───────────────────────────────────────────────
