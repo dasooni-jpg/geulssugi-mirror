@@ -332,6 +332,11 @@ label.fld{display:block;font-size:13px;color:var(--muted);font-weight:700;margin
 .key kbd{background:rgba(0,0,0,.4);border:1px solid var(--line);border-bottom-width:3px;border-radius:8px;
   padding:5px 9px;font-size:12px;font-weight:900;color:var(--text);font-family:inherit;min-width:30px;text-align:center}
 
+.items{display:grid;grid-template-columns:repeat(auto-fit,minmax(214px,1fr));gap:9px;margin-top:4px}
+.itm{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted);font-weight:700}
+.itm .ic{font-size:21px;width:30px;text-align:center;flex:0 0 auto}
+.itm b{color:var(--text);font-weight:900;margin-right:2px}
+
 .foot{text-align:center;font-size:11.5px;margin-top:22px;color:#5d688e;line-height:1.8}
 .rowbtn{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
 .rowbtn .btn{flex:1;min-width:132px}
@@ -496,6 +501,14 @@ label.fld{display:block;font-size:13px;color:var(--muted);font-weight:700;margin
       </div>
       <p class="note">패드·휴대폰은 화면 아래 <b>버튼</b>으로 조작합니다. 코너에서 <b>드리프트</b>를 길게 하면
         노란 불꽃이 모이고, 손을 떼는 순간 <b>부스터</b>가 터집니다.</p>
+    </div>
+
+    <div class="card">
+      <h2>🎁 아이템 7가지</h2>
+      <p class="desc">길 위의 상자를 지나가면 아이템이 하나 들어와요. <b>뒤쪽일수록 따라잡는 아이템</b>이,
+        <b>앞쪽일수록 지키는 아이템</b>이 잘 나옵니다.</p>
+      <div class="items" id="itemGuide"></div>
+      <p class="note">아이템을 쓰지 않는 <b>순수 실력전</b>으로도 달릴 수 있어요(경기 준비 화면에서 고릅니다).</p>
     </div>
 
     <p class="foot">
@@ -2019,6 +2032,10 @@ function getPropMesh(gl, kind) {
     mb.pop();
     mb.tri3([0, 0.20, 0.36], [-0.18, -0.10, 0.36], [0.18, -0.10, 0.36], [0.96,0.96,0.98]);
     mb.frustum(0, 0.36, 0, 0.20, 0.02, 0.38, 8, [0.96,0.96,0.98], [0.96,0.96,0.98]);
+  } else if (kind === 'ice') {
+    // 얼음 웅덩이 — 납작한 육각 얼음판
+    mb.frustum(0, 0, 0, 0.62, 0.46, 0.16, 6, [0.62, 0.86, 1.0], [0.86, 0.96, 1.0]);
+    mb.frustum(0, 0.16, 0, 0.30, 0.16, 0.22, 6, [0.78, 0.93, 1.0], [0.95, 0.99, 1.0]);
   } else if (kind === 'shield') {
     mb.frustum(0, -1.1, 0, 1.35, 1.35, 2.2, 12, [0.45, 0.78, 1.0], [0.65, 0.90, 1.0]);
   }
@@ -2026,21 +2043,30 @@ function getPropMesh(gl, kind) {
   return propMeshCache[kind];
 }
 
-/* ═════════ 아이템 정의 ═════════ */
+/* ═════════ 아이템 정의 ═════════
+   hint 는 아이템 칸 아래에 뜨는 한 줄 설명이다. 조작 키가 아니라 '무엇을 하는지'를 적는다
+   (아이템 쓰기는 어느 것이든 Shift·E, 패드에서는 [아이템] 단추다). */
 const ITEMS = {
-  boost:  { icon:'⚡', name:'부스터', hint:'스페이스' },
-  banana: { icon:'🍌', name:'바나나', hint:'뒤에 두기' },
-  missile:{ icon:'🚀', name:'미사일', hint:'앞차 공격' },
-  shield: { icon:'🛡️', name:'방패',   hint:'6초 보호' },
+  boost:  { icon:'⚡',  name:'부스터', hint:'잠깐 아주 빨라져요' },
+  banana: { icon:'🍌', name:'바나나', hint:'뒤에 놓아 두어요' },
+  missile:{ icon:'🚀', name:'미사일', hint:'앞차를 쫓아가 맞혀요' },
+  shield: { icon:'🛡️', name:'방패',   hint:'한 번 막아 줘요 (6초)' },
+  ice:    { icon:'🧊', name:'얼음',   hint:'뒤에 깔아 미끄러뜨려요' },
+  thunder:{ icon:'🌩️', name:'번개',   hint:'나보다 앞선 카트가 모두 휘청' },
+  star:   { icon:'🌟', name:'별',     hint:'6초 동안 무적 · 조금 빨라져요' },
 };
-/** 순위가 낮을수록 좋은 아이템이 잘 나옴 (초등 수업용으로 완만하게) */
+/** 순위가 낮을수록 좋은 아이템이 잘 나옴 (초등 수업용으로 완만하게)
+    선두는 지키는 아이템(바나나·얼음·방패), 뒤쪽은 따라잡는 아이템(미사일·번개·별)이 잘 나온다 */
 function rollItem(rank, total) {
   const behind = total > 1 ? (rank - 1) / (total - 1) : 0;   // 0=1위, 1=꼴찌
   const w = {
-    banana:  0.34 - behind * 0.16,
-    shield:  0.22,
-    boost:   0.26 + behind * 0.14,
-    missile: 0.18 + behind * 0.16,
+    banana:  0.22 - behind * 0.10,
+    ice:     0.14 - behind * 0.05,
+    shield:  0.15,
+    boost:   0.18 + behind * 0.06,
+    missile: 0.14 + behind * 0.10,
+    thunder: 0.04 + behind * 0.14,
+    star:    0.05 + behind * 0.09,
   };
   let sum = 0; for (const k in w) sum += w[k];
   let r = Math.random() * sum;
@@ -2071,6 +2097,8 @@ class Kart {
     this.boost = 0;             // 남은 부스터 시간
     this.spin = 0;              // 아이템에 맞아 도는 시간
     this.shield = 0;
+    this.star = 0;              // 별 — 남은 무적 시간
+    this.slip = 0;              // 얼음 — 남은 미끄러짐 시간
     this.item = null;
     this.itemRolling = 0;
     this.itemHeld = false;      // 아이템 버튼을 계속 누르고 있는지
@@ -2097,6 +2125,7 @@ class Kart {
     this.finished = false; this.finishTime = null;
     this.lapTimes = []; this.bestLap = null; this.lastLapStart = 0;
     this.boost = 0; this.spin = 0; this.shield = 0; this.item = null;
+    this.star = 0; this.slip = 0; this.itemHeld = false;
     this.driftCharge = 0; this.drifting = false; this.roll = 0; this.pitch = 0;
   }
 
@@ -2137,10 +2166,15 @@ class Kart {
     const surfaceGrip = this.offRoad ? 0.55 : 1;
     const surfaceTop  = this.offRoad ? 0.52 : 1;
 
+    // ── 얼음에 미끄러지는 중 ──
+    if (this.slip > 0) this.slip -= dt;
+    const slipping = this.slip > 0;
+
     // ── 엔진 ──
     const boosting = this.boost > 0;
     if (boosting) this.boost -= dt;
-    const topSpeed = (boosting ? 46 : 33.5) * surfaceTop * (this.isAI ? (0.90 + this.skill * 0.14) : 1);
+    const topSpeed = (boosting ? 46 : 33.5) * surfaceTop * (this.isAI ? (0.90 + this.skill * 0.14) : 1)
+                   * (this.star > 0 ? 1.12 : 1);            // 별을 쓰면 조금 더 빨라짐
     let accel = boosting ? 30 : 15.5;
     // 속도가 붙을수록 가속이 둔해짐
     accel *= clamp(1 - this.speed / (topSpeed + 8), 0.12, 1);
@@ -2163,7 +2197,8 @@ class Kart {
     const sAbs = Math.abs(this.speed);
     // 아주 느릴 때와 아주 빠를 때는 덜 꺾임
     const speedTurn = clamp(sAbs / 7, 0, 1) * clamp(1 - (sAbs - 26) / 46, 0.62, 1);
-    let turn = this.steer * 2.35 * speedTurn * surfaceGrip;
+    // 얼음 위에서는 핸들이 잘 안 먹는다(넘어지지는 않고 쭉 미끄러진다)
+    let turn = this.steer * 2.35 * speedTurn * surfaceGrip * (slipping ? 0.55 : 1);
 
     // ── 드리프트 ──
     const wantDrift = input.drift && sAbs > 11 && !this.offRoad;
@@ -2193,7 +2228,7 @@ class Kart {
     // 회전으로 생기는 옆 미끄러짐을 더해 줌
     const slideAdd = turn * this.speed * (this.drifting ? 0.46 : 0.12);
     latx += nfz * slideAdd; latz += -nfx * slideAdd;
-    const grip = (this.drifting ? 2.0 : 9.5) * surfaceGrip;
+    const grip = (this.drifting ? 2.0 : 9.5) * surfaceGrip * (slipping ? 0.32 : 1);
     const keep = Math.exp(-grip * dt);
     latx *= keep; latz *= keep;
     const latLen = Math.hypot(latx, latz);
@@ -2277,6 +2312,7 @@ class Kart {
   }
   /** 아이템에 맞음 */
   hit(dur) {
+    if (this.star > 0) return false;                        // 별을 쓰는 동안은 무적
     if (this.shield > 0) { this.shield = 0; return false; }
     if (this.spin > 0) return false;
     this.spin = dur || 1.3;
@@ -2351,7 +2387,10 @@ function aiControl(k, track, race, dt) {
     k.aiSeed += dt;
     if (k.item === 'boost') useItem = sAbs > 12 && curveMag < 0.004;
     else if (k.item === 'shield') useItem = k.rank > 1;
+    else if (k.item === 'star') useItem = true;                       // 받으면 바로 쓴다
     else if (k.item === 'banana') useItem = Math.sin(k.aiSeed * 1.7) > 0.9;
+    else if (k.item === 'ice') useItem = Math.sin(k.aiSeed * 1.9) > 0.9;
+    else if (k.item === 'thunder') useItem = k.rank > 1 && Math.sin(k.aiSeed * 1.3) > 0.5;
     else if (k.item === 'missile') {
       // 앞에 누군가 있으면 발사
       useItem = k.rank > 1 && Math.sin(k.aiSeed * 2.3) > 0.55;
@@ -2494,6 +2533,7 @@ class Race {
       }
       k.update(dt, inp, this.track, this);
       if (k.shield > 0) k.shield -= dt;
+      if (k.star > 0) k.star -= dt;
       if (k.itemRolling > 0) {
         k.itemRolling -= dt;
         if (k.itemRolling <= 0) {
@@ -2608,11 +2648,29 @@ class Race {
     } else if (it === 'shield') {
       k.shield = 6.5;
       if (k.isPlayer) sfx('shield');
-    } else if (it === 'banana') {
+    } else if (it === 'star') {
+      k.star = 6;
+      k.spin = 0;                                   // 맞아 돌던 중이었다면 바로 풀림
+      if (k.isPlayer) sfx('star');
+    } else if (it === 'banana' || it === 'ice') {
+      // 얼음도 바나나와 같은 목록에 넣고 kind 로만 구분한다(움직임·수명이 같다)
       const fx = Math.sin(k.h), fz = Math.cos(k.h);
-      this.bananas.push({ x: k.x - fx * 3.2, y: k.y + 0.3, z: k.z - fz * 3.2, t: 0, owner: k.id });
+      this.bananas.push({ kind: it, x: k.x - fx * 3.2, y: k.y + 0.3, z: k.z - fz * 3.2,
+                          t: 0, owner: k.id });
       if (this.bananas.length > 24) this.bananas.shift();
-      if (k.isPlayer) sfx('drop');
+      if (k.isPlayer) sfx(it === 'ice' ? 'ice' : 'drop');
+    } else if (it === 'thunder') {
+      // 나보다 앞선 카트를 모두 잠깐 휘청이게 함 (통신 카트는 각자의 기기에서 처리)
+      for (const o of this.karts) {
+        if (o === k || o.finished || o.isRemote) continue;
+        if (o.total <= k.total) continue;
+        if (o.hit(0.9)) {
+          this.effects.push({ kind:'burst', x:o.x, y:o.y + 0.9, z:o.z, t:0, life:0.55, col:[0.7,0.86,1] });
+          if (o.isPlayer) { this.shake = 1; flashHit(); }
+        }
+      }
+      this.effects.push({ kind:'burst', x:k.x, y:k.y + 1.4, z:k.z, t:0, life:0.6, col:[0.8,0.92,1] });
+      if (k.isPlayer) sfx('thunder');
     } else if (it === 'missile') {
       // 바로 앞 순위의 카트를 겨냥
       let target = null, bestGap = Infinity;
@@ -2632,19 +2690,29 @@ class Race {
     if (k.isPlayer && net.active) net.sendItem(it, k);
   }
 
-  /* ── 바나나 · 미사일 움직이기 ── */
+  /* ── 바나나 · 얼음 · 미사일 움직이기 ── */
   stepProps(dt) {
     const T = this.track;
-    // 바나나
+    // 길에 놓인 것들 (바나나 = 뒤집힘, 얼음 = 한동안 미끄러짐)
     for (let n = this.bananas.length - 1; n >= 0; n--) {
       const b = this.bananas[n];
       b.t += dt;
       if (b.t > 40) { this.bananas.splice(n, 1); continue; }
+      const isIce = b.kind === 'ice';
       for (const k of this.karts) {
-        if (k.isRemote || k.finished || k.spin > 0 || k.respawnT > 0) continue;
+        if (k.isRemote || k.finished || k.respawnT > 0) continue;
+        if (!isIce && k.spin > 0) continue;
         if (b.t < 0.5 && k.id === b.owner) continue;
-        if (Math.hypot(k.x - b.x, k.z - b.z) < 1.7) {
-          if (k.hit(1.25)) {
+        if (Math.hypot(k.x - b.x, k.z - b.z) < (isIce ? 2.1 : 1.7)) {
+          if (isIce) {
+            // 얼음은 뒤집지 않는다 — 대신 잠깐 핸들이 말을 안 듣는다. 별을 쓰는 중이면 안 미끄러짐
+            if (k.star <= 0) {
+              k.slip = Math.max(k.slip, 2.6);
+              k.speed *= 0.86;
+              this.effects.push({ kind:'burst', x:k.x, y:k.y+0.35, z:k.z, t:0, life:0.5, col:[0.65,0.9,1] });
+              if (k.isPlayer) { this.shake = Math.min(1, this.shake + 0.4); sfx('ice'); }
+            }
+          } else if (k.hit(1.25)) {
             this.effects.push({ kind:'burst', x:k.x, y:k.y+0.6, z:k.z, t:0, life:0.5, col:[1,0.85,0.3] });
             if (k.isPlayer) { this.shake = 1; sfx('hit'); flashHit(); }
           }
@@ -2710,6 +2778,8 @@ class Race {
     if (k.spin > 0) k.spin -= dt;
     if (k.shield > 0) k.shield -= dt;
     if (k.boost > 0) k.boost -= dt;
+    if (k.star > 0) k.star -= dt;
+    if (k.slip > 0) k.slip -= dt;
     const loc = this.track.locate(k.x, k.z, k.trackI);
     k.trackI = loc.i; k.lat = loc.lat;
   }
@@ -2781,9 +2851,12 @@ function drawScene(R, race, cam, aspect, showSelf) {
       R.draw(boxM, TMP_M, TINT);
     }
     const banM = getPropMesh(R.gl, 'banana');
+    const iceM = getPropMesh(R.gl, 'ice');
     for (const b of race.bananas) {
-      M4.compose(TMP_M, b.x, b.y, b.z, b.t * 0.7, 0, 0, 1, 1, 1);
-      R.draw(banM, TMP_M, TINT);
+      const isIce = b.kind === 'ice';
+      // 얼음은 굴러가지 않으므로 천천히만 돌린다
+      M4.compose(TMP_M, b.x, b.y, b.z, b.t * (isIce ? 0.25 : 0.7), 0, 0, 1, 1, 1);
+      R.draw(isIce ? iceM : banM, TMP_M, TINT);
     }
     const misM = getPropMesh(R.gl, 'missile');
     for (const m of race.missiles) {
@@ -2805,13 +2878,16 @@ function drawScene(R, race, cam, aspect, showSelf) {
   }
   TINT[0] = TINT[1] = TINT[2] = TINT[3] = 1;
 
-  // 방패 거품
+  // 방패 거품 · 별 거품(같은 거품 모양을 색만 바꿔 쓴다)
   const shieldM = getPropMesh(R.gl, 'shield');
   for (const k of race.karts) {
-    if (k.shield <= 0) continue;
-    const a = 0.24 + Math.sin(race.time * 8) * 0.06;
-    TINT[0] = 0.55; TINT[1] = 0.85; TINT[2] = 1; TINT[3] = a;
-    M4.compose(TMP_M, k.x, k.y + 0.6, k.z, race.time * 2, 0, 0, 1, 1, 1);
+    const starOn = k.star > 0;
+    if (!starOn && k.shield <= 0) continue;
+    const a = 0.24 + Math.sin(race.time * (starOn ? 14 : 8)) * 0.08;
+    if (starOn) { TINT[0] = 1; TINT[1] = 0.86; TINT[2] = 0.35; }
+    else        { TINT[0] = 0.55; TINT[1] = 0.85; TINT[2] = 1; }
+    TINT[3] = a;
+    M4.compose(TMP_M, k.x, k.y + 0.6, k.z, race.time * (starOn ? 5 : 2), 0, 0, 1, 1, 1);
     R.draw(shieldM, TMP_M, TINT);
   }
   TINT[0] = TINT[1] = TINT[2] = TINT[3] = 1;
@@ -2984,6 +3060,9 @@ const SFX = {
   count: { f:520, to:520, d:0.14, type:'sine',   v:0.22 },
   go:    { f:880, to:880, d:0.40, type:'sine',   v:0.26 },
   finish:{ f:520, to:1320,d:0.55, type:'sine',   v:0.24 },
+  ice:   { f:1400, to:420, d:0.26, type:'sine',   v:0.16 },
+  thunder:{f:1200, to:110, d:0.50, type:'sawtooth', v:0.24 },
+  star:  { f:520, to:1568,d:0.45, type:'triangle', v:0.22 },
 };
 function sfx(name) {
   if (!audio.on || !audio.ctx) return;
@@ -3356,6 +3435,7 @@ const net = {
     if (k.boost > 0) fl |= 2;
     if (k.spin > 0) fl |= 4;
     if (k.shield > 0) fl |= 8;
+    if (k.star > 0) fl |= 16;
     this.send({
       t:'s',
       x: Math.round(k.x * 20) / 20, y: Math.round(k.y * 20) / 20, z: Math.round(k.z * 20) / 20,
@@ -3568,6 +3648,16 @@ function buildPickers() {
     };
     ip.appendChild(b);
   });
+
+  // 아이템 안내 — ITEMS 를 그대로 옮겨 적어 두 곳이 어긋나지 않게 한다
+  const ig = $('#itemGuide');
+  if (ig) {
+    ig.innerHTML = Object.keys(ITEMS).map(id => {
+      const it = ITEMS[id];
+      return '<div class="itm"><span class="ic">' + it.icon + '</span>'
+           + '<span><b>' + it.name + '</b> · ' + it.hint + '</span></div>';
+    }).join('');
+  }
 
   // 화면 품질
   const qp = $('#qualPick'); qp.innerHTML = '';
@@ -4003,13 +4093,22 @@ function onNetEvent(m) {
       k.boost = (m.f & 2) ? 0.3 : 0;
       k.spin = (m.f & 4) ? 0.3 : 0;
       k.shield = (m.f & 8) ? 0.3 : 0;
+      k.star = (m.f & 16) ? 0.3 : 0;
     }
   } else if (m.t === 'i') {
     // 친구가 아이템을 썼음 — 내 화면에도 똑같이 보이게
     const race = app.race;
     if (!race || !app.running) return;
-    if (m.k === 'banana') {
-      race.bananas.push({ x:m.x, y:m.y + 0.3, z:m.z, t:0, owner:m.id });
+    if (m.k === 'banana' || m.k === 'ice') {
+      race.bananas.push({ kind:m.k, x:m.x, y:m.y + 0.3, z:m.z, t:0, owner:m.id });
+    } else if (m.k === 'thunder') {
+      // 번개는 쏜 친구보다 앞서 있을 때만 맞는다 (각 기기가 스스로 판정)
+      const src = race.karts.find(x => x.id === m.id);
+      const me = app.player;
+      if (src && me && !me.finished && me.total > src.total && me.hit(0.9)) {
+        race.shake = 1; sfx('hit'); flashHit();
+      }
+      race.effects.push({ kind:'burst', x:m.x, y:m.y + 1.4, z:m.z, t:0, life:0.6, col:[0.8,0.92,1] });
     } else if (m.k === 'missile') {
       race.missiles.push({
         x:m.x + Math.sin(m.h) * 2.6, y:m.y + 0.7, z:m.z + Math.cos(m.h) * 2.6,
