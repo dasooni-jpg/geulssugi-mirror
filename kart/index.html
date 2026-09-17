@@ -1280,6 +1280,72 @@ const TRACKS = [
       stands: 5,
     },
   },
+  {
+    id: 'beach',
+    name: '바닷가 코코넛 서킷',
+    desc: '넓고 평평한 해변 길. 길게 밟을 수 있어 가장 빨라요.',
+    tag: '난이도 ★★☆ · 넓고 빠름',
+    scale: 0.88, width: 12.6, hills: 0.9, seed: 5517,
+    // 오른쪽 아래에 헤어핀 하나, 나머지는 길게 이어지는 큰 곡선
+    pts: [
+      [   0, 186], [  84, 176], [ 142, 138], [ 160,  74],
+      [ 142,  16], [ 116, -32], [ 130, -88], [ 170,-128],
+      [ 158,-188], [  88,-216], [   6,-214], [ -76,-192],
+      [-138,-148], [-168, -78], [-170,   6], [-148,  82],
+      [-110, 146], [ -56, 180],
+    ],
+    env: {
+      ground: [0.93, 0.86, 0.64], groundAlt: [0.87, 0.79, 0.57],
+      road:   [0.30, 0.30, 0.33], roadAlt: [0.27, 0.27, 0.30],
+      curbA:  [0.96, 0.54, 0.18], curbB: [0.98, 0.98, 0.96],
+      wall:   [0.18, 0.62, 0.68], wallTop: [0.98, 0.98, 0.96],
+      skyTop: [0.16, 0.48, 0.88], skyMid: [0.46, 0.76, 0.96], skyBottom: [0.86, 0.95, 0.99],
+      sunGlow:[0.26, 0.22, 0.12], sunAngle: 0.4,
+      lightDir:[0.30, 0.86, 0.42], sun: [0.78, 0.74, 0.62],
+      ambSky: [0.56, 0.66, 0.76], ambGround: [0.50, 0.46, 0.34],
+      fogCol: [0.70, 0.88, 0.94], fogNear: 320, fogFar: 1100,
+      // 멀리 보이는 것은 산이 아니라 바다 건너 섬이다
+      mountain: [0.28, 0.54, 0.50], mountainTop: [0.48, 0.70, 0.58], mountainCount: 18,
+      tree: 'palm', treeCount: 150,
+      treeLeaf: [0.20, 0.58, 0.32], treeLeaf2: [0.32, 0.72, 0.40], treeTrunk: [0.56, 0.44, 0.28],
+      stands: 6,
+    },
+  },
+  {
+    id: 'volcano',
+    name: '불타는 화산 지대',
+    desc: '가장 길고 가파른 길. 좁은 오르내리막이 끝없이 이어져요.',
+    tag: '난이도 ★★★★ · 가장 어려움',
+    // 폭 10.0 으로 해 보니 컴퓨터 카트가 코스 밖에서 보내는 시간이 21% 나 됐다
+    // (가장 어려운 기존 코스인 노을 사막이 14%). 10.8 로 넓혀 17% 로 맞췄다.
+    scale: 0.88, width: 10.8, hills: 3.0, seed: 7731,
+    // 바깥 고리 안쪽으로 두 번 파고드는 모양 — 오르내리막이 특히 심하다
+    pts: [
+      [   0, 166], [  74, 158], [ 122, 126], [ 136,  76],
+      [ 118,  32], [  90,   8], [  76, -36], [ 104, -78],
+      [ 142, -94], [ 176,-126], [ 180,-180], [ 118,-212],
+      [  44,-206], [ -30,-178], [-100,-122], [-100, -56],
+      [ -74, -12], [ -86,  36], [-134,  54], [-172,  98],
+      [-150, 154], [ -80, 172],
+    ],
+    env: {
+      // 도로(0.22)와 너무 비슷하면 길 끝이 안 보인다 — 땅을 조금 밝게 둔다
+      ground: [0.34, 0.26, 0.24], groundAlt: [0.28, 0.21, 0.20],
+      road:   [0.22, 0.20, 0.21], roadAlt: [0.19, 0.17, 0.18],
+      curbA:  [0.94, 0.36, 0.12], curbB: [0.16, 0.14, 0.15],
+      wall:   [0.36, 0.24, 0.22], wallTop: [0.96, 0.46, 0.16],
+      skyTop: [0.10, 0.06, 0.16], skyMid: [0.44, 0.15, 0.20], skyBottom: [0.94, 0.42, 0.14],
+      sunGlow:[0.55, 0.22, 0.05], sunAngle: -1.2,
+      lightDir:[-0.50, 0.58, -0.64], sun: [0.95, 0.50, 0.22],
+      ambSky: [0.40, 0.24, 0.26], ambGround: [0.34, 0.18, 0.14],
+      fogCol: [0.44, 0.18, 0.14], fogNear: 190, fogFar: 820,
+      // 봉우리가 붉게 달아오른 화산들
+      mountain: [0.24, 0.16, 0.16], mountainTop: [0.96, 0.42, 0.12], mountainCount: 20,
+      tree: 'rock', treeCount: 150,
+      treeLeaf: [0.26, 0.22, 0.22], treeLeaf2: [0.36, 0.31, 0.30], treeTrunk: [0.20, 0.17, 0.17],
+      stands: 4,
+    },
+  },
 ];
 
 /** Catmull-Rom 보간 (한 축) */
@@ -1903,6 +1969,37 @@ function buildTrees(mb, T, env, rng, standSpots, quality) {
       mb.cyl(p[0], p[1] + 1.4*s, p[2], 0.32*s, 2.8*s, 5, env.treeTrunk);
       mb.frustum(p[0], p[1] + 2.4*s, p[2], 1.1*s, 2.2*s, 1.5*s, 7, env.treeLeaf, env.treeLeaf2);
       mb.frustum(p[0], p[1] + 3.9*s, p[2], 2.2*s, 0.5*s, 2.0*s, 7, env.treeLeaf2, env.treeLeaf2);
+    } else if (env.tree === 'palm') {
+      // 야자수 — 살짝 기운 줄기 세 토막 + 잎 여섯 장 + 코코넛
+      const H = (4.6 + rng() * 1.8) * s;
+      const ang = rng() * TAU;
+      const lean = (0.10 + rng() * 0.16) * H;          // 꼭대기가 옆으로 밀리는 정도
+      const lx = Math.cos(ang) * lean, lz = Math.sin(ang) * lean;
+      for (let t = 0; t < 3; t++) {
+        const f0 = t / 3, f1 = (t + 1) / 3;
+        // 위로 갈수록 더 휘도록 f를 제곱해서 옆으로 민다
+        mb.frustum(p[0] + lx * f0 * f0, p[1] + H * f0, p[2] + lz * f0 * f0,
+                   0.30 * s * (1 - f0 * 0.45), 0.30 * s * (1 - f1 * 0.45),
+                   H / 3 + 0.06, 6, env.treeTrunk, env.treeTrunk);
+      }
+      const tx = p[0] + lx, ty = p[1] + H, tz = p[2] + lz;
+      for (let t = 0; t < 6; t++) {
+        // 잎 한 장 = 납작하게 눌러(sz 0.42) 바깥으로 뉘인(pitch 1.25) 원뿔
+        mb.push(M4.compose(M4.create(), tx, ty, tz, ang + t / 6 * TAU, 0, 1.25, 1, 1, 0.42));
+        mb.frustum(0, 0, 0, 0.36 * s, 0.05 * s, 2.5 * s, 5,
+                   (t % 2) ? env.treeLeaf : env.treeLeaf2, env.treeLeaf2);
+        mb.pop();
+      }
+      mb.frustum(tx, ty - 0.3 * s, tz, 0.30 * s, 0.16 * s, 0.40 * s, 6, env.treeTrunk, env.treeLeaf);
+    } else if (env.tree === 'rock') {
+      // 검은 바위 — 다섯에 하나쯤은 붉게 달아올라 있다
+      const hot = rng() < 0.22;
+      const top = hot ? env.mountainTop : env.treeLeaf2;
+      mb.frustum(p[0], p[1], p[2], 2.2 * s, 1.2 * s, 1.7 * s, 6, env.treeLeaf, top);
+      if (rng() < 0.6) {
+        mb.frustum(p[0] + 1.3 * s, p[1], p[2] - 0.9 * s, 1.1 * s, 0.45 * s, 1.2 * s, 5,
+                   env.treeLeaf, hot ? env.mountainTop : env.treeLeaf2);
+      }
     } else {
       // 선인장 · 바위
       if (rng() < 0.55) {
