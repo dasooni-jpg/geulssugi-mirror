@@ -39,6 +39,9 @@ const APP_HTML = `<!DOCTYPE html>
     --wood-pc1:#f6e6c3; --wood-pc2:#dcbf8e;
   }
   html, body { height:100%; }
+  /* 화면 글자 크기 기준. 이 값만 바꾸면 글자 전체가 함께 줄고 늘어남.
+     장기판 위의 말은 판 너비에서 계산하므로 여기 영향을 받지 않음. */
+  :root { font-size:14.4px; }
   body {
     font-family:'Noto Sans KR','Malgun Gothic','Apple SD Gothic Neo',sans-serif;
     color:var(--text); min-height:100%; overflow-x:hidden;
@@ -59,7 +62,7 @@ const APP_HTML = `<!DOCTYPE html>
   /* ===== 공통 타이포 ===== */
   h1.title {
     font-family:'Gowun Batang','Noto Serif KR',serif; text-wrap:balance;
-    text-align:center; font-size:clamp(1.7rem,5.4vw,2.7rem); margin:14px 0 4px;
+    text-align:center; font-size:clamp(1.55rem,4.4vw,2.3rem); margin:14px 0 4px;
     color:var(--gold); letter-spacing:.04em; text-shadow:0 2px 14px rgba(220,180,99,.35);
   }
   .subtitle { text-align:center; color:var(--muted); font-size:.93rem; margin-bottom:20px; line-height:1.6; }
@@ -135,7 +138,7 @@ const APP_HTML = `<!DOCTYPE html>
   /* ===== 선택 카드 ===== */
   .choice-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:11px; margin:12px 0; }
   .choice-grid.tight { grid-template-columns:repeat(auto-fit,minmax(152px,1fr)); }
-  .choice-grid.four { grid-template-columns:repeat(auto-fit,minmax(172px,1fr)); }
+  .choice-grid.four { grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); }
   .choice {
     cursor:pointer; border-radius:13px; padding:14px; border:2px solid #4d3a26;
     background:rgba(30,22,15,.85); transition:.12s; font-family:inherit; color:var(--text); text-align:left;
@@ -435,8 +438,10 @@ const APP_HTML = `<!DOCTYPE html>
         <button class="choice sel" type="button" data-level="easy"><span class="ci">🌱</span><div class="ct">쉬움</div><div class="cd">한 수 앞만 봅니다. 가끔 엉뚱한 수도 둡니다. 처음 배울 때.</div></button>
         <button class="choice" type="button" data-level="normal"><span class="ci">🌿</span><div class="ct">보통</div><div class="cd">두세 수 앞을 읽습니다. 기물을 그냥 주지는 않습니다.</div></button>
         <button class="choice" type="button" data-level="hard"><span class="ci">🌳</span><div class="ct">어려움</div><div class="cd">네 수 이상 + 교환 계산. 방심하면 차를 잃습니다.</div></button>
-        <button class="choice" type="button" data-level="veryhard"><span class="ci">🔥</span><div class="ct">매우 어려움</div><div class="cd">생각 시간을 길게 써서 깊이 읽습니다. 실력자용.</div></button>
+        <button class="choice" type="button" data-level="veryhard"><span class="ci">🔥</span><div class="ct">매우 어려움</div><div class="cd">4~5초쯤 생각합니다. 실수 없이 둡니다.</div></button>
+        <button class="choice" type="button" data-level="master"><span class="ci">👑</span><div class="ct">최고 어려움</div><div class="cd">8~9초를 꽉 채워 끝까지 읽습니다. 한 수도 그냥 주지 않습니다.</div></button>
       </div>
+      <div class="hint-line">위로 갈수록 생각 시간이 길어집니다. ‘최고 어려움’은 한 수에 10초 가까이 걸릴 수 있습니다.</div>
 
       <div class="section-label">내 진영</div>
       <div class="choice-grid tight" id="ai-sides">
@@ -1379,26 +1384,39 @@ const LEVELS = {
   easy:     { name: '쉬움',      depth: 1,  time: 300,  q: false, blunder: 0.32, spread: 150, icon: '🌱' },
   normal:   { name: '보통',      depth: 3,  time: 1000, q: true,  blunder: 0.08, spread: 25,  icon: '🌿' },
   hard:     { name: '어려움',    depth: 7,  time: 2500, q: true,  blunder: 0.0,  spread: 10,  icon: '🌳' },
-  veryhard: { name: '매우 어려움', depth: 14, time: 4500, q: true,  blunder: 0.0,  spread: 0,   icon: '🔥' }
+  veryhard: { name: '매우 어려움', depth: 14, time: 4500, q: true,  blunder: 0.0,  spread: 0,   icon: '🔥' },
+  master:   { name: '최고 어려움', depth: 24, time: 8500, q: true,  blunder: 0.0,  spread: 0,   icon: '👑' }
 };
 
 /* 뿌리 탐색: 합법수만 대상으로 점수를 매겨 돌려줌 */
-function searchBest(side, level) {
+let yieldNow = null;
+async function searchBest(side, level) {
   const cfg = LEVELS[level] || LEVELS.normal;
   const roots = legalMoves(side);
   if (roots.length === 0) return { move: -1, score: 0, depth: 0 };
 
   nodes = 0; aborted = false; useQ = cfg.q;
   deadline = Date.now() + cfg.time;
+  /* 0.12초 넘게 붙들고 있었으면 한 번 놓아 준다 */
+  if (cfg.time >= 1500) {
+    let last = Date.now();
+    yieldNow = () => {
+      const now = Date.now();
+      if (now - last < 120) return null;
+      last = now;
+      return new Promise(r => setTimeout(r, 0));
+    };
+  } else yieldNow = null;
   curStamp = (curStamp % 100) + 1;
   history.fill(0); killers.fill(0);
 
   const scored = roots.map(m => ({ m, s: -INF }));
   let doneDepth = 0, lastGood = null;
 
-  /* 뿌리에서는 창을 좁히지 않음.
-     창을 좁히면 나쁜 수도 "기준값 바로 아래" 값으로 돌아오는데,
-     난이도별 무작위 선택 폭(spread)이 그 값을 좋은 수로 착각하기 때문임. */
+  /* 뿌리에서는 창을 좁히지 않는다.
+     창을 좁히면 뒤로 밀린 수들이 "기준값 언저리" 값으로만 돌아오는데, 이 엔진에서는
+     그 값들이 다음 깊이의 수 정렬을 흐트러뜨려 오히려 약해졌다(자체 대국으로 두 번 확인).
+     전체 창은 노드를 더 쓰지만 고른 수가 확실하다. */
   for (let d = 1; d <= cfg.depth; d++) {
     const cur = [];
     scored.sort((x, y) => y.s - x.s);            /* 이전 깊이에서 좋았던 수부터 */
@@ -1410,6 +1428,8 @@ function searchBest(side, level) {
       unmk(it.m, cap);
       if (aborted) break;
       cur.push({ m: it.m, s: v });
+      if (yieldNow) await yieldNow();            /* 오래 생각하는 단계는 중간에 화면을 숨 쉬게 함 */
+      if (aborted) break;
     }
     /* 중간에 끊겨도 좋은 수부터 살펴본 뒤이므로 그때까지의 결과를 씀 */
     if (cur.length) {
@@ -1747,11 +1767,12 @@ function aiTurn() {
   if (G.over || G.thinking) return;
   G.thinking = true; updateStatus(); updatePanel();
   /* 화면을 한 번 그린 뒤 계산 시작 */
-  requestAnimationFrame(() => setTimeout(() => {
+  requestAnimationFrame(() => setTimeout(async () => {
     let res = null;
-    try { res = searchBest(G.turn, G.level); }
+    try { res = await searchBest(G.turn, G.level); }
     catch (e) { res = null; }
     G.thinking = false;
+    if (G.over) { updateStatus(); updatePanel(); return; }   /* 생각하는 사이에 판이 끝났으면 */
     if (!res || res.move === -1) { doPass(true); return; }
     applyMove(res.move);
   }, 30));
@@ -1958,14 +1979,14 @@ $('btn-pass').addEventListener('click', () => {
 $('btn-hint').addEventListener('click', () => {
   if (G.over || G.thinking) return;
   G.thinking = true; updateStatus(); updatePanel();
-  requestAnimationFrame(() => setTimeout(() => {
+  requestAnimationFrame(() => setTimeout(async () => {
     let mv = -1;
     try {
       if (G.mode === 'puzzle') {
         const list = matingMoves(CHO, G.puzzle.left);
         if (list.length) mv = list[0];
       } else {
-        const res = searchBest(G.turn, 'hard');
+        const res = await searchBest(G.turn, 'hard');
         if (res) mv = res.move;
       }
     } catch (e) { /* 훈수를 못 찾아도 대국은 계속됨 */ }
