@@ -455,7 +455,8 @@ const APP_HTML = `<!DOCTYPE html>
         <div class="sb-row" id="sb-row-me">
           <div class="sb-head"><span class="sb-who" id="sb-who-me">내 진영</span><span class="sb-name" id="sb-name-me"></span></div>
           <div class="sb-rank" id="sb-rank-me"></div>
-          <div class="sb-foot">양귀마 · 원앙마 · 귀마(좌) · 귀마(우) 네 가지가 장기에서 놓을 수 있는 배치의 전부임</div>
+          <div class="sb-foot">양귀마 · 원앙마 · 귀마(좌) · 귀마(우) 네 가지가 장기에서 놓을 수 있는 배치의 전부임<br>
+            좌·우는 <b>그 진영이 앉은 자리에서 본 방향</b>이라, 마주 앉은 상대는 화면에서 반대쪽에 보임</div>
         </div>
       </div>
 
@@ -602,6 +603,7 @@ const APP_HTML = `<!DOCTYPE html>
         <h3>🎴 마·상 배치</h3>
         <p>장기는 시작 전에 <b>마와 상의 자리를 바꿔 놓을 수</b> 있습니다. 양쪽이 각자 고릅니다.</p>
         <p><b>양귀마</b>는 두 마가 모두 바깥(차 옆), <b>원앙마</b>는 두 마가 모두 안쪽, <b>귀마</b>는 한쪽만 바깥입니다. 귀마가 가장 흔합니다.</p>
+        <p>배치 이름의 <b>왼쪽·오른쪽은 그 진영이 앉은 자리에서 본 방향</b>입니다. 마주 앉은 두 사람이 똑같이 왼귀마를 놓으면, 판 위에서는 두 마가 서로 엇갈려 보입니다.</p>
       </div>
       <div class="rule-card">
         <h3>🔢 기보 좌표</h3>
@@ -767,14 +769,37 @@ const SETUPS = [
 ];
 /* 날개 표기는 "차에서 궁성 쪽으로" 읽음.
    왼쪽 날개: c1, c2 / 오른쪽 날개: c7, c6  → 'MS'면 차 옆이 마 */
+/* 마·상이 놓이는 넉 자리 (내부 세로줄 기준).
+   장기는 배치를 부를 때 좌·우를 '그 진영이 앉은 자리'에서 봄.
+   한(漢)은 아래쪽에 앉으므로 제 왼쪽이 내부 0번 줄 쪽이고,
+   초(楚)는 판 건너편에 앉으므로 제 왼쪽이 내부 8번 줄 쪽임 → 좌우가 뒤집힘. */
+function wingCols(side) {
+  return side === CHO
+    ? { outL: 7, inL: 6, outR: 1, inR: 2 }
+    : { outL: 1, inL: 2, outR: 7, inR: 6 };
+}
+/* 어느 세로줄이 그 진영의 어느 날개인지 */
+function wingOfCol(side, c) {
+  const w = wingCols(side);
+  if (c === w.outL || c === w.inL) return 'left';
+  if (c === w.outR || c === w.inR) return 'right';
+  return '';
+}
+/* 뒷줄 아홉 자리의 기물 종류를 내부 세로줄 차례대로 돌려줌 (빈 자리는 0) */
+function backRankTypes(side, setup) {
+  const t = new Array(9).fill(0);
+  t[0] = T_R; t[8] = T_R; t[3] = T_S; t[5] = T_S;
+  const w = wingCols(side);
+  t[w.outL] = setup.left === 'MS' ? T_H : T_E;
+  t[w.inL] = setup.left === 'MS' ? T_E : T_H;
+  t[w.outR] = setup.right === 'MS' ? T_H : T_E;
+  t[w.inR] = setup.right === 'MS' ? T_E : T_H;
+  return t;
+}
 function setupBackRank(side, setup) {
   const row = side === HAN ? 9 : 0;
-  const put = (c, t) => { bd[row * 9 + c] = t + side; };
-  put(0, T_R); put(8, T_R);
-  put(3, T_S); put(5, T_S);
-  const L = setup.left, R = setup.right;
-  put(1, L === 'MS' ? T_H : T_E); put(2, L === 'MS' ? T_E : T_H);
-  put(7, R === 'MS' ? T_H : T_E); put(6, R === 'MS' ? T_E : T_H);
+  const t = backRankTypes(side, setup);
+  for (let c = 0; c < 9; c++) if (t[c]) bd[row * 9 + c] = t[c] + side;
 }
 function setupSide(side, setup) {
   const back = side === HAN ? 9 : 0;
@@ -2059,30 +2084,36 @@ const setupByWings = (l, r) => SETUPS.find(s => s.left === l && s.right === r);
 function mySideForUI() { return S.side === 'cho' ? CHO : HAN; }
 
 /* 뒷줄 아홉 자리 — 마·상 넉 자리만 누를 수 있음 */
+/* 배치판은 대국 때 판에 놓일 모습 그대로 그림.
+   내 진영이 초면 대국 중 판이 돌아가므로 미리보기도 함께 뒤집음. */
 function renderRank(who) {
-  const id = who === 'me' ? S.setup : S.oppSetup;
-  const st = setupById(id);
+  const st = setupById(who === 'me' ? S.setup : S.oppSetup);
   const side = who === 'me' ? mySideForUI() : other(mySideForUI());
   const cc = side === HAN ? 'han' : 'cho';
-  const L = st.left, R = st.right;
-  const row = [
-    { g: '車' },
-    { g: L === 'MS' ? '馬' : '象', w: 'left' }, { g: L === 'MS' ? '象' : '馬', w: 'left' },
-    { g: '士' }, { g: sideHanja(side) }, { g: '士' },
-    { g: R === 'MS' ? '象' : '馬', w: 'right' }, { g: R === 'MS' ? '馬' : '象', w: 'right' },
-    { g: '車' }
-  ];
+  const types = backRankTypes(side, st);
+  const GL = side === HAN ? GLYPH_HAN : GLYPH_CHO;
+
+  const cols = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+  if (mySideForUI() === CHO) cols.reverse();          /* 대국 때 돌아갈 방향에 맞춤 */
+
   let html = '';
-  row.forEach((c, i) => {
-    if (c.w) html += \`<button class="sb-pc \${cc} wing" type="button" data-who="\${who}" data-wing="\${c.w}" title="\${c.g} — 눌러서 마·상 자리 바꾸기">\${c.g}</button>\`;
-    else html += \`<span class="sb-pc \${cc} fixed">\${c.g}</span>\`;
-    if (i === 1 || i === 6) {
-      const w = i === 1 ? 'left' : 'right';
-      html += \`<button class="sb-swap" type="button" data-who="\${who}" data-wing="\${w}" aria-label="\${w === 'left' ? '왼쪽' : '오른쪽'} 마·상 자리 바꾸기">↔</button>\`;
+  for (let i = 0; i < cols.length; i++) {
+    const c = cols[i], t = types[c], wing = wingOfCol(side, c);
+    const g = c === 4 ? sideHanja(side) : GL[t];      /* 뒷줄 한가운데는 비어 있어 진영 글자를 놓음 */
+    if (wing) {
+      const wn = wing === 'left' ? '왼쪽' : '오른쪽';
+      html += \`<button class="sb-pc \${cc} wing" type="button" data-who="\${who}" data-wing="\${wing}" title="\${g} — 눌러서 \${wn} 마·상 자리 바꾸기">\${g}</button>\`;
+    } else {
+      html += \`<span class="sb-pc \${cc} fixed">\${g}</span>\`;
     }
-  });
-  $('sb-rank-' + (who === 'me' ? 'me' : 'opp')).innerHTML = html;
-  $('sb-name-' + (who === 'me' ? 'me' : 'opp')).textContent = st.name;
+    const nx = cols[i + 1];
+    if (nx !== undefined && wing && wing === wingOfCol(side, nx)) {
+      const wn = wing === 'left' ? '왼쪽' : '오른쪽';
+      html += \`<button class="sb-swap" type="button" data-who="\${who}" data-wing="\${wing}" aria-label="\${wn} 마·상 자리 바꾸기">↔</button>\`;
+    }
+  }
+  $('sb-rank-' + who).innerHTML = html;
+  $('sb-name-' + who).textContent = st.name;
 }
 function renderSetupBoard() {
   const mine = mySideForUI(), opp = other(mine);
