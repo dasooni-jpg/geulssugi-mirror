@@ -1,4 +1,21 @@
-<!DOCTYPE html>
+/*
+ * 다람쌤 장기 한판 — 온라인 주소로 열기 (Cloudflare Worker)
+ * ──────────────────────────────────────────────────────────
+ * 화면 하나짜리 정적 앱이라 서버가 하는 일은 index.html 을 내려 주는 것뿐임.
+ * 데이터베이스·비밀키·설정이 필요 없음.
+ *
+ *   - 주소: https://<워커주소>/
+ *
+ * ※ 이 파일은 build-janggi-worker.mjs 가 만든 자동 생성본임.
+ *    화면(janggi/index.html)을 고친 뒤에는 빌드 스크립트를 다시 실행할 것.
+ *
+ * 올리는 법 (Cloudflare 대시보드에서 한 번만):
+ *  1. Workers & Pages → Create → Worker 만들기 (이름 예: janggi)
+ *  2. 이 파일(janggi-worker.js) 내용을 그대로 붙여넣고 Deploy
+ *  3. 끝. 주소는 https://janggi.<계정이름>.workers.dev
+ */
+
+const APP_HTML = `<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -1470,7 +1487,7 @@ function coordLabel(sq) {
 function buildGrid() {
   let out = '';
   const L = (x1, y1, x2, y2, w, op) =>
-    `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#6b4420" stroke-width="${w}" stroke-linecap="round" opacity="${op}"/>`;
+    \`<line x1="\${x1}" y1="\${y1}" x2="\${x2}" y2="\${y2}" stroke="#6b4420" stroke-width="\${w}" stroke-linecap="round" opacity="\${op}"/>\`;
   const x0 = PAD, x1 = PAD + 8 * CELL, y0 = PAD, y1 = PAD + 9 * CELL;
   for (let c = 0; c < 9; c++) { const x = PAD + c * CELL; out += L(x, y0, x, y1, (c === 0 || c === 8) ? 5 : 3, .82); }
   for (let r = 0; r < 10; r++) { const y = PAD + r * CELL; out += L(x0, y, x1, y, (r === 0 || r === 9) ? 5 : 3, .82); }
@@ -1481,14 +1498,14 @@ function buildGrid() {
     out += L(xb, ya, xa, yb, 3, .82);
   }
   /* 바깥 테두리 */
-  out += `<rect x="${x0 - 16}" y="${y0 - 16}" width="${x1 - x0 + 32}" height="${y1 - y0 + 32}" fill="none" stroke="#7a4f22" stroke-width="4" opacity=".55" rx="6"/>`;
+  out += \`<rect x="\${x0 - 16}" y="\${y0 - 16}" width="\${x1 - x0 + 32}" height="\${y1 - y0 + 32}" fill="none" stroke="#7a4f22" stroke-width="4" opacity=".55" rx="6"/>\`;
   gridSvg.innerHTML = out;
 }
 
 function buildCells() {
   let html = '';
   for (let sq = 0; sq < NSQ; sq++) {
-    html += `<button class="cell" type="button" data-sq="${sq}" aria-label="${coordLabel(sq)}"></button>`;
+    html += \`<button class="cell" type="button" data-sq="\${sq}" aria-label="\${coordLabel(sq)}"></button>\`;
   }
   layCells.innerHTML = html;
   positionCells();
@@ -1512,7 +1529,7 @@ function renderPieces() {
     const cls = ['pc', 'sz' + SZ[p & 7], (p & 8) ? 'cho' : 'han'];
     if (S.korean) cls.push('ko');
     if (sq === G.sel) cls.push('sel');
-    html += `<div class="${cls.join(' ')}" style="left:${pctX(c)}%; top:${pctY(r)}%">${glyphOf(p)}</div>`;
+    html += \`<div class="\${cls.join(' ')}" style="left:\${pctX(c)}%; top:\${pctY(r)}%">\${glyphOf(p)}</div>\`;
   }
   layPieces.innerHTML = html;
 }
@@ -1521,7 +1538,7 @@ function renderMarks() {
   let html = '';
   const mk = (sq, cls) => {
     const [r, c] = dispRC(sq);
-    html += `<div class="mk ${cls}" style="left:${pctX(c)}%; top:${pctY(r)}%"></div>`;
+    html += \`<div class="mk \${cls}" style="left:\${pctX(c)}%; top:\${pctY(r)}%"></div>\`;
   };
   if (G.lastMove) { mk(G.lastMove.f, 'last'); mk(G.lastMove.t, 'last'); }
   if (G.hint) { mk(G.hint.f, 'hint'); mk(G.hint.t, 'hint'); }
@@ -1552,7 +1569,7 @@ function updatePanel() {
     $('pl-' + pos).classList.toggle('turn', !G.over && G.turn === side);
     $('cap-' + pos).innerHTML = G.captured[side].map(p => {
       const t = p & 7;
-      return `<span class="${(p & 8) ? 'cho' : 'han'}" title="${nameOf(p)}">${(p & 8) ? GLYPH_CHO[t] : GLYPH_HAN[t]}</span>`;
+      return \`<span class="\${(p & 8) ? 'cho' : 'han'}" title="\${nameOf(p)}">\${(p & 8) ? GLYPH_CHO[t] : GLYPH_HAN[t]}</span>\`;
     }).join('');
   };
   set('top', topSide); set('bot', botSide);
@@ -1562,7 +1579,7 @@ function updatePanel() {
   $('pl-top').hidden = pz; $('pl-bot').hidden = pz;
   $('btn-pass').hidden = pz; $('btn-resign').hidden = pz; $('btn-flip').hidden = pz;
   if (pz) {
-    $('pz-title').textContent = `${G.puzzle.i + 1}번 · ${G.puzzle.n}수 외통`;
+    $('pz-title').textContent = \`\${G.puzzle.i + 1}번 · \${G.puzzle.n}수 외통\`;
     $('pz-left').textContent = G.over ? '성공' : '남은 ' + G.puzzle.left + '수';
     $('pz-sub').textContent = G.over
       ? '다음 문제로 넘어가 보세요.'
@@ -1600,9 +1617,9 @@ function renderLog() {
   const box = $('movelog');
   if (!G.log.length) { box.innerHTML = '<div class="empty">아직 둔 수가 없습니다.</div>'; return; }
   box.innerHTML = G.log.map((e, i) =>
-    `<div class="ml${i === G.log.length - 1 ? ' new' : ''}"><span class="no">${i + 1}</span>` +
-    `<span class="sd ${e.side === HAN ? 'han' : 'cho'}">${sideHanja(e.side)}</span>` +
-    `<span>${e.text}</span></div>`).join('');
+    \`<div class="ml\${i === G.log.length - 1 ? ' new' : ''}"><span class="no">\${i + 1}</span>\` +
+    \`<span class="sd \${e.side === HAN ? 'han' : 'cho'}">\${sideHanja(e.side)}</span>\` +
+    \`<span>\${e.text}</span></div>\`).join('');
   box.scrollTop = box.scrollHeight;
 }
 
@@ -1701,12 +1718,12 @@ function renderPuzzleList() {
   const solved = loadSolved();
   let done = 0;
   for (let i = 0; i < PUZZLES.length; i++) if (solved.has(i)) done++;
-  $('pz-progress').innerHTML = `푼 문제 <b>${done}</b> / <b>${PUZZLES.length}</b>`;
+  $('pz-progress').innerHTML = \`푼 문제 <b>\${done}</b> / <b>\${PUZZLES.length}</b>\`;
   $('puzzle-grid').innerHTML = PUZZLES.map((p, i) => {
     const ok = solved.has(i);
     const how = p.n === 1 ? '한 수로 끝내기' : (p.n === 2 ? '두 수 만에 몰아넣기' : '세 수 만에 몰아넣기');
-    return `<button class="pz-card${ok ? ' done' : ''}" type="button" data-pz="${i}">` +
-      `<div class="pn">${i + 1}번 · ${p.n}수 외통</div><div class="pd">${how}</div>` +
+    return \`<button class="pz-card\${ok ? ' done' : ''}" type="button" data-pz="\${i}">\` +
+      \`<div class="pn">\${i + 1}번 · \${p.n}수 외통</div><div class="pd">\${how}</div>\` +
       (ok ? '<div class="pk">✔ 해결</div>' : '') + '</button>';
   }).join('');
 }
@@ -1727,7 +1744,7 @@ function startPuzzle(i) {
   G.lastMove = null; G.hint = null; G.over = false; G.overText = '';
   G.thinking = false; G.noMoveStreak = 0;
   G.names[CHO] = '나 (초)'; G.names[HAN] = '수비 (컴퓨터)';
-  $('game-title').textContent = `🧩 묘수풀이 ${i + 1}번 · ${p.n}수 외통`;
+  $('game-title').textContent = \`🧩 묘수풀이 \${i + 1}번 · \${p.n}수 외통\`;
   show('game');
   positionCells(); renderLog(); renderAll(); updateStatus(); syncUnit();
   toast(p.n + '수 안에 외통을 만드세요.');
@@ -1779,7 +1796,7 @@ function puzzleSolved() {
   $('go-icon').textContent = '🎉';
   $('go-title').textContent = '외통! 성공입니다';
   $('go-text').textContent = G.puzzle.n + '수 만에 궁을 몰아넣었습니다.';
-  $('go-score').textContent = `묘수풀이 ${G.puzzle.i + 1}번 · ${G.puzzle.n}수 외통`;
+  $('go-score').textContent = \`묘수풀이 \${G.puzzle.i + 1}번 · \${G.puzzle.n}수 외통\`;
   setModalButtons();
   updateStatus(); updatePanel(); renderMarks(); sndEnd();
   setTimeout(() => $('gameover-modal').classList.add('open'), 420);
@@ -1815,7 +1832,7 @@ function endGame(reason, winner, detail) {
   $('go-icon').textContent = icon;
   $('go-title').textContent = title;
   $('go-text').textContent = text;
-  $('go-score').textContent = `최종 점수 — 한(漢) ${hs.toFixed(1)}점 · 초(楚) ${cs.toFixed(1)}점 (한 덤 1.5 포함)`;
+  $('go-score').textContent = \`최종 점수 — 한(漢) \${hs.toFixed(1)}점 · 초(楚) \${cs.toFixed(1)}점 (한 덤 1.5 포함)\`;
 
   if (G.mode === 'ai') {
     const r = w === null ? 'd' : (w === G.humanSide ? 'w' : 'l');
@@ -2008,11 +2025,11 @@ function renderRank(who) {
   ];
   let html = '';
   row.forEach((c, i) => {
-    if (c.w) html += `<button class="sb-pc ${cc} wing" type="button" data-who="${who}" data-wing="${c.w}" title="${c.g} — 눌러서 마·상 자리 바꾸기">${c.g}</button>`;
-    else html += `<span class="sb-pc ${cc} fixed">${c.g}</span>`;
+    if (c.w) html += \`<button class="sb-pc \${cc} wing" type="button" data-who="\${who}" data-wing="\${c.w}" title="\${c.g} — 눌러서 마·상 자리 바꾸기">\${c.g}</button>\`;
+    else html += \`<span class="sb-pc \${cc} fixed">\${c.g}</span>\`;
     if (i === 1 || i === 6) {
       const w = i === 1 ? 'left' : 'right';
-      html += `<button class="sb-swap" type="button" data-who="${who}" data-wing="${w}" aria-label="${w === 'left' ? '왼쪽' : '오른쪽'} 마·상 자리 바꾸기">↔</button>`;
+      html += \`<button class="sb-swap" type="button" data-who="\${who}" data-wing="\${w}" aria-label="\${w === 'left' ? '왼쪽' : '오른쪽'} 마·상 자리 바꾸기">↔</button>\`;
     }
   });
   $('sb-rank-' + (who === 'me' ? 'me' : 'opp')).innerHTML = html;
@@ -2020,9 +2037,9 @@ function renderRank(who) {
 }
 function renderSetupBoard() {
   const mine = mySideForUI(), opp = other(mine);
-  $('sb-who-me').innerHTML = `<span class="tag ${mine === HAN ? 'han' : 'cho'}">${sideHanja(mine)}</span>내 진영` +
+  $('sb-who-me').innerHTML = \`<span class="tag \${mine === HAN ? 'han' : 'cho'}">\${sideHanja(mine)}</span>내 진영\` +
     (S.side === 'random' ? ' <span style="font-weight:400; color:var(--muted); font-size:.78rem;">(진영은 시작할 때 정해짐)</span>' : '');
-  $('sb-who-opp').innerHTML = `<span class="tag ${opp === HAN ? 'han' : 'cho'}">${sideHanja(opp)}</span>상대 진영`;
+  $('sb-who-opp').innerHTML = \`<span class="tag \${opp === HAN ? 'han' : 'cho'}">\${sideHanja(opp)}</span>상대 진영\`;
   renderRank('me'); renderRank('opp');
   $('sb-row-opp').classList.toggle('dim', !!S.oppRandom);
   $('opt-opp-random').checked = !!S.oppRandom;
@@ -2051,11 +2068,11 @@ function renderStats() {
   const rate = total ? Math.round((w / total) * 100) : 0;
   $('stats-summary').innerHTML =
     [['총 대국', total], ['승', w], ['무', d], ['패', l], ['승률', rate + '%']]
-      .map(([k, v]) => `<div class="stat-tile"><div class="sv">${v}</div><div class="sl">${k}</div></div>`).join('');
+      .map(([k, v]) => \`<div class="stat-tile"><div class="sv">\${v}</div><div class="sl">\${k}</div></div>\`).join('');
   let rows = '<tr><th>난이도</th><th class="n">승</th><th class="n">무</th><th class="n">패</th></tr>';
   for (const key of ['easy', 'normal', 'hard', 'veryhard']) {
     const r = st[key] || { w: 0, d: 0, l: 0 };
-    rows += `<tr><td>${LEVELS[key].icon} ${LEVELS[key].name}</td><td class="n">${r.w}</td><td class="n">${r.d}</td><td class="n">${r.l}</td></tr>`;
+    rows += \`<tr><td>\${LEVELS[key].icon} \${LEVELS[key].name}</td><td class="n">\${r.w}</td><td class="n">\${r.d}</td><td class="n">\${r.l}</td></tr>\`;
   }
   $('stats-table').innerHTML = rows;
 }
@@ -2155,3 +2172,20 @@ syncUnit();
 </script>
 </body>
 </html>
+`;
+
+export default {
+  fetch(request) {
+    const url = new URL(request.url);
+    if (url.pathname === '/favicon.ico') return new Response(null, { status: 204 });
+    if (request.method !== 'GET' && request.method !== 'HEAD') {
+      return new Response('Method Not Allowed', { status: 405 });
+    }
+    return new Response(APP_HTML, {
+      headers: {
+        'content-type': 'text/html; charset=utf-8',
+        'cache-control': 'no-cache'
+      }
+    });
+  }
+};
