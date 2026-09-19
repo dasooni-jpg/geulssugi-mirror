@@ -315,6 +315,11 @@
   .pz-card.done .pn { color:var(--ok); }
   .pz-card .pd { font-size:.8rem; color:var(--muted); margin-top:4px; }
   .pz-card .pk { font-size:.78rem; font-weight:700; margin-top:7px; color:var(--ok); }
+  .pz-group + .pz-group { margin-top:22px; }
+  .pz-group-title { display:flex; justify-content:space-between; align-items:baseline; gap:10px;
+    border-bottom:1px solid var(--panel-b); padding-bottom:6px; margin-top:18px; flex-wrap:wrap; }
+  .pz-group-title b { color:var(--gold); font-size:1.02rem; font-family:'Gowun Batang',serif; }
+  .pz-group-title span { color:var(--muted); font-size:.8rem; font-variant-numeric:tabular-nums; }
   #pz-progress { text-align:center; color:var(--muted); font-size:.9rem; margin-bottom:4px; }
   #pz-progress b { color:var(--gold); font-variant-numeric:tabular-nums; }
   #puzzle-card .pl-name { color:var(--gold); }
@@ -384,7 +389,7 @@
       </button>
       <button class="menu-btn" data-go="puzzles">
         <span class="mi">🧩</span><span class="mt">묘수풀이</span>
-        <span class="md">13문제 · 1수 · 2수 · 3수 외통 (정답을 엔진으로 검증함)</span>
+        <span class="md">차·포·마·상·졸로 끝내는 외통 문제 (정답을 엔진으로 검증함)</span>
       </button>
       <button class="menu-btn" data-go="rules">
         <span class="mi">📜</span><span class="mt">장기 규칙 보기</span>
@@ -597,9 +602,9 @@
   <section id="screen-puzzles" class="screen">
     <div class="backrow"><button class="btn ghost" data-back>← 메뉴로</button></div>
     <h1 class="title">묘수풀이</h1>
-    <div class="subtitle">초(楚)를 잡고 정해진 수 안에 <b>외통</b>을 만드세요 · 상대는 가장 끈질긴 수로 버팁니다</div>
+    <div class="subtitle">초(楚)를 잡고 정해진 수 안에 <b>외통</b>을 만드세요 · 상대는 가장 끈질긴 수로 버팁니다<br>1수 문제는 어떤 기물로 끝내는지 적어 두었습니다</div>
     <div id="pz-progress"></div>
-    <div class="puzzle-grid" id="puzzle-grid"></div>
+    <div id="puzzle-list"></div>
   </section>
 
   <!-- ===================== 전적 ===================== -->
@@ -1071,19 +1076,43 @@ function matingMoves(side, n) {
    기물 표기: 종류 + 가로줄(0~9) + 세로줄(0~8), 내부 좌표 기준.
    전부 엔진으로 "정답 첫수가 꼭 하나"임을 확인해 둠 */
 const PUZZLES = [
-  { n: 1, cho: 'K04 P96 R58 R82', han: 'K74' },
-  { n: 1, cho: 'K03 R77 E55 E78', han: 'K95 S85' },
-  { n: 1, cho: 'K25 H53 R41',     han: 'K73 S83 S74' },
-  { n: 1, cho: 'K05 R45 H72',     han: 'K95 S94 S93 J75' },
-  { n: 1, cho: 'K24 H56 J65 E41', han: 'K74 S75' },
+  /* ── 1수 외통: 기물마다 궁을 몰아넣는 모양을 익히는 문제 ── */
+  { n: 1, t: '차',          cho: 'K13 R46 R64 J72', han: 'K95' },
+  { n: 1, t: '차',          cho: 'K14 P72 R55 R45', han: 'K74 E60' },
+  { n: 1, t: '포',          cho: 'K04 R44 P96 J84', han: 'K75 H95' },
+  { n: 1, t: '포',          cho: 'K15 P55 R64 J62', han: 'K75' },
+  { n: 1, t: '포',          cho: 'K15 E95 R73 P56', han: 'K94 S74 E66' },
+  { n: 1, t: '마',          cho: 'K05 H51 H82 R88', han: 'K73 S74 E52' },
+  { n: 1, t: '마',          cho: 'K13 H86 H78 R54', han: 'K73 S75 S83 E65' },
+  { n: 1, t: '상',          cho: 'K05 E96 R74 P51', han: 'K85 S93 S95' },
+  { n: 1, t: '상',          cho: 'K03 E63 R83 P52', han: 'K74 S75' },
+  { n: 1, t: '졸',          cho: 'K03 P44 R80 J95', han: 'K93 S85 S74' },
+  { n: 1, t: '졸',          cho: 'K15 R64 J74 E97', han: 'K95 J53' },
+  { n: 1, t: '궁성 대각선', cho: 'K24 P83 R73 R53', han: 'K93' },
+  { n: 1, t: '궁성 대각선', cho: 'K25 R95 P86 J94', han: 'K75 S85 S93' },
+
+  /* ── 2수 외통 ── */
   { n: 2, cho: 'K14 R45 J86 E98', han: 'K94 J50' },
   { n: 2, cho: 'K13 R50 H44 E96', han: 'K95' },
   { n: 2, cho: 'K23 J72 R46 P80', han: 'K84 S74' },
   { n: 2, cho: 'K03 J88 H64 R45', han: 'K74 J85' },
+  { n: 2, cho: 'K03 P74 R40 E76', han: 'K83 S94 S93' },
+  { n: 2, cho: 'K03 R44 R75 J55', han: 'K83 S73 S94' },
+  { n: 2, cho: 'K13 R52 J65 J44', han: 'K74 S95 S84' },
+
+  /* ── 3수 외통 ── */
   { n: 3, cho: 'K25 R92 P67 J82', han: 'K73 S95' },
   { n: 3, cho: 'K23 J60 R51 E61', han: 'K95 E72' },
   { n: 3, cho: 'K04 R65 J81 P82', han: 'K93 S75 J51' },
-  { n: 3, cho: 'K03 P66 R40 E43', han: 'K83 E68' }
+  { n: 3, cho: 'K03 P66 R40 E43', han: 'K83 E68' },
+  { n: 3, cho: 'K25 R53 P42 H58', han: 'K74 S83' },
+  { n: 3, cho: 'K13 R54 P73 J60', han: 'K83 S95 S74' },
+  { n: 3, cho: 'K24 R48 P71 J67', han: 'K74' },
+
+  /* ── 4수 외통 ── */
+  { n: 4, cho: 'K15 R42 H70 P80', han: 'K85 S94 S93' },
+  { n: 4, cho: 'K13 R63 H84 P66', han: 'K94 S85' },
+  { n: 4, cho: 'K05 R46 P94 H48', han: 'K75 S73' }
 ];
 const PZ_TYPE = { K: T_K, S: T_S, R: T_R, P: T_P, H: T_H, E: T_E, J: T_J };
 function setPuzzleBoard(p) {
@@ -1689,7 +1718,7 @@ function aiTurn() {
 /* ============================================================================
    6-2. 묘수풀이
    ============================================================================ */
-const PZKEY = 'daram-janggi-puzzles-v1';
+const PZKEY = 'daram-janggi-puzzles-v2';
 function loadSolved() {
   try { return new Set(JSON.parse(localStorage.getItem(PZKEY)) || []); } catch (e) { return new Set(); }
 }
@@ -1697,20 +1726,40 @@ function markSolved(i) {
   try { const st = loadSolved(); st.add(i); localStorage.setItem(PZKEY, JSON.stringify([...st])); } catch (e) {}
 }
 
+const PZ_HOW = { 1: '한 수로 끝내기', 2: '두 수 만에 몰아넣기', 3: '세 수 만에 몰아넣기', 4: '네 수 만에 몰아넣기' };
+/* '차로 / 상으로' 처럼 받침에 맞는 조사를 붙임 */
+function withRo(w) {
+  const code = w.charCodeAt(w.length - 1) - 0xAC00;
+  if (code < 0 || code > 11171) return w + '로';
+  const jong = code % 28;
+  return w + (jong === 0 || jong === 8 ? '로' : '으로');
+}
 function renderPuzzleList() {
   const solved = loadSolved();
   let done = 0;
   for (let i = 0; i < PUZZLES.length; i++) if (solved.has(i)) done++;
   $('pz-progress').innerHTML = `푼 문제 <b>${done}</b> / <b>${PUZZLES.length}</b>`;
-  $('puzzle-grid').innerHTML = PUZZLES.map((p, i) => {
-    const ok = solved.has(i);
-    const how = p.n === 1 ? '한 수로 끝내기' : (p.n === 2 ? '두 수 만에 몰아넣기' : '세 수 만에 몰아넣기');
-    return `<button class="pz-card${ok ? ' done' : ''}" type="button" data-pz="${i}">` +
-      `<div class="pn">${i + 1}번 · ${p.n}수 외통</div><div class="pd">${how}</div>` +
-      (ok ? '<div class="pk">✔ 해결</div>' : '') + '</button>';
-  }).join('');
+
+  const steps = [...new Set(PUZZLES.map(p => p.n))].sort((a, b) => a - b);
+  let html = '';
+  for (const n of steps) {
+    const idx = PUZZLES.map((p, i) => [p, i]).filter(([p]) => p.n === n);
+    const cleared = idx.filter(([, i]) => solved.has(i)).length;
+    html += `<div class="pz-group"><div class="pz-group-title"><b>${n}수 외통</b>` +
+            `<span>${PZ_HOW[n] || n + '수 만에 몰아넣기'} · ${cleared}/${idx.length}</span></div>` +
+            '<div class="puzzle-grid">';
+    for (const [p, i] of idx) {
+      const ok = solved.has(i);
+      html += `<button class="pz-card${ok ? ' done' : ''}" type="button" data-pz="${i}">` +
+        `<div class="pn">${i + 1}번</div>` +
+        `<div class="pd">${p.t ? withRo(p.t) + ' 끝내기' : p.n + '수 외통'}</div>` +
+        (ok ? '<div class="pk">✔ 해결</div>' : '') + '</button>';
+    }
+    html += '</div></div>';
+  }
+  $('puzzle-list').innerHTML = html;
 }
-$('puzzle-grid').addEventListener('click', ev => {
+$('puzzle-list').addEventListener('click', ev => {
   const b = ev.target.closest('[data-pz]');
   if (b) startPuzzle(+b.dataset.pz);
 });
