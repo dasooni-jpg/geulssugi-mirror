@@ -22,6 +22,9 @@
 # ↓ 다람쌤 오목 대회 플랫폼
 !/omok/
 
+# ↓ 다람쌤 장기 한판 (AI 난이도 4단계)
+!/janggi/
+
 # ↓ 우리 반 아이디어 보드 (와우아이디어스 대체, Cloudflare Worker + D1)
 !/ideaboard-app/
 !/ideaboard-worker.template.js
