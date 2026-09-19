@@ -56,6 +56,7 @@
 | `ideaboard-app/` | 우리 반 아이디어 보드 | `ideaboard-worker.js`를 Worker 편집기에 붙여넣기 |
 | `chess/` | 어린이 체스 교실 | `chess-online-worker.js` 붙여넣기 |
 | `omok/` | 다람쌤 오목 대회 | 정적 페이지 |
+| `janggi/` | 다람쌤 장기 한판 (한국 장기, AI 4단계 + 묘수풀이) | 정적 페이지 · `janggi/janggi-cloudflare.zip` 으로 Cloudflare 업로드 |
 | `typing-rain/` | 타자 연습 (낱말 비) | 정적 페이지 |
 | `kart/` | 우리 반 카트 그랑프리 (3D 레이싱) | 정적 페이지 + `kart-online-worker.js` 붙여넣기 |
 | `safety-edu/` | 안전교육 문구 복사기 | **git 연동 자동배포** (아래 참고) |
