@@ -370,6 +370,72 @@ button{font-family:inherit;color:inherit;border:0;background:none;cursor:pointer
 }
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 :focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+/* ============ 유물 — 받침대 진열장 + 등급 띠지 상세창 ============ */
+.rl-top{display:flex;align-items:center;gap:8px;margin:0 0 4px}
+.rl-sum{flex:1;display:flex;gap:5px;flex-wrap:wrap;min-width:0}
+.rl-chip{display:inline-flex;align-items:center;gap:4px;padding:4px 9px;border-radius:999px;background:#1b0f28;
+  border:1px solid #4a2a6a;font-family:var(--ff-n);font-size:11.5px;font-weight:700;color:#ecdcf5;white-space:nowrap}
+.rl-chip svg{width:14px;height:14px}
+.rl-auto{flex:0 0 auto;min-width:92px;height:42px;padding:0 10px;border-radius:11px;font-size:13px;font-weight:900;line-height:1.15;
+  color:#062812;background:linear-gradient(180deg,#8dffbc,#22b45a);border:2px solid #c8ffdc;box-shadow:0 3px 0 #0d5a2a}
+.rl-auto small{display:block;font-size:9.5px;font-weight:800;opacity:.8}
+.rl-auto:active{transform:translateY(2px);box-shadow:0 1px 0 #0d5a2a}
+.rl-auto.off{background:linear-gradient(180deg,#5a4a52,#33262d);border-color:#6b5a63;color:#a8949f;box-shadow:0 3px 0 #1e1519}
+.rl-sec{display:flex;align-items:center;gap:8px;margin:14px 0 8px;font-family:var(--ff-d);font-size:13px;letter-spacing:.06em;color:var(--rc)}
+.rl-sec i{font-style:normal;font-family:var(--ff-n);font-size:11px;color:var(--muted)}
+.rl-sec::after{content:"";flex:1;height:2px;border-radius:2px;background:linear-gradient(90deg,var(--rc),transparent)}
+.rl-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px 7px}
+.rl-cell{position:relative;display:flex;flex-direction:column;align-items:center;padding:0;margin:0;background:none;border:0;color:inherit;cursor:pointer}
+.rl-stage{position:relative;width:100%;aspect-ratio:1/.9;display:flex;align-items:flex-end;justify-content:center;
+  background:radial-gradient(ellipse 62% 55% at 50% 84%,var(--rg),transparent 72%)}
+.rl-ic{position:relative;z-index:2;width:60%;aspect-ratio:1;margin-bottom:17%;filter:drop-shadow(0 6px 5px rgba(0,0,0,.75));transition:transform .12s}
+.rl-ic svg{width:100%;height:100%;display:block}
+.rl-disc{position:absolute;z-index:1;left:13%;right:13%;bottom:9%;height:16%;border-radius:50%;
+  background:radial-gradient(ellipse at 50% 35%,rgba(255,255,255,.75) 0%,var(--rc) 32%,var(--rd) 100%);
+  box-shadow:0 0 16px var(--rc),inset 0 -3px 0 rgba(0,0,0,.35)}
+.rl-plinth{position:absolute;left:7%;right:7%;bottom:0;height:15%;border-radius:0 0 7px 7px;
+  background:linear-gradient(180deg,#7a5440 0%,#4a2c1e 70%,#2e1a10 100%);box-shadow:inset 0 2px 0 rgba(255,220,180,.18)}
+.rl-plate{position:relative;z-index:2;width:100%;margin-top:-1px;padding:4px 2px 5px;border-radius:7px;text-align:center;
+  background:linear-gradient(180deg,#6247ad,#3b2677);border:2px solid #170d2a;box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+.rl-stars{display:flex;justify-content:center;gap:1px}
+.rl-stars svg{width:12px;height:12px}
+.rl-nm{display:block;margin-top:2px;font-size:10.5px;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 0 #000}
+.rl-cell.off .rl-ic{filter:grayscale(1) brightness(.42) drop-shadow(0 6px 5px rgba(0,0,0,.75))}
+.rl-cell.off .rl-disc{opacity:.4;box-shadow:none}
+.rl-cell.off .rl-stage{background:none}
+.rl-cell:active .rl-ic{transform:scale(.92)}
+.rl-up{position:absolute;right:1px;top:1px;z-index:3;width:22px;height:22px;border-radius:6px;display:grid;place-items:center;
+  font-size:13px;font-weight:900;color:#062812;background:linear-gradient(180deg,#8dffbc,#22b45a);border:2px solid #0d5a2a}
+.rl-effh{margin:16px 0 8px}
+/* 상세창 */
+.rl-m{position:relative;padding:30px 14px 14px}
+.rl-rib{position:absolute;left:50%;top:0;transform:translateX(-50%);padding:4px 34px 6px;white-space:nowrap;
+  font-family:var(--ff-d);font-size:14px;letter-spacing:.1em;color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.6);
+  background:linear-gradient(180deg,var(--rc),var(--rd));clip-path:polygon(0 0,100% 0,90% 100%,10% 100%)}
+.rl-x{position:absolute;right:8px;top:7px;width:30px;height:30px;border-radius:50%;border:2px solid rgba(255,255,255,.35);
+  background:rgba(0,0,0,.35);color:#fff;font-size:14px;line-height:1}
+.rl-m h3{margin:4px 0 12px}
+.rl-row{display:flex;gap:10px;align-items:stretch}
+.rl-thumb{flex:0 0 94px}
+.rl-box{width:94px;height:94px;border-radius:11px;border:3px solid var(--rc);display:grid;place-items:center;
+  background:radial-gradient(circle at 50% 38%,rgba(255,255,255,.2),transparent 58%),radial-gradient(circle at 50% 115%,var(--rc),#1b0f28 72%);
+  box-shadow:0 0 18px var(--rg)}
+.rl-box svg{width:62px;height:62px;filter:drop-shadow(0 4px 4px rgba(0,0,0,.6))}
+.rl-box.off svg{filter:grayscale(1) brightness(.5)}
+.rl-pc{margin-top:6px;height:24px;display:flex;align-items:center;justify-content:center;gap:4px;padding:0 4px;border-radius:12px;
+  background:#5a1320;border:2px solid #8e2233;font-family:var(--ff-n);font-size:11px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden}
+.rl-pc svg{width:14px;height:14px}
+.rl-lore{flex:1;font-size:11.5px;line-height:1.6;color:#dcc8ea;background:#1b0f28;border:1px solid #4a2a6a;border-radius:10px;padding:9px 10px}
+.rl-lv{display:flex;align-items:center;justify-content:center;gap:8px;margin:10px 0 0;font-size:11.5px;font-weight:800;color:#bcd0ff}
+.rl-lv .stars{margin:0}
+.rl-nx{margin-left:6px;color:#7ee08a}
+.rl-foot{margin-top:12px;padding:12px 10px;border-radius:10px;background:#1b0f28;border:1px solid #4a2a6a;text-align:center;
+  font-size:14px;font-weight:900;color:#fff;line-height:1.5}
+.rl-foot em{font-style:normal;font-family:var(--ff-n);color:#ff5a6e}
+.rl-cost{display:flex;justify-content:center;gap:12px;margin-top:7px;font-family:var(--ff-n);font-size:11.5px;font-weight:700}
+.rl-cost span{display:inline-flex;align-items:center;gap:3px}
+.rl-cost svg{width:13px;height:13px}
+.rl-cost .ok{color:#4ade80}.rl-cost .no{color:#ff7a8c}
 </style>
 
 <div id="frame">
@@ -3299,6 +3365,46 @@ function canBreak(id){
   if(st >= 5) return false;
   return S.shard >= RELIC_COST[st+1] && S.gold >= RELIC_GOLD[st+1];
 }
+/* 유물 등급 → 장비 등급표(RAR)의 색을 그대로 씀 */
+const RELIC_RANK = {'일반':0,'고급':1,'희귀':2,'영웅':3,'전설':4,'신화':5};
+function relicRank(r){ return RELIC_RANK[r.rare] != null ? RELIC_RANK[r.rare] : 2; }
+function hexA(h, a){ const n = parseInt(h.slice(1),16); return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`; }
+/* 받침대·띠지 색 변수 — 밝은 색, 짙은 색, 은은한 빛 */
+function relicVars(r){ const c = RAR[relicRank(r)].c; return `--rc:${c};--rd:${hexA(c,.35)};--rg:${hexA(c,.45)}`; }
+/* 유물 효과 한 줄의 값 — 0성이면 1성 값을 미리 보여 줌 */
+function relicVal(e, st){ const s = Math.max(st,1); return e.t==='mul' ? '×'+(1+e.v*s).toFixed(2) : '+'+(e.v*s).toFixed(1)+'%'; }
+/* 모두 돌파 — 금화가 싼 단계부터 하나씩 올림. 그래서 안 깬 유물이 먼저 깨어나고 고르게 오름 */
+function breakAllRelics(){
+  let n = 0, woke = 0;
+  for(let guard = 0; guard < 300; guard++){
+    let best = null;
+    for(const r of RELICS){
+      if(!canBreak(r.id)) continue;
+      const nx = relicStar(r.id) + 1;
+      if(!best || RELIC_GOLD[nx] < RELIC_GOLD[best.nx] || (RELIC_GOLD[nx] === RELIC_GOLD[best.nx] && relicRank(r) > relicRank(best.r))) best = {r, nx};
+    }
+    if(!best) break;
+    S.shard -= RELIC_COST[best.nx]; S.gold -= RELIC_GOLD[best.nx];
+    S.relics[best.r.id] = {star: best.nx};
+    n++; if(best.nx === 1) woke++;
+  }
+  if(n){ recalc(); markDirty(); sfx('lvup'); toast('유물 '+n+'번 돌파'+(woke?' · 새로 깨운 유물 '+woke+'개':''), 'gold'); }
+  else toast('돌파할 수 있는 유물이 없음','bad');
+}
+/* 착용 장비 고르게 강화 — 다음 강화가 가장 싼 장비부터 금화가 닿는 데까지 */
+function upgradeEquippedEven(){
+  const eq = SLOTS.map(sl => S.equip[sl.id]).filter(Boolean);
+  if(!eq.length){ toast('착용한 장비가 없음','bad'); return; }
+  let n = 0, spent = 0;
+  for(let guard = 0; guard < 1e5; guard++){
+    let best = null, bc = Infinity;
+    for(const it of eq){ const c = itemUpCost(it); if(c < bc){ bc = c; best = it; } }
+    if(!best || !isFinite(bc) || S.gold < bc) break;
+    S.gold -= bc; best.lv++; n++; spent += bc;
+  }
+  if(n){ recalc(); markDirty(); sfx('buy'); toast('착용 장비 '+n+'번 강화 · 금화 -'+fmt(spent), 'gold'); }
+  else toast('금화가 부족함','bad');
+}
 function breakRelic(id){
   const st = relicStar(id);
   if(st >= 5 || !canBreak(id)) return;
@@ -3421,30 +3527,52 @@ function renderGear(){
      <button class="cta ghost" data-act="autoeq" style="height:40px;font-size:13px">최강 장착</button>
      <button class="cta ghost" data-act="salvageAll" style="height:40px;font-size:13px">희귀 이하 분해</button>
    </div>
+   <div class="ctarow" style="margin-bottom:10px">
+     <button class="rl-auto" data-act="eqUpAll" style="width:100%;margin:0">⚡ 착용 장비 고르게 강화<small>다음 강화가 싼 장비부터 · 금화가 닿는 데까지</small></button>
+   </div>
    <div class="grid">${inv.length ? inv.map(i=>gearCell(i)).join('') : '<div class="tiny" style="grid-column:1/-1">보관함이 비어 있음. 소환으로 장비를 획득함.</div>'}</div>`;
   return {sub:`보관 ${S.inv.length}개 · 소환권 ${fmt(S.ticket)}`, html};
 }
 /* ---------- 유물 ---------- */
 function renderRelic(){
-  const cells = RELICS.map(r=>{
+  const stars = st => `<span class="rl-stars">${[1,2,3,4,5].map(i=>icon(i<=st?'star':'starOff')).join('')}</span>`;
+  const cell = r => {
     const st = relicStar(r.id);
-    const c = st ? (st>=4?'#ef4444':st>=3?'#fb923c':'#a855f7') : '#4a3a46';
-    return `<button class="cell" style="--rc:${c};${st?'':'filter:grayscale(.85) brightness(.6)'}" data-act="relic" data-id="${r.id}">
-      ${icon(r.ic)}<span class="q">${st}★</span>
-      ${canBreak(r.id)?'<span class="new">↑</span>':''}</button>`;
-  }).join('');
-  const owned = RELICS.filter(r=>relicStar(r.id)>0);
+    return `<button class="rl-cell${st?'':' off'}" style="${relicVars(r)}" data-act="relic" data-id="${r.id}">
+      <span class="rl-stage"><span class="rl-plinth"></span><span class="rl-disc"></span><span class="rl-ic">${icon(r.ic)}</span></span>
+      <span class="rl-plate">${stars(st)}<span class="rl-nm">${r.n}</span></span>
+      ${canBreak(r.id)?'<span class="rl-up">↑</span>':''}</button>`;
+  };
+  /* 첨부 화면처럼 높은 등급이 위로 오게 등급별로 묶음 */
+  let grid = '';
+  for(let k = RAR.length-1; k >= 0; k--){
+    const list = RELICS.filter(r => relicRank(r) === k);
+    if(!list.length) continue;
+    const have = list.filter(r => relicStar(r.id) > 0).length;
+    grid += `<div class="rl-sec" style="--rc:${RAR[k].c}">${RAR[k].k} <i>${have} / ${list.length}</i></div>
+      <div class="rl-grid">${list.map(cell).join('')}</div>`;
+  }
+  const ready = RELICS.filter(r => canBreak(r.id)).length;
+  const owned = RELICS.filter(r => relicStar(r.id) > 0);
+  const top = `<div class="rl-top">
+      <div class="rl-sum">
+        <span class="rl-chip">${icon('relicgem')} ${fmt(S.shard)}</span>
+        <span class="rl-chip">${icon('coin')} ${fmt(S.gold)}</span>
+        <span class="rl-chip">${icon('star')} ${relicStars()} / ${RELICS.length*5}</span>
+      </div>
+      <button class="rl-auto${ready?'':' off'}" data-act="breakAll">⚡ 모두 돌파${ready?' ('+ready+')':''}<small>싼 단계부터 고르게</small></button>
+    </div>`;
   const eff = owned.length ? owned.map(r=>{
     const st = relicStar(r.id);
     return `<div class="row" style="padding:7px">
       <div class="ic">${icon(r.ic)}</div>
       <div class="meta"><div class="nm">${r.n} <i>${st}★</i></div>
-      <div class="ds">${r.base.map(b=>b.k+' '+(b.t==='mul'?'×'+(1+b.v*st).toFixed(2):'+'+(b.v*st).toFixed(1)+'%')).join(' · ')} · <b>${r.sp.k} +${(r.sp.v*st).toFixed(1)}%</b></div></div>
+      <div class="ds">${r.base.map(b=>b.k+' '+relicVal(b, st)).join(' · ')} · <b>${r.sp.k} ${relicVal(r.sp, st)}</b></div></div>
     </div>`;
-  }).join('') : '<div class="tiny">아직 각성한 유물이 없음. 유물 조각은 피의 첨탑·미션·장비 분해로 획득함.</div>';
-  const html = `<div class="grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:12px">${cells}</div>
-    <div class="sheet-title" style="margin:2px 0 6px"><h2 style="font-size:14px">보유 효과</h2></div>${eff}`;
-  return {sub:`유물 조각 <b style="color:#c56bf0">${fmt(S.shard)}</b> · 성급 합계 ${relicStars()}`, html};
+  }).join('') : '<div class="tiny">아직 깨운 유물이 없음. 유물 조각은 피의 첨탑·미션·장비 분해로 획득함.</div>';
+  const html = top + grid +
+    `<div class="rl-sec rl-effh" style="--rc:#ffd98a">보유 효과 <i>${owned.length} / ${RELICS.length}</i></div>${eff}`;
+  return {sub:`깨운 유물 ${owned.length} / ${RELICS.length}`, html};
 }
 /* ---------- 상점 / 보상함 ---------- */
 const SHOP = [
@@ -3715,28 +3843,39 @@ function itemModal(id){
     </div>`);
 }
 function relicModal(id){
-  const r = RELICMAP[id], st = relicStar(id);
-  const nxt = st+1, canUp = st < 5;
-  const have = S.shard, need = canUp ? RELIC_COST[nxt] : 0, goldNeed = canUp ? RELIC_GOLD[nxt] : 0;
-  const ok = canBreak(id);
-  const line = (e) => `<div class="line"><span>${e.k}</span><b>${e.t==='mul' ? '×'+(1+e.v*Math.max(st,1)).toFixed(2) : '+'+(e.v*Math.max(st,1)).toFixed(1)+'%'}</b></div>`;
+  const r = RELICMAP[id], st = relicStar(id), nxt = st+1, maxed = st >= 5;
+  const k = relicRank(r), showNext = st > 0 && !maxed;
+  const line = e => `<div class="line"><span>${e.k}</span><b>${relicVal(e, st)}${showNext?`<span class="rl-nx">→ ${relicVal(e, nxt)}</span>`:''}</b></div>`;
+  let foot = '';
+  if(maxed) foot = `<div class="rl-foot">최고 단계에 이른 유물임.</div>`;
+  else {
+    const needS = RELIC_COST[nxt], needG = RELIC_GOLD[nxt];
+    const lackS = Math.max(0, needS - S.shard), lackG = Math.max(0, needG - S.gold);
+    const cost = `<div class="rl-cost">
+        <span class="${lackS?'no':'ok'}">${icon('relicgem')} ${fmt(S.shard)} / ${fmt(needS)}</span>
+        <span class="${lackG?'no':'ok'}">${icon('coin')} ${fmt(S.gold)} / ${fmt(needG)}</span></div>`;
+    const verb = st ? '돌파' : '활성화';
+    if(!lackS && !lackG) foot = `<button class="cta" data-act="break" data-id="${id}">${st ? nxt+'성 돌파하기' : '활성화하기'}</button>` + cost;
+    else if(lackS && !lackG) foot = `<div class="rl-foot">조각을 <em>${fmt(lackS)}</em>개 모아 ${verb}하세요.</div>` + cost;
+    else if(!lackS && lackG) foot = `<div class="rl-foot">금화 <em>${fmt(lackG)}</em>이 더 있어야 ${verb}할 수 있음.</div>` + cost;
+    else foot = `<div class="rl-foot">조각 <em>${fmt(lackS)}</em>개와 금화 <em>${fmt(lackG)}</em>이 더 필요함.</div>` + cost;
+  }
   openModal(`
-    <div class="cap">${r.rare}</div>
-    <div class="cbody">
+    <div class="rl-m" style="${relicVars(r)}">
+      <div class="rl-rib">${r.rare}</div>
+      <button class="rl-x" data-act="closeModal" aria-label="닫기">✕</button>
       <h3>${r.n}</h3>
-      <div style="display:flex;gap:11px;align-items:flex-start">
-        <span style="width:72px;height:72px;flex:0 0 auto;display:grid;place-items:center;border-radius:12px;border:2px solid ${st?'#f7b33c':'#5c4a56'};background:radial-gradient(circle at 50% 120%,${st?'#f7b33c66':'#3a2a3666'},transparent 65%)">${icon(r.ic,'style="width:48px;height:48px"')}</span>
-        <span class="lore" style="flex:1">${r.lore}</span>
+      <div class="rl-row">
+        <div class="rl-thumb">
+          <div class="rl-box${st?'':' off'}">${icon(r.ic)}</div>
+          <div class="rl-pc">${icon('relicgem')} ${maxed ? fmt(S.shard) : fmt(S.shard)+' / '+fmt(RELIC_COST[nxt])}</div>
+        </div>
+        <div class="rl-lore">${r.lore}</div>
       </div>
-      <div class="stars">${[1,2,3,4,5].map(i=>icon(i<=st?'star':'starOff')).join('')}</div>
-      <div class="sect"><h4>◇ 기본 능력 ${st?'':'(0성 — 미보유)'}</h4>${r.base.map(line).join('')}</div>
-      <div class="sect"><h4>◇ 특수 능력</h4>${line(r.sp)}</div>
-      ${canUp ? `<div class="sect"><h4>◇ ${nxt}성 돌파 재료</h4>
-        <div class="line"><span>유물 조각</span><b style="color:${have>=need?'#4ade80':'#ff7a8c'}">${fmt(have)} / ${fmt(need)}</b></div>
-        <div class="line"><span>금화</span><b style="color:${S.gold>=goldNeed?'#4ade80':'#ff7a8c'}">${fmt(S.gold)} / ${fmt(goldNeed)}</b></div></div>
-        <button class="cta ${ok?'':'off'}" data-act="break" data-id="${id}">성급 돌파</button>`
-      : `<button class="cta off" disabled>최대 성급</button>`}
-      <button class="cta ghost" data-act="closeModal" style="margin-top:8px">닫기</button>
+      <div class="rl-lv"><span class="stars">${[1,2,3,4,5].map(i=>icon(i<=st?'star':'starOff')).join('')}</span>${st} / 5 단계</div>
+      <div class="sect"><h4>◈ 기본 능력${st?'':' (1성 기준)'}</h4>${r.base.map(line).join('')}</div>
+      <div class="sect"><h4>◈ 특수 능력</h4>${line(r.sp)}</div>
+      ${foot}
     </div>`);
 }
 function offlineModal(dt, rw){
@@ -3786,6 +3925,8 @@ function act(el){
     case 'salvage': { const it = findItem(id); if(it){ salvage(it); closeModal(); } break; }
     case 'relic': relicModal(id); break;
     case 'break': breakRelic(id); relicModal(id); break;
+    case 'breakAll': breakAllRelics(); break;
+    case 'eqUpAll': upgradeEquippedEven(); break;
     case 'shop': {
       const s = SHOP.find(x=>x.id===id);
       if(S.gem < s.cost){ toast('젬이 부족함','bad'); break; }
