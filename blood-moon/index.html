@@ -540,20 +540,11 @@ button{font-family:inherit;color:inherit;border:0;background:none;cursor:pointer
 .rb-open.on{border-color:#ff5470;box-shadow:0 0 14px rgba(255,84,112,.45)}
 .rb-open svg{width:28px;height:28px}.rb-open span{flex:1}.rb-open b{font-family:var(--ff-d);font-size:15px}
 .rb-open s{display:block;text-decoration:none;font-size:11px;color:var(--muted)}.rb-open em{font-style:normal;font-size:22px;color:var(--muted)}
-/* 학급 순위 */
-.rk-tabs{display:flex;gap:5px;margin-bottom:8px}
-.rk-tabs button{flex:1;height:34px;border-radius:9px;font-size:12px;font-weight:800;color:#e8cddc;background:#2a1524;border:1px solid #5c2a45}
-.rk-tabs button.on{color:#2e1400;background:linear-gradient(180deg,#ffd07a,#e8901c);border-color:#ffe9bd}
-.rk-row{display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:5px;border-radius:10px;background:#1b0f28;border:1px solid #4a2a6a;font-size:13px;font-weight:800}
-.rk-row .n{flex:0 0 30px;text-align:center;font-family:var(--ff-n)}.rk-row .nm{flex:1;min-width:0;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.rk-row .nm i{font-style:normal;font-size:10px;padding:1px 5px;border-radius:5px;background:#22b45a;color:#062812}
-.rk-row .v{font-family:var(--ff-n);color:var(--gold)}.rk-row .s{flex:0 0 52px;text-align:right;font-size:10.5px;color:var(--muted)}
-.rk-row.me{border-color:#22b45a;background:#10241a}
-/* 저장 코드 · 허브 */
+/* 저장 코드 */
 .bm-code{width:100%;height:110px;box-sizing:border-box;padding:8px;border-radius:10px;background:#12091c;border:1px solid #4a2a6a;color:#dcc8ea;
   font:11px/1.4 var(--ff-n);resize:none;word-break:break-all}
-.hub-line{margin-top:10px;padding:8px 10px;border-radius:10px;background:#1b0f28;border:1px solid #4a2a6a;font-size:11.5px;font-weight:700;color:#d8c4e8;line-height:1.5}
-.hub-line b{color:#8dffbc}.hub-line em{font-style:normal;color:#ff9aa8}
+.save-note{margin-top:10px;padding:8px 10px;border-radius:10px;background:#1b0f28;border:1px solid #4a2a6a;font-size:11.5px;font-weight:700;color:#d8c4e8;line-height:1.5}
+.save-note b{color:#8dffbc}.save-note em{font-style:normal;color:#ff9aa8}
 /* 장비 진열 — 유물과 같은 받침대 */
 .rl-cell .rl-lvl{display:block;font-family:var(--ff-n);font-size:10.5px;font-weight:700;color:#ffd07a;line-height:1.1}
 .rl-tag{position:absolute;top:1px;z-index:3;padding:1px 5px;border-radius:5px;font-size:9px;font-weight:900}
@@ -980,9 +971,6 @@ function sealsFor(stage){ return stage < REBIRTH.minStage ? 0 : Math.floor(REBIR
 const ATTEND = [
   {gem:20}, {shard:30}, {ticket:5}, {relicBox:1}, {gem:40}, {shard:60}, {mythPieces:3, gem:50},
 ];
-/* ── 허브(탐수) 저장 — 이 주소에서 온 열쇠만 받음 ── */
-const HUB_ORIGINS = ['https://tamsu.pinkdal1213.workers.dev'];
-const HUB_PUSH_SEC = 45;   /* 서버 저장 간격(초) */
 function relicAwake(){ let n = 0; for(const r of RELICS) if(((S.relics[r.id]||{}).star||0) > 0) n++; return n; }
 function codexSetDone(rar){ const L = RELICS.filter(r => r.rare === rar); return L.length > 0 && L.every(r => ((S.relics[r.id]||{}).star||0) > 0); }
 
@@ -3874,7 +3862,6 @@ const PANELS = {
   settings: {t:'설정'},
   quest:    {t:'임무 목록'},
   rebirth:  {t:'환생'},
-  rank:     {t:'학급 순위'},
 };
 function openSheet(id){
   curPanel = id; dirty = false;
@@ -3893,7 +3880,7 @@ function renderPanel(){
     upgrade:renderUpgrade, alchemy:renderAlchemy, gear:renderGear, relic:renderRelic,
     shop:renderShop, mail:renderMail, map:renderMap, dungeon:renderDungeon, mission:renderMission,
     tower:renderTower, stats:renderStats, settings:renderSettings, quest:renderQuest,
-    rebirth:renderRebirth, rank:renderRank
+    rebirth:renderRebirth
   }[curPanel];
   const out = R ? R() : {sub:'', html:''};
   $('#sheetSub').innerHTML = out.sub || '';
@@ -4109,25 +4096,6 @@ function renderRebirth(){
     <div class="tiny">인장은 쌓일수록 커짐. 막혔을 때 환생하면 더 빨리, 더 멀리 올라감.</div>`;
   return {sub:`핏빛 인장 ${fmt(rb.seals)}`, html};
 }
-/* ---------- 학급 순위 (탐수 허브) ---------- */
-let rankData = null, rankSort = 'best', rankAt = 0, rankBusy = false;
-function renderRank(){
-  if(!hubReady()){
-    return {sub:'', html:`<div class="tiny" style="font-size:12px">학급 순위는 <b>탐수에서 게임을 열었을 때</b> 볼 수 있음.<br>
-      탐수의 코인 게임 상점에서 블러드문을 시작하면 이 기기의 진행도 서버에 함께 저장됨.</div>`};
-  }
-  if(!rankBusy && (!rankData || now() - rankAt > 30000)) loadRank();
-  const tabs = [['best','최고 스테이지'],['awake','유물 도감'],['seals','핏빛 인장']];
-  const head = `<div class="rk-tabs">${tabs.map(([k,n]) => `<button class="${rankSort===k?'on':''}" data-act="rankSort" data-id="${k}">${n}</button>`).join('')}</div>`;
-  if(!rankData) return {sub:'불러오는 중', html: head + '<div class="tiny">순위를 불러오는 중…</div>'};
-  const val = x => rankSort==='best' ? x.best+'스테이지' : rankSort==='awake' ? x.awake+' / 30' : fmt(x.seals)+'개';
-  const L = rankData.slice().sort((a,b) => (b[rankSort]||0) - (a[rankSort]||0) || (b.best||0) - (a.best||0));
-  const medal = i => i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i+1);
-  const rows = L.map((x,i) => `<div class="rk-row${x.me?' me':''}"><span class="n">${medal(i)}</span><span class="nm">${esc(x.nickname)}${x.me?' <i>나</i>':''}</span>
-      <span class="v">${val(x)}</span><span class="s">환생 ${x.rebirth||0}</span></div>`).join('');
-  return {sub:`${L.length}명 · 별명만 보임`, html: head + (rows || '<div class="tiny">아직 기록이 없음.</div>')};
-}
-function esc(t){ return String(t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 /* ---------- 월드 맵 ---------- */
 function renderMap(){
   const top = Math.max(S.maxStage, 1) + 1;
@@ -4302,9 +4270,7 @@ function renderStats(){
       <span class="sub">깨운 유물 ${awake} / ${RELICS.length} · 성급 ${relicStars()} / ${RELICS.length*5}</span></div>
     <div class="tiny" style="margin:0 2px 4px">도감 단계 (켜진 것은 초록)</div>${codexRows}
     <div class="tiny" style="margin:10px 2px 4px">등급 세트 — 한 등급을 모두 깨우면</div>${setRows}`;
-  const links = `<div class="ctarow" style="margin-bottom:10px">
-      <button class="cta ghost" data-open="rebirth" style="height:40px;font-size:13px;margin-top:0">환생 · 인장 ${fmt(S.rebirth.seals)}</button>
-      <button class="cta ghost" data-open="rank" style="height:40px;font-size:13px;margin-top:0">학급 순위</button></div>`;
+  const links = `<button class="cta ghost" data-open="rebirth" style="height:40px;font-size:13px;margin:0 0 10px">환생 · 핏빛 인장 ${fmt(S.rebirth.seals)}</button>`;
   return {sub:`LV.${S.lv}`, html: links + box(rows) + relicBox + `<div class="sheet-title" style="margin:12px 0 6px"><h2 style="font-size:14px">기록</h2></div>` + box(life)};
 }
 /* ---------- 임무 목록 ---------- */
@@ -4334,7 +4300,7 @@ function renderSettings(){
         <button data-act="sleepMin" style="padding:7px 14px;border-radius:11px;background:linear-gradient(180deg,#3a1d30,#221020);border:1.5px solid #7a3a5c;font-family:var(--ff-n);font-weight:700;font-size:13px;color:#f6e9df">${S.opt.sleepMin}분</button></div>
        <button class="cta ghost" data-act="sleepNow" style="margin-top:10px">지금 절전모드 켜기</button>
        <button class="cta ghost" data-act="save" style="margin-top:8px">지금 저장하기</button>
-       <div class="hub-line">${hubStatusText()}</div>
+       <div class="save-note">진행은 <em>이 기기(브라우저)에만</em> 저장됨. 다른 기기로 옮기거나 백업하려면 아래 저장 코드를 쓸 것.</div>
        <div class="ctarow">
          <button class="cta ghost" data-act="saveCode" style="margin-top:8px;font-size:13px">저장 코드 복사하기</button>
          <button class="cta ghost" data-act="loadCode" style="margin-top:8px;font-size:13px">저장 코드로 불러오기</button>
@@ -4591,7 +4557,7 @@ function act(el){
       if(armed('reset')){
         /* 초기화 뒤 곧바로 자동 저장·허브 저장이 옛 진행을 다시 써넣지 않게 막고 다시 시작함 */
         window.__bmResetting = true;
-        try{ localStorage.removeItem(SAVE_KEY); localStorage.removeItem('bloodmoon.hub'); }catch(e){}
+        try{ localStorage.removeItem(SAVE_KEY); }catch(e){}
         location.reload();
       } else arm('reset');
       break;
@@ -4605,7 +4571,6 @@ function act(el){
       else arm('rebirth');
       break;
     }
-    case 'rankSort': rankSort = id; break;
     case 'saveCode': saveCodeModal(); break;
     case 'loadCode': loadCodeModal(); break;
     case 'copySaveCode': {
@@ -4753,7 +4718,6 @@ function boot(hot){
   let loaded = false;
   if(hot && hot.save){ loaded = loadSave(hot.save); }
   if(!loaded){ try{ const raw = localStorage.getItem(SAVE_KEY); if(raw) loaded = loadSave(raw); }catch(e){} }
-  window.__bmLoaded = loaded; window.__bmStamp = loaded ? (S.lastSave||0) : 0;   /* 허브 저장과 비교할 기준 */
   S.sessions = (S.sessions||0) + 1;
   recalc();
   if(window.__relicMigrated) setTimeout(()=>toast('유물 개편 — 공용 조각은 「유물 가루」가 됨. 유물 탭에서 원하는 유물 조각으로 바꿀 수 있음','gold'), 1600);
@@ -4903,86 +4867,6 @@ try{
   window.__sleepExit = exit;
   arm();
 })();
-</script>
-<script>
-"use strict";
-/* ============================ 탐수 허브 저장 · 학급 순위 ============================
-   탐수에서 게임을 열면 주소 끝(#hub=…&api=…)에 이번 이용 시간 동안만 쓰는 열쇠가 붙어 옴.
-   PIN 은 게임으로 넘어오지 않음. 열쇠로 진행을 서버에 저장하고, 다른 기기에서 열면 서버 것을 불러옴. */
-const HUB_KEY = 'bloodmoon.hub';
-let HUB = null, hubInfo = {nick:'', lastPush:0, err:'', expired:false, pulled:false};
-function hubReady(){ return !!(HUB && HUB.token && HUB.api && !hubInfo.expired); }
-function hubStatusText(){
-  if(!HUB) return '탐수 허브 연결 없음 — <em>이 기기에만 저장됨</em>. 기기를 옮기려면 아래 저장 코드를 쓸 것.';
-  if(hubInfo.expired) return '탐수 이용 시간이 끝나 서버 저장이 멈춤 — 다음에 탐수에서 열면 다시 이어짐.';
-  const ago = hubInfo.lastPush ? Math.round((now()-hubInfo.lastPush)/1000)+'초 전' : '아직 안 함';
-  return `탐수 허브 연결됨${hubInfo.nick?' · <b>'+esc(hubInfo.nick)+'</b>':''} · 마지막 서버 저장 ${ago}` + (hubInfo.err ? ` · <em>${esc(hubInfo.err)}</em>` : '');
-}
-async function hubCall(path, body, keepalive){
-  const res = await fetch(HUB.api + path, { method:'POST', headers:{'Content-Type':'text/plain;charset=UTF-8'},
-    body: JSON.stringify(Object.assign({token: HUB.token, game:'bloodMoon'}, body||{})), keepalive: !!keepalive });
-  const data = await res.json().catch(() => ({ok:false, error:'응답을 읽지 못함'}));
-  if(res.status === 401){ hubInfo.expired = true; markDirty(); }
-  return data;
-}
-function hubMeta(){
-  return { best: Math.max(S.maxStage, (S.rebirth||{}).best||0), stage: S.maxStage, lv: S.lv,
-           awake: relicAwake(), stars: relicStars(), seals: (S.rebirth||{}).seals||0, rebirth: (S.rebirth||{}).count||0 };
-}
-let hubPushing = false;
-async function hubPush(keepalive){
-  if(!hubReady() || hubPushing || window.__bmResetting) return;
-  hubPushing = true;
-  try{
-    saveNow();
-    const r = await hubCall('/api/game/save', {data: JSON.stringify(S), meta: hubMeta()}, keepalive);
-    if(r.ok){ hubInfo.lastPush = now(); hubInfo.err = ''; } else if(!hubInfo.expired) hubInfo.err = r.error || '저장 실패';
-  }catch(e){ hubInfo.err = '서버에 닿지 않음'; }
-  hubPushing = false; markDirty();
-}
-async function loadRank(){
-  if(!hubReady()) return;
-  rankBusy = true;
-  try{ const r = await hubCall('/api/game/rank', {}); if(r.ok){ rankData = r.rows; rankAt = now(); } else toast(r.error || '순위를 불러오지 못함','bad'); }
-  catch(e){ toast('순위 서버에 닿지 않음','bad'); }
-  rankBusy = false; markDirty();
-}
-async function hubInit(){
-  /* 1) 주소에 붙어 온 열쇠를 받아 둠 */
-  try{ HUB = JSON.parse(localStorage.getItem(HUB_KEY) || 'null'); }catch(e){ HUB = null; }
-  const h = new URLSearchParams(location.hash.slice(1));
-  if(h.get('hub') && h.get('api')){
-    const api = h.get('api').replace(/\/+$/,'');
-    if(HUB_ORIGINS.includes(api)){ HUB = {token: h.get('hub'), api}; try{ localStorage.setItem(HUB_KEY, JSON.stringify(HUB)); }catch(e){} }
-    history.replaceState(null, '', location.pathname + location.search);
-  }
-  if(!HUB) return;
-  /* 2) 서버 것이 더 최근이면(또는 이 기기에 저장이 없으면) 서버 것으로 바꾸고 다시 시작 */
-  try{
-    const r = await hubCall('/api/game/load', {});
-    if(!r.ok){ hubInfo.err = hubInfo.expired ? '' : (r.error||''); markDirty(); return; }
-    hubInfo.nick = r.nickname || '';
-    if(r.data && !sessionStorage.getItem('bmHubPulled')){
-      let srv = null; try{ srv = JSON.parse(r.data); }catch(e){}
-      const srvStamp = srv ? (srv.lastSave||0) : 0;
-      if(srv && (!window.__bmLoaded || srvStamp > (window.__bmStamp||0) + 3000)){
-        sessionStorage.setItem('bmHubPulled', '1');
-        window.__bmResetting = true;   /* 다시 시작하는 동안 옛 진행이 받은 것을 덮어쓰지 않게 */
-        try{ localStorage.setItem(SAVE_KEY, r.data); }catch(e){}
-        toast('탐수에 저장된 진행을 불러옴','gold');
-        setTimeout(() => location.reload(), 700);
-        return;
-      }
-    }
-    hubPush();
-  }catch(e){ hubInfo.err = '서버에 닿지 않음'; markDirty(); }
-  /* 3) 주기 저장 · 창이 닫히기 직전 저장 */
-  setInterval(() => hubPush(), HUB_PUSH_SEC*1000);
-  addEventListener('message', ev => { if(ev.data && ev.data.type === 'tamsu:closing') hubPush(true); });
-  addEventListener('pagehide', () => hubPush(true));
-  document.addEventListener('visibilitychange', () => { if(document.hidden) hubPush(true); });
-}
-hubInit();
 </script>
 </body>
 </html>
