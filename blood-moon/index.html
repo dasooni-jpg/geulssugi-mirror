@@ -476,6 +476,18 @@ button{font-family:inherit;color:inherit;border:0;background:none;cursor:pointer
 .rl-loot .lt b{display:block;font-size:9.5px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rl-loot .lt span{font-family:var(--ff-n);font-size:11px;font-weight:700;color:#ffd07a}
 .rl-loot .lt.hi{box-shadow:0 0 14px var(--rc)}
+/* 신화 전용 — 화면 번쩍임 + 카드 둘레를 도는 불빛 */
+.rl-m.myth::before{content:"";position:absolute;inset:0;z-index:6;pointer-events:none;
+  background:radial-gradient(circle at 50% 45%,rgba(255,255,255,.95),rgba(239,68,68,.75) 32%,transparent 72%);animation:rlMythFlash 1.1s ease-out .35s both}
+@keyframes rlMythFlash{0%{opacity:0}15%{opacity:1}100%{opacity:0}}
+.rl-m.myth .rl-rib{animation:rlGlow 1.4s ease-out .4s both;background:linear-gradient(180deg,#ff6a5a,#8a0f1a)}
+.rl-loot .lt.myth{overflow:hidden;isolation:isolate;background:none;box-shadow:0 0 18px #ef4444,0 0 36px rgba(239,68,68,.5);
+  animation:rlMythIn .7s cubic-bezier(.2,1.6,.4,1) both}
+.rl-loot .lt.myth::before{content:"";position:absolute;inset:-60%;z-index:-2;
+  background:conic-gradient(from 0deg,transparent 0 50deg,#ff5a4d 80deg,transparent 110deg 230deg,#ffd07a 260deg,transparent 290deg);animation:rlSpin 1.8s linear infinite}
+.rl-loot .lt.myth::after{content:"";position:absolute;inset:2px;z-index:-1;border-radius:7px;background:radial-gradient(circle at 50% 30%,rgba(239,68,68,.6),#150b20 75%)}
+@keyframes rlSpin{to{transform:rotate(360deg)}}
+@keyframes rlMythIn{0%{transform:scale(.2) rotate(-25deg);opacity:0;filter:brightness(4)}60%{transform:scale(1.18) rotate(4deg);opacity:1}100%{transform:scale(1);filter:none}}
 @keyframes rlPop{from{transform:scale(.3);opacity:0}to{transform:scale(1);opacity:1}}
 /* 돌파 성공 연출 */
 .rl-thumb{position:relative}
@@ -872,19 +884,24 @@ const RELIC_GOLD = [0, 12500, 80000, 6e5, 5e6, 6e7];   // 금화
    예전 공용 조각은 '유물 가루'(S.shard)가 되어 상자를 열거나 원하는 조각을 만드는 데 씀. */
 const RELIC_CFG = {
   /* 성급마다 필요한 그 유물의 조각 수 [_, 1성(활성화), 2성, 3성, 4성, 5성] */
-  pieces: { '희귀':[0,5,12,28,60,120], '영웅':[0,8,18,40,85,170], '전설':[0,10,24,55,120,240], '신화':[0,10,25,60,140,300] },
-  /* 유물 가루로 조각 1개를 만들 때 드는 가루 */
-  dustPerPiece: { '희귀':3, '영웅':5, '전설':8, '신화':12 },
+  pieces: { '희귀':[0,3,8,18,36,70], '영웅':[0,4,10,22,45,90], '전설':[0,5,12,28,58,115], '신화':[0,6,15,34,70,140] },
+  /* 유물 가루로 조각 1개를 만들 때 드는 가루 — 상자(무작위)보다 1.7배쯤 비싸게: 원하는 것을 고르는 값 */
+  dustPerPiece: { '희귀':12, '영웅':24, '전설':45, '신화':90 },
+  /* 남는 조각을 분해할 때 돌려받는 비율 (만들 때 값의 40%) */
+  dustBack: 0.4,
+  /* 아직 안 깬 유물이 나올 비율 배수 — 같은 등급 안에서 새 유물이 먼저 모이게 */
+  newBias: 3,
   /* 유물 상자 */
   box: {
-    gem1:30, gem10:270, dust1:60, dust10:540,
+    gem1:30, gem10:270, dust1:40, dust10:360,
     weight: { '희귀':50, '영웅':30, '전설':15, '신화':5 },   /* 뽑힐 비율 */
     amount: { '희귀':[3,5], '영웅':[2,4], '전설':[2,3], '신화':[1,2] },   /* 한 번에 나오는 조각 수 */
     tenFloor: '전설',   /* 10회 뽑기에 반드시 하나 들어가는 최저 등급 */
     pity: 40            /* 이 횟수 동안 신화가 없으면 다음 한 번은 신화 확정 */
   },
-  bossPieces: [1, 2],   /* 보스 처치 때 무작위 유물 조각 */
-  towerPieces: 2        /* 피의 첨탑 한 층마다 무작위 유물 조각 */
+  bossPieces: [1, 3],   /* 보스 처치 때 무작위 유물 조각 */
+  towerPieces: 3,       /* 피의 첨탑 한 층마다 무작위 유물 조각 */
+  wavePieceChance: 0.25 /* 웨이브를 넘길 때 조각 1개가 나올 확률 */
 };
 /* 유물 도감 — 깨운 유물 수에 따라 영구 보너스, 단계마다 젬 1회 보상 */
 const CODEX = [
@@ -1175,6 +1192,7 @@ const MAILS = [
   {id:'blood',  n:'혈액 저장고',   cd:7200e3,  ic:'blood',   d:'피 대량 지급',           give:()=>({blood: eBlood(S.maxStage,8)*900*ST.bloodMul})},
   {id:'ticket', n:'소환 보급',     cd:21600e3, ic:'ticket',  d:'소환권 3장',             give:()=>({ticket:3})},
   {id:'gem',    n:'일일 젬 배급',  cd:86400e3, ic:'gem',     d:'젬 15개',                give:()=>({gem:15})},
+  {id:'rbox',   n:'유물 상자 보급', cd:86400e3, ic:'relicgem', d:'유물 상자 1회 무료',     give:()=>({relicBox:1})},
 ];
 </script>
 
@@ -2120,6 +2138,10 @@ function killEnemy(e){
     S.waveKills++;
     if(S.waveKills >= KILLS_PER_WAVE){
       S.waveKills = 0;
+      if(Math.random() < RELIC_CFG.wavePieceChance){
+        const d = dropRelicPieces(1);
+        addText(e.x, e.y - e.r*2.2, d.r.n + ' 조각 +1', RAR[relicRank(d.r)].c, 12, 1.2);
+      }
       if(S.wave >= WAVES_PER_STAGE){ G.bossQueued = true; openGate(); }
       else { S.wave++; toast(S.wave+'웨이브', 'good'); }
     }
@@ -3375,6 +3397,7 @@ function grant(o){
   if(o.blood) S.blood += o.blood;
   if(o.ticket) S.ticket += o.ticket;
   if(o.shard) S.shard += o.shard;
+  if(o.relicBox){ const res = openRelicBox(o.relicBox, 'free'); if(res) relicBoxModal(res, o.relicBox, 'free'); }
   markDirty();
 }
 function grantText(o){
@@ -3382,6 +3405,7 @@ function grantText(o){
   if(o.gem) p.push('젬 +'+fmt(o.gem));
   if(o.ticket) p.push('소환권 +'+fmt(o.ticket));
   if(o.shard) p.push('유물 가루 +'+fmt(o.shard));
+  if(o.relicBox) p.push('유물 상자 '+o.relicBox+'회');
   if(o.blood) p.push('피 +'+fmt(o.blood));
   if(o.gold) p.push('금화 +'+fmt(o.gold));
   return p.join(' · ');
@@ -3504,9 +3528,31 @@ function rollRelicRar(){
   for(const k in w){ x -= w[k]; if(x <= 0) return k; }
   return '희귀';
 }
-function randomRelicOf(rar){ const L = RELICS.filter(r => r.rare === rar); return pick(L.length ? L : RELICS); }
+function randomRelicOf(rar){
+  const L = RELICS.filter(r => r.rare === rar), list = L.length ? L : RELICS;
+  const w = list.map(r => relicStar(r.id) ? 1 : RELIC_CFG.newBias);
+  let x = Math.random() * w.reduce((a,b)=>a+b,0);
+  for(let i = 0; i < list.length; i++){ x -= w[i]; if(x <= 0) return list[i]; }
+  return list[list.length-1];
+}
 /* 무작위 유물 조각 — 보스·첨탑 전리품 */
 function dropRelicPieces(n){ const r = randomRelicOf(rollRelicRar()); addRelicPieces(r.id, n); return {r, amt:n}; }
+/* 5성까지 더 필요한 조각 수 · 그보다 많이 가진 '남는 조각' */
+function relicRemain(r){ let t = 0; for(let k = relicStar(r.id)+1; k <= 5; k++) t += relicNeed(r, k); return t; }
+function relicSurplus(r){ return Math.max(0, relicPc(r.id) - relicRemain(r)); }
+function surplusDust(r, n){ return Math.floor(n * (RELIC_CFG.dustPerPiece[r.rare]||12) * RELIC_CFG.dustBack); }
+function surplusAll(){ let n = 0, d = 0; for(const r of RELICS){ const k = relicSurplus(r); n += k; d += surplusDust(r, k); } return {n, d}; }
+/* 남는 조각만 분해 — 5성까지 필요한 조각은 절대 건드리지 않음 */
+function dismantleSurplus(id){
+  let n = 0, d = 0;
+  for(const r of (id ? [RELICMAP[id]] : RELICS)){
+    const k = relicSurplus(r); if(!k) continue;
+    relicSlot(r.id).pc -= k; n += k; d += surplusDust(r, k);
+  }
+  if(!n){ toast('남는 조각이 없음','bad'); return; }
+  S.shard += d; sfx('coin'); markDirty();
+  toast('남는 조각 '+fmt(n)+'개 분해 — 유물 가루 +'+fmt(d), 'good');
+}
 /* 유물 가루로 원하는 유물 조각 만들기 */
 function craftPieces(id, n){
   const r = RELICMAP[id], per = RELIC_CFG.dustPerPiece[r.rare] || 5, cost = per*n;
@@ -3520,7 +3566,8 @@ function openRelicBox(count, pay){
   const B = RELIC_CFG.box;
   const price = pay === 'gem' ? (count === 10 ? B.gem10 : B.gem1*count) : (count === 10 ? B.dust10 : B.dust1*count);
   if(pay === 'gem'){ if(S.gem < price){ toast('젬이 부족함','bad'); return null; } S.gem -= price; }
-  else { if(S.shard < price){ toast('유물 가루가 부족함','bad'); return null; } S.shard -= price; }
+  else if(pay === 'dust'){ if(S.shard < price){ toast('유물 가루가 부족함','bad'); return null; } S.shard -= price; }
+  /* pay === 'free' — 보상함 무료 상자 */
   const res = [];
   for(let i = 0; i < count; i++){
     S.relicPity = (S.relicPity||0) + 1;
@@ -3764,6 +3811,8 @@ function renderRelic(){
       <div class="rl-prog"><i style="width:${awake/RELICS.length*100}%"></i></div>
       ${claim.length ? `<button class="rl-auto rl-claim" data-act="codexClaim">도감 보상 받기 · 젬 +${claim.reduce((t,i)=>t+CODEX[i].gem,0)}</button>` : ''}
     </div>`;
+  const sp = surplusAll();
+  const dis = sp.n ? `<button class="cta ghost" data-act="dismantle" style="height:40px;font-size:13px;margin-top:10px">남는 조각 ${fmt(sp.n)}개 분해 → 유물 가루 +${fmt(sp.d)}<br><span style="font-size:10px">5성까지 필요한 조각은 남겨 둠</span></button>` : '';
   const owned = RELICS.filter(r => relicStar(r.id) > 0);
   const eff = owned.length ? owned.map(r=>{
     const st = relicStar(r.id);
@@ -3773,7 +3822,7 @@ function renderRelic(){
       <div class="ds">${r.base.map(b=>b.k+' '+relicVal(b, st)).join(' · ')} · <b>${r.sp.k} ${relicVal(r.sp, st)}</b></div></div>
     </div>`;
   }).join('') : '<div class="tiny">아직 깨운 유물이 없음. 유물 조각은 보스·피의 첨탑·유물 상자에서 얻고, 유물 가루로 원하는 조각을 만들 수도 있음.</div>';
-  const html = top + grid +
+  const html = top + dis + grid +
     `<div class="rl-sec rl-effh" style="--rc:#ffd98a">보유 효과 <i>${owned.length} / ${RELICS.length}</i></div>${eff}`;
   return {sub:`깨운 유물 ${awake} / ${RELICS.length}`, html};
 }
@@ -3964,9 +4013,21 @@ function renderStats(){
     ['플레이 시간', Math.floor(S.stats.playtime/3600)+'시간 '+Math.floor(S.stats.playtime%3600/60)+'분'],
     ['다음 레벨까지', fmt(Math.max(0, expNeed(S.lv)-S.exp))+' EXP'],
     ['발견한 비밀 상자', Object.keys(S.secret||{}).length+' 곳'],
+    ['유물 상자', fmt(S.stats.relicBox||0)+'회'],
   ];
   const box = arr => `<div class="statgrid">${arr.map(([k,v])=>`<div class="sbox"><s>${k}</s><b>${v}</b></div>`).join('')}</div>`;
-  return {sub:`LV.${S.lv}`, html: box(rows) + `<div class="sheet-title" style="margin:12px 0 6px"><h2 style="font-size:14px">기록</h2></div>` + box(life)};
+  /* 유물 도감 · 등급 세트 보너스 — 어디서 얼마나 붙는지 따로 보여 줌 */
+  const awake = relicAwake();
+  const codexRows = CODEX.map(c => `<div class="rl-cx${awake>=c.need?' done':''}"><span class="n">${awake>=c.need?'✓ ':''}${c.need}개</span><span class="e">${c.k} ${relicVal(c,1)}</span></div>`).join('');
+  const setRows = Object.keys(CODEX_SET).map(k => {
+    const e = CODEX_SET[k], L = RELICS.filter(r=>r.rare===k), have = L.filter(r=>relicStar(r.id)>0).length;
+    return `<div class="rl-cx${have===L.length?' done':''}"><span class="n" style="color:${RAR[RELIC_RANK[k]].c}">${have===L.length?'✓ ':''}${k} ${have}/${L.length}</span><span class="e">${e.k} ${relicVal(e,1)}</span></div>`;
+  }).join('');
+  const relicBox = `<div class="sheet-title" style="margin:12px 0 6px"><h2 style="font-size:14px">유물 보너스</h2>
+      <span class="sub">깨운 유물 ${awake} / ${RELICS.length} · 성급 ${relicStars()} / ${RELICS.length*5}</span></div>
+    <div class="tiny" style="margin:0 2px 4px">도감 단계 (켜진 것은 초록)</div>${codexRows}
+    <div class="tiny" style="margin:10px 2px 4px">등급 세트 — 한 등급을 모두 깨우면</div>${setRows}`;
+  return {sub:`LV.${S.lv}`, html: box(rows) + relicBox + `<div class="sheet-title" style="margin:12px 0 6px"><h2 style="font-size:14px">기록</h2></div>` + box(life)};
 }
 /* ---------- 임무 목록 ---------- */
 function renderQuest(){
@@ -4068,6 +4129,8 @@ function relicModal(id, fx){
         유물 가루로 조각 ${fmt(can||lackP)}개 만들기 · ${icon('relicgem','style="width:12px;height:12px;vertical-align:-1px"')} ${fmt((can||lackP)*per)}</button>`;
     }
   }
+  const sur = relicSurplus(r);
+  if(sur) foot += `<button class="cta ghost" data-act="dismantle" data-id="${id}" style="height:40px;font-size:12.5px">남는 조각 ${fmt(sur)}개 분해 → 유물 가루 +${fmt(surplusDust(r, sur))}</button>`;
   const starRow = [1,2,3,4,5].map(i => `<span${fx && i===st ? ' class="pop"' : ''}>${icon(i<=st?'star':'starOff')}</span>`).join('');
   openModal(`
     <div class="rl-m${fx?' fx':''}" style="${relicVars(r)}">
@@ -4090,22 +4153,30 @@ function relicModal(id, fx){
 }
 function relicBoxModal(res, n, pay){
   const best = res.reduce((m,x) => Math.max(m, RELIC_RANK[x.rar]), 2), c = RAR[best].c, B = RELIC_CFG.box;
+  const myth = res.filter(x => x.rar === '신화');
+  const again = pay === 'free' ? 'gem' : pay;
   const loot = res.map((x,i) => {
-    const rc = RAR[RELIC_RANK[x.rar]].c;
-    return `<div class="lt${RELIC_RANK[x.rar]>=4?' hi':''}" style="${rcVars(rc)};animation-delay:${(i*0.06).toFixed(2)}s">${icon(x.r.ic)}<b>${x.r.n}</b><span>+${x.amt}</span></div>`;
+    const rc = RAR[RELIC_RANK[x.rar]].c, m = x.rar === '신화';
+    /* 신화는 다른 카드가 다 나온 뒤 마지막에 따로 등장 */
+    const delay = m ? res.length*0.06 + 0.35 : i*0.06;
+    return `<div class="lt${RELIC_RANK[x.rar]>=4?' hi':''}${m?' myth':''}" style="${rcVars(rc)};animation-delay:${delay.toFixed(2)}s">${icon(x.r.ic)}<b>${x.r.n}</b><span>+${x.amt}</span></div>`;
   }).join('');
   openModal(`
-    <div class="rl-m" style="${rcVars(c)}">
-      <div class="rl-rib">${RAR[best].k}</div>
+    <div class="rl-m${myth.length?' myth':''}" style="${rcVars(c)}">
+      <div class="rl-rib">${myth.length ? '신화 획득!' : RAR[best].k}</div>
       <button class="rl-x" data-act="closeModal" aria-label="닫기">✕</button>
-      <h3>유물 상자 ${n}회</h3>
+      <h3>${pay === 'free' ? '무료 유물 상자' : '유물 상자 '+n+'회'}</h3>
       <div class="rl-loot">${loot}</div>
       <div class="tiny" style="text-align:center">신화 확정까지 ${Math.max(1, B.pity - (S.relicPity||0))}번 남음</div>
       <div class="ctarow">
-        <button class="cta" data-act="rbox" data-n="${n}" data-id="${pay}">한 번 더 (${n}회)</button>
+        <button class="cta" data-act="rbox" data-n="${n===10?10:1}" data-id="${again}">한 번 더 (${again==='gem'?'젬 '+(n===10?B.gem10:B.gem1):'가루 '+(n===10?B.dust10:B.dust1)})</button>
         <button class="cta ghost" data-act="closeModal">확인</button>
       </div>
     </div>`);
+  if(myth.length){
+    const names = [...new Set(myth.map(x => x.r.n))].join(' · ');
+    setTimeout(() => { showBanner('신화 유물', names); sfx('boss'); }, 450);
+  }
 }
 function relicOddsModal(){
   const B = RELIC_CFG.box, W = B.weight, tot = Object.values(W).reduce((a,b)=>a+b,0);
@@ -4193,6 +4264,7 @@ function act(el){
     case 'break': { const ok = breakRelic(id); relicModal(id, ok); break; }
     case 'breakAll': breakAllRelics(); break;
     case 'craft': craftPieces(id, n); relicModal(id); break;
+    case 'dismantle': dismantleSurplus(id || null); if(id) relicModal(id); break;
     case 'rbox': { const cnt = n === 10 ? 10 : 1, res = openRelicBox(cnt, id); if(res) relicBoxModal(res, cnt, id); break; }
     case 'rboxOdds': relicOddsModal(); break;
     case 'codexList': codexModal(); break;
