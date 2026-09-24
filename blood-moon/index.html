@@ -567,6 +567,12 @@ button{font-family:inherit;color:inherit;border:0;background:none;cursor:pointer
 .mq-rec{display:flex;align-items:center;gap:8px;padding:6px 9px;margin-bottom:4px;border-radius:9px;background:#1b0f28;border:1px solid #4a2a6a;font-size:12px;font-weight:700}
 .mq-rec .s{flex:0 0 36px;font-size:10.5px;color:var(--muted)}.mq-rec .n{flex:1;color:#ecdcf5}
 .mq-rec .v{font-family:var(--ff-n);color:#bcd0ff}.mq-rec .p{flex:0 0 40px;text-align:right;font-family:var(--ff-n);color:#ffd07a}
+/* 오답 노트 */
+.mq-wrong{display:flex;align-items:center;gap:8px;padding:8px 9px;margin-bottom:5px;border-radius:10px;background:#1f0f18;border:1px solid #6a2a3a}
+.mq-wrong .t{flex:1;min-width:0;font-size:11.5px;line-height:1.45;color:#ecdcf5}
+.mq-wrong .t i{display:block;font-style:normal;font-size:10px;font-weight:800;color:#ff9aa8}
+.mq-wrong .b{display:flex;flex-direction:column;gap:4px}
+.mq-wrong button{height:26px;padding:0 9px;border-radius:7px;font-size:10.5px;font-weight:800;color:#e8cddc;background:#3a1d30;border:1px solid #8a4468;white-space:nowrap}
 /* 저장 코드 · QR */
 .qr-box{display:flex;flex-direction:column;align-items:center;margin:0 0 8px}
 .qr-box canvas{width:min(78vw,280px);height:auto;aspect-ratio:1;image-rendering:pixelated;border-radius:8px}
@@ -1029,19 +1035,22 @@ const MATH_CFG = {
   perBox: 3,          /* 문제를 몇 개 맞힐 때마다 유물 상자 1회 */
   dustPerCorrect: 10, /* 한 문제 맞힐 때마다 유물 가루 */
   pi: 3.14,           /* 원주율 */
+  /* 교과서: 아이스크림미디어 6-1 · 6-2 (2022 개정). no = 교과서 단원 번호.
+     출판사 누리집을 직접 열어 확인하지는 못했고 여러 자료에서 같은 순서로 확인함 — 교과서와 다르면 n·no 만 고치면 됨 */
+  book: '아이스크림미디어',
   units: [
-    {id:'m1',  sem:1, n:'분수의 나눗셈',          on:true},
-    {id:'m2',  sem:1, n:'각기둥과 각뿔',           on:true},
-    {id:'m3',  sem:1, n:'소수의 나눗셈',          on:true},
-    {id:'m4',  sem:1, n:'비와 비율',              on:true},
-    {id:'m5',  sem:1, n:'여러 가지 그래프',        on:true},
-    {id:'m6',  sem:1, n:'직육면체의 부피와 겉넓이', on:true},
-    {id:'m7',  sem:2, n:'분수의 나눗셈',          on:true},
-    {id:'m8',  sem:2, n:'소수의 나눗셈',          on:true},
-    {id:'m9',  sem:2, n:'공간과 입체',            on:true},
-    {id:'m10', sem:2, n:'비례식과 비례배분',       on:true},
-    {id:'m11', sem:2, n:'원의 넓이',              on:true},
-    {id:'m12', sem:2, n:'원기둥, 원뿔, 구',        on:true},
+    {id:'m1',  sem:1, no:1, n:'분수의 나눗셈',          on:true},
+    {id:'m2',  sem:1, no:2, n:'각기둥과 각뿔',           on:true},
+    {id:'m3',  sem:1, no:3, n:'소수의 나눗셈',          on:true},
+    {id:'m4',  sem:1, no:4, n:'비와 비율',              on:true},
+    {id:'m5',  sem:1, no:5, n:'여러 가지 그래프',        on:true},
+    {id:'m6',  sem:1, no:6, n:'직육면체의 부피와 겉넓이', on:true},
+    {id:'m7',  sem:2, no:1, n:'분수의 나눗셈',          on:true},
+    {id:'m8',  sem:2, no:2, n:'소수의 나눗셈',          on:true},
+    {id:'m9',  sem:2, no:3, n:'공간과 입체',            on:true},
+    {id:'m10', sem:2, no:4, n:'비례식과 비례배분',       on:true},
+    {id:'m11', sem:2, no:5, n:'원의 넓이',              on:true},
+    {id:'m12', sem:2, no:6, n:'원기둥, 원뿔, 구',        on:true},
   ],
 };
 /* ---------- 수 다루기 ---------- */
@@ -1056,8 +1065,11 @@ function fs(x){                                                              /* 
   return `${x.n}/${x.d}`;
 }
 const fsImp = x => typeof x === 'object' && x.d !== 1 ? `${x.n}/${x.d}` : fs(x);   /* 가분수 그대로 */
-const R = (a,b) => a + Math.floor(Math.random()*(b-a+1));
-const P = arr => arr[Math.floor(Math.random()*arr.length)];
+/* 씨앗(seed)으로 같은 문제를 다시 만들 수 있게 하는 난수 — 오답 노트가 문제 전체 대신 씨앗만 저장함 */
+let rnd = Math.random;
+function seeded(seed){ let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const R = (a,b) => a + Math.floor(rnd()*(b-a+1));
+const P = arr => arr[Math.floor(rnd()*arr.length)];
 function coprimeTo(d, lo, hi){ let n; do { n = R(lo, hi); } while(gcd(n, d) !== 1); return n; }
 const POLY = {3:'삼각형',4:'사각형',5:'오각형',6:'육각형',7:'칠각형',8:'팔각형',9:'구각형'};
 const PI = () => MATH_CFG.pi;
@@ -1077,6 +1089,18 @@ const MATH_BANK = {
       return {t:`넓이가 ${fsImp(F(p,q))} m²인 직사각형 모양 꽃밭의 세로가 ${n} m임. 가로는 몇 m인지 구하고, 가로와 세로의 차이도 구하시오.`,
         s:[{q:'가로', a:w, u:'m'}, {q:'가로와 세로의 차이', a:diff, u:'m'}],
         sol:`가로 = 넓이 ÷ 세로 = ${fsImp(F(p,q))} ÷ ${n} = ${fs(w)} (m). 차이는 ${fs(w)}와 ${n}의 차 = ${fs(diff)} (m)임.`}; },
+    () => { const b = R(2,6); let a; do { a = R(b+1, 3*b); } while(a % b === 0); const each = F(a,b), left = F(a-b, b);
+      return {t:`케이크 ${a}개를 ${b}명이 똑같이 나누어 먹으려고 함. 한 명이 먹는 양은 케이크 몇 개인지 대분수로 구하고, 한 명이 케이크 1개만 먹는다면 한 명 몫에서 남는 양도 구하시오.`,
+        s:[{q:'한 명이 먹는 양', a:each, u:'개'}, {q:'한 명 몫에서 남는 양', a:left, u:'개'}],
+        sol:`${a} ÷ ${b} = ${a}/${b} = ${fs(each)} (개). 1개를 먹으면 ${fs(each)} − 1 = ${fs(left)} (개)가 남음.`}; },
+    () => { const q = R(2,6), w = R(1,4), p = coprimeTo(q, 1, q-1), n = R(2,5), imp = F(w*q+p, q), one = F(w*q+p, q*n);
+      return {t:`쌀 ${w}과 ${p}/${q} kg을 ${n}봉지에 똑같이 나누어 담으려고 함. 대분수를 가분수로 바꾼 뒤, 한 봉지에 담는 쌀의 양을 구하시오.`,
+        s:[{q:`${w}과 ${p}/${q} 를 가분수로`, a:imp, u:''}, {q:'한 봉지의 쌀', a:one, u:'kg'}],
+        sol:`${w}과 ${p}/${q} = ${w*q+p}/${q}. ${w*q+p}/${q} ÷ ${n} = ${w*q+p}/${q*n} = ${fs(one)} (kg)임.`}; },
+    () => { const q = R(2,7), p = coprimeTo(q, q+1, 4*q), tri = F(p, 3*q), sq = F(p, 4*q);
+      return {t:`길이가 ${fsImp(F(p,q))} m인 철사를 남김없이 써서 정삼각형 하나를 만들었음. 한 변의 길이를 구하시오. 같은 길이의 철사로 정사각형을 만든다면 한 변은 몇 m인지도 구하시오.`,
+        s:[{q:'정삼각형의 한 변', a:tri, u:'m'}, {q:'정사각형의 한 변', a:sq, u:'m'}],
+        sol:`정삼각형은 변이 3개이므로 ${fsImp(F(p,q))} ÷ 3 = ${fs(tri)} (m). 정사각형은 변이 4개이므로 ${fsImp(F(p,q))} ÷ 4 = ${fs(sq)} (m)임.`}; },
   ],
   m2: [
     () => { const n = R(3,9);
@@ -1091,6 +1115,18 @@ const MATH_BANK = {
       return {t:`모서리가 ${3*n}개인 각기둥이 있음. 한 밑면의 변은 몇 개인지 구하고, 이 각기둥의 꼭짓점과 면의 수도 구하시오.`,
         s:[{q:'한 밑면의 변의 수', a:n, u:'개'}, {q:'꼭짓점의 수', a:2*n, u:'개'}, {q:'면의 수', a:n+2, u:'개'}],
         sol:`각기둥의 모서리는 (한 밑면의 변의 수) × 3 이므로 ${3*n} ÷ 3 = ${n}. 밑면은 ${POLY[n]}이고 꼭짓점은 ${n} × 2 = ${2*n}, 면은 ${n} + 2 = ${n+2}임.`}; },
+    () => { const n = R(3,9);
+      return {t:`모서리가 ${2*n}개인 각뿔이 있음. 밑면은 몇각형인지(변의 수) 구하고, 이 각뿔의 면과 꼭짓점의 수도 구하시오.`,
+        s:[{q:'밑면의 변의 수', a:n, u:'개'}, {q:'면의 수', a:n+1, u:'개'}, {q:'꼭짓점의 수', a:n+1, u:'개'}],
+        sol:`각뿔의 모서리는 (밑면의 변의 수) × 2 이므로 ${2*n} ÷ 2 = ${n}, 밑면은 ${POLY[n]}. 면 = ${n} + 1 = ${n+1}, 꼭짓점 = ${n} + 1 = ${n+1}임.`}; },
+    () => { const n = R(3,9);
+      return {t:`꼭짓점이 ${2*n}개인 각기둥이 있음. 한 밑면의 꼭짓점은 몇 개인지 구하고, 이 각기둥의 모서리와 옆면의 수도 구하시오.`,
+        s:[{q:'한 밑면의 꼭짓점', a:n, u:'개'}, {q:'모서리의 수', a:3*n, u:'개'}, {q:'옆면의 수', a:n, u:'개'}],
+        sol:`각기둥의 꼭짓점은 두 밑면에 반씩 있으므로 ${2*n} ÷ 2 = ${n}. 밑면은 ${POLY[n]}, 모서리 = ${n} × 3 = ${3*n}, 옆면은 밑면의 변의 수와 같아 ${n}개임.`}; },
+    () => { const n = R(3,6), a = R(2,9), h = R(3,12);
+      return {t:`밑면이 한 변 ${a} cm인 정${POLY[n]}이고 높이가 ${h} cm인 각기둥이 있음. 두 밑면의 모서리 길이의 합, 높이를 나타내는 모서리 길이의 합, 모든 모서리 길이의 합을 차례로 구하시오.`,
+        s:[{q:'두 밑면의 모서리 길이 합', a:2*n*a, u:'cm'}, {q:'높이 모서리 길이 합', a:n*h, u:'cm'}, {q:'모든 모서리 길이 합', a:2*n*a+n*h, u:'cm'}],
+        sol:`밑면 하나의 둘레 ${a} × ${n} = ${n*a}, 두 밑면 ${n*a} × 2 = ${2*n*a} (cm). 높이 모서리는 ${n}개라 ${h} × ${n} = ${n*h} (cm). 모두 ${2*n*a} + ${n*h} = ${2*n*a+n*h} (cm)임.`}; },
   ],
   m3: [
     () => { const n = R(3,8), k = R(11,99)/10, tot = nn(k*n);
@@ -1105,6 +1141,18 @@ const MATH_BANK = {
       return {t:`${n}일 동안 모은 빗물이 모두 ${tot} L임. 하루 평균 몇 L를 모았는지 구하고, 이 빠르기로 ${m}일을 더 모으면 모두 몇 L가 되는지 구하시오.`,
         s:[{q:'하루 평균', a:x, u:'L'}, {q:`${m}일 더 모은 뒤 모두`, a:nn(tot + x*m), u:'L'}],
         sol:`평균 = ${tot} ÷ ${n} = ${x} (L). ${m}일 동안 ${x} × ${m} = ${nn(x*m)} L를 더 모으므로 모두 ${tot} + ${nn(x*m)} = ${nn(tot+x*m)} (L)임.`}; },
+    () => { const n = R(3,9), k = R(11,95)/100, a = nn(k*n);
+      return {t:`주스 ${a} L를 컵 ${n}개에 똑같이 나누어 담았음. 한 컵에 담긴 주스는 몇 L인지 구하고, 몇 mL인지도 나타내시오.`,
+        s:[{q:'한 컵의 양', a:k, u:'L'}, {q:'mL로 나타내면', a:nn(k*1000), u:'mL'}],
+        sol:`${a} ÷ ${n} = ${k} (L). 1 L = 1000 mL 이므로 ${k} L = ${nn(k*1000)} mL임.`}; },
+    () => { const b = P([2,4,5,8,20,25]); let a; do { a = R(b+1, b*9); } while(a % b === 0); const v = nn(a/b);
+      return {t:`끈 ${a} m를 ${b}명이 똑같이 나누어 가지려고 함. 한 명이 갖는 끈의 길이를 소수로 구하고, 몇 cm인지도 나타내시오.`,
+        s:[{q:'한 명의 끈 (소수)', a:v, u:'m'}, {q:'cm로 나타내면', a:nn(v*100), u:'cm'}],
+        sol:`${a} ÷ ${b} = ${v} (m). 몫이 나누어떨어지지 않으면 0을 내려 소수점 아래까지 계산함. ${v} m = ${nn(v*100)} cm임.`}; },
+    () => { const n = R(2,8), k = R(15,95)/10, A = nn(n*k), per = nn(2*(n+k));
+      return {t:`넓이가 ${A} m²인 직사각형 텃밭의 가로가 ${n} m임. 세로는 몇 m인지 구하고, 텃밭의 둘레도 구하시오.`,
+        s:[{q:'세로', a:k, u:'m'}, {q:'둘레', a:per, u:'m'}],
+        sol:`세로 = ${A} ÷ ${n} = ${k} (m). 둘레 = (${n} + ${k}) × 2 = ${per} (m)임.`}; },
   ],
   m4: [
     () => { const tot = P([20,25,40,50]), a = R(Math.ceil(tot*0.3), Math.floor(tot*0.7)), who = P(['남학생','안경 쓴 학생','자전거로 오는 학생']);
@@ -1129,6 +1177,10 @@ const MATH_BANK = {
       return {t:`가 마을은 넓이 ${A} km²에 ${pop.toLocaleString()}명, 나 마을은 넓이 ${B} km²에 ${pop2.toLocaleString()}명이 살고 있음. 두 마을의 인구 밀도(넓이에 대한 인구의 비율)를 각각 구하시오. 어느 마을이 더 붐비는지도 생각해 볼 것.`,
         s:[{q:'가 마을의 인구 밀도', a:den, u:''}, {q:'나 마을의 인구 밀도', a:den2, u:''}],
         sol:`인구 밀도 = (인구) ÷ (넓이). 가 마을 ${pop.toLocaleString()} ÷ ${A} = ${den}, 나 마을 ${pop2.toLocaleString()} ÷ ${B} = ${den2}. 1 km²에 사는 사람이 더 많은 ${more}이 더 붐빔.`}; },
+    () => { const a = P([4,5,10,20,25]), b = R(1, a*2); if(b === a) return MATH_BANK.m4[5]();
+      return {t:`바구니에 사과 ${a}개와 배 ${b}개가 있음. 사과 수에 대한 배 수의 비를 쓸 때 기준량은 무엇인지 수로 쓰고, 비율을 분수로, 백분율로 나타내시오.`,
+        s:[{q:'기준량 (사과 수)', a:a, u:'개'}, {q:'비율', a:F(b,a), u:''}, {q:'백분율', a:nn(b/a*100), u:'%'}],
+        sol:`'사과 수에 대한 배 수의 비'는 ${b} : ${a} 이고 기준량은 사과 수 ${a}. 비율 = ${b} ÷ ${a} = ${fs(F(b,a))}, 백분율 = ${nn(b/a*100)}% 임.`}; },
   ],
   m5: [
     () => { const N = P([20,40]), items = ['축구','피구','농구','줄넘기'];
@@ -1141,6 +1193,22 @@ const MATH_BANK = {
       return {t:`길이가 ${L} cm인 띠그래프에서 어떤 항목이 전체의 ${pct}%를 차지함. 이 항목의 비율을 소수로 나타내고, 띠그래프에서 차지하는 길이를 구하시오.`,
         s:[{q:'비율 (소수)', a:nn(pct/100), u:''}, {q:'띠그래프에서의 길이', a:len, u:'cm'}],
         sol:`${pct}% = ${nn(pct/100)}. 차지하는 길이 = ${L} × ${nn(pct/100)} = ${len} (cm)임.`}; },
+    () => { const N = P([40,50,60,80,100,200]), x = P([5,10,15,20,25,30,35,40,45]); if(N*x % 100) return MATH_BANK.m5[2]();
+      return {t:`전교생 ${N}명이 좋아하는 과일을 원그래프로 나타냈더니 포도가 전체의 ${x}%였음. 포도의 비율을 소수로 나타내고, 포도를 좋아하는 학생 수를 구하시오.`,
+        s:[{q:'비율 (소수)', a:nn(x/100), u:''}, {q:'포도를 좋아하는 학생', a:N*x/100, u:'명'}],
+        sol:`${x}% = ${nn(x/100)}. 학생 수 = ${N} × ${nn(x/100)} = ${N*x/100}(명)임.`}; },
+    () => { const N = P([100,200,300,400]), a = R(6,9)*5, b = R(2,5)*5, d = a - b;
+      return {t:`학생 ${N}명의 등교 방법을 띠그래프로 나타냈더니 걷기가 ${a}%, 자전거가 ${b}%였음. 걷기는 자전거보다 전체의 몇 %가 더 많은지 구하고, 학생 수로는 몇 명 더 많은지 구하시오.`,
+        s:[{q:'백분율의 차', a:d, u:'%'}, {q:'학생 수의 차', a:N*d/100, u:'명'}],
+        sol:`${a} − ${b} = ${d}(%). 학생 수의 차 = ${N} × ${d}/100 = ${N*d/100}(명)임.`}; },
+    () => { const A1 = R(1,4), A2 = R(0,9), B1 = R(1,4), B2 = R(0,9); const pa = A1*10000 + A2*1000, pb = B1*10000 + B2*1000; if(pa === pb) return MATH_BANK.m5[4]();
+      return {t:`그림그래프에서 큰 그림은 10000명, 작은 그림은 1000명을 나타냄. 가 마을은 큰 그림 ${A1}개와 작은 그림 ${A2}개, 나 마을은 큰 그림 ${B1}개와 작은 그림 ${B2}개임. 두 마을의 인구와 인구의 차를 구하시오.`,
+        s:[{q:'가 마을 인구', a:pa, u:'명'}, {q:'나 마을 인구', a:pb, u:'명'}, {q:'인구의 차', a:Math.abs(pa-pb), u:'명'}],
+        sol:`가 마을 ${A1} × 10000 + ${A2} × 1000 = ${pa.toLocaleString()}(명), 나 마을 ${B1} × 10000 + ${B2} × 1000 = ${pb.toLocaleString()}(명). 차는 ${Math.abs(pa-pb).toLocaleString()}명임.`}; },
+    () => { const ang = P([36,54,72,90,108,144,180]), pct = ang/360*100, N = P([20,40,60,80,100]); if(N*pct % 100) return MATH_BANK.m5[5]();
+      return {t:`원그래프에서 어떤 항목의 중심각이 ${ang}°임. 이 항목은 전체의 몇 %인지 구하고, 전체가 ${N}명이면 몇 명인지 구하시오.`,
+        s:[{q:'백분율', a:nn(pct), u:'%'}, {q:'사람 수', a:N*pct/100, u:'명'}],
+        sol:`원 한 바퀴 360°가 100% 이므로 ${ang} ÷ 360 × 100 = ${nn(pct)}(%). 사람 수 = ${N} × ${nn(pct)}/100 = ${N*pct/100}(명)임.`}; },
   ],
   m6: [
     () => { const a = R(2,12), b = R(2,12), c = R(2,12), V = a*b*c, Sf = 2*(a*b+b*c+c*a);
@@ -1155,6 +1223,18 @@ const MATH_BANK = {
       return {t:`가로 ${a} m, 세로 ${b} m, 높이 ${c} m인 직육면체 모양 창고가 있음. 창고의 부피는 몇 m³인지 구하고, 몇 cm³인지도 나타내시오.`,
         s:[{q:'부피 (m³)', a:V, u:'m³'}, {q:'부피 (cm³)', a:V*1000000, u:'cm³'}],
         sol:`부피 = ${a} × ${b} × ${c} = ${V} (m³). 1 m³ = 1000000 cm³ 이므로 ${V} m³ = ${(V*1000000).toLocaleString()} cm³임.`}; },
+    () => { const a = R(2,10), b = R(2,10), c = R(2,10), V = a*b*c;
+      return {t:`가로 ${a} cm, 세로 ${b} cm인 직육면체의 부피가 ${V} cm³임. 밑면의 넓이를 구하고, 높이를 구하시오.`,
+        s:[{q:'밑면의 넓이', a:a*b, u:'cm²'}, {q:'높이', a:c, u:'cm'}],
+        sol:`밑면의 넓이 = ${a} × ${b} = ${a*b} (cm²). 부피 = 밑면의 넓이 × 높이 이므로 높이 = ${V} ÷ ${a*b} = ${c} (cm)임.`}; },
+    () => { const a = R(2,8), b = R(2,8), c = R(2,6);
+      return {t:`한 모서리가 1 cm인 쌓기나무를 가로 ${a}개, 세로 ${b}개, 높이 ${c}층으로 빈틈없이 쌓아 직육면체를 만들었음. 한 층에 놓인 쌓기나무 수, 전체 쌓기나무 수, 직육면체의 부피를 구하시오.`,
+        s:[{q:'한 층의 쌓기나무', a:a*b, u:'개'}, {q:'전체 쌓기나무', a:a*b*c, u:'개'}, {q:'부피', a:a*b*c, u:'cm³'}],
+        sol:`한 층 = ${a} × ${b} = ${a*b}(개), 전체 = ${a*b} × ${c} = ${a*b*c}(개). 쌓기나무 1개가 1 cm³ 이므로 부피는 ${a*b*c} cm³임.`}; },
+    () => { const a = R(1,6), b = 2*a;
+      return {t:`한 모서리가 ${a} cm인 정육면체와, 한 모서리가 그 2배인 ${b} cm인 정육면체가 있음. 두 정육면체의 부피를 구하고, 큰 정육면체의 부피는 작은 것의 몇 배인지 구하시오.`,
+        s:[{q:'작은 정육면체의 부피', a:a*a*a, u:'cm³'}, {q:'큰 정육면체의 부피', a:b*b*b, u:'cm³'}, {q:'몇 배', a:8, u:'배'}],
+        sol:`작은 것 ${a}×${a}×${a} = ${a*a*a} (cm³), 큰 것 ${b}×${b}×${b} = ${b*b*b} (cm³). ${b*b*b} ÷ ${a*a*a} = 8. 모서리가 2배면 부피는 2×2×2 = 8배가 됨.`}; },
   ],
   m7: [
     () => { const s = R(3,8), r = coprimeTo(s, 1, s-1), k = R(2,9), tot = F(k*r, s);
@@ -1170,6 +1250,18 @@ const MATH_BANK = {
       return {t:`물 ${n} L를 들이가 ${r}/${s} L인 컵에 가득 채워 나누어 담으려고 함. 컵이 몇 개 필요한지 구하시오.`,
         s:[{q:'필요한 컵', a:cups, u:'개'}],
         sol:`${n} ÷ ${r}/${s} = ${n} × ${s}/${r} = ${cups} (개)임.`}; },
+    () => { const q = R(5,12), r = R(1,3), k = R(3,8), p = r*k; if(p >= q*3) return MATH_BANK.m7[3]();
+      return {t:`물 ${p}/${q} L를 ${r}/${q} L씩 병에 나누어 담으려고 함. 병은 몇 개 필요한지 구하고, 그중 2병을 마시면 남는 병은 몇 개인지 구하시오.`,
+        s:[{q:'필요한 병', a:k, u:'개'}, {q:'남는 병', a:k-2, u:'개'}],
+        sol:`분모가 같으면 분자끼리 나눔: ${p}/${q} ÷ ${r}/${q} = ${p} ÷ ${r} = ${k}(개). 2병을 마시면 ${k} − 2 = ${k-2}(개)가 남음.`}; },
+    () => { const q = R(2,5), p = coprimeTo(q, 1, q-1), m = R(2,6), a = p*m, v = m*q;
+      return {t:`어떤 사람이 ${p}/${q} 시간 동안 ${a} km를 걸었음. 같은 빠르기로 1시간 동안 걷는 거리를 구하고, 3시간 동안 걷는 거리도 구하시오.`,
+        s:[{q:'1시간 동안 걷는 거리', a:v, u:'km'}, {q:'3시간 동안 걷는 거리', a:3*v, u:'km'}],
+        sol:`${a} ÷ ${p}/${q} = ${a} × ${q}/${p} = ${v} (km). 3시간이면 ${v} × 3 = ${3*v} (km)임.`}; },
+    () => { const q = R(2,6), p = coprimeTo(q, 1, 2*q), s = R(2,5), r = coprimeTo(s, 1, s-1), x = F(p*s, q*r), y = F(x.n*s, x.d*r);
+      return {t:`어떤 수에 ${r}/${s} 를 곱했더니 ${fsImp(F(p,q))} 가 되었음. 어떤 수를 구하고, 어떤 수를 ${r}/${s} 로 나눈 몫도 구하시오.`,
+        s:[{q:'어떤 수', a:x, u:''}, {q:`어떤 수 ÷ ${r}/${s}`, a:y, u:''}],
+        sol:`어떤 수 = ${fsImp(F(p,q))} ÷ ${r}/${s} = ${fsImp(F(p,q))} × ${s}/${r} = ${fs(x)}. ${fs(x)} ÷ ${r}/${s} = ${fs(x)} × ${s}/${r} = ${fs(y)} 임.`}; },
   ],
   m8: [
     () => { const b = R(3,15)/10, k = R(3,9), rem = R(1, Math.round(b*10)-1)/10, a = nn(b*k + rem);
@@ -1188,6 +1280,21 @@ const MATH_BANK = {
       return {t:`${a}의 끈은 ${x} m이고 ${b}의 끈은 ${y} m임. ${a}의 끈은 ${b}의 끈의 몇 배인지 구하시오.`,
         s:[{q:'몇 배', a:r, u:'배'}],
         sol:`${x} ÷ ${y} = ${r} 이므로 ${r}배임.`}; },
+    () => { const b = R(2,9)/10 + R(0,1), k = R(3,12), a = nn(b*k), c = R(2,9)*100;
+      return {t:`철사 ${a} m를 ${nn(b)} m씩 자르려고 함. 몇 도막이 되는지 구하고, 한 도막을 ${c}원에 판다면 모두 얼마인지 구하시오.`,
+        s:[{q:'도막 수', a:k, u:'도막'}, {q:'판 돈', a:k*c, u:'원'}],
+        sol:`${a} ÷ ${nn(b)} 는 두 수의 소수점을 같은 자리만큼 옮겨 계산: ${nn(a*10)} ÷ ${nn(b*10)} = ${k}(도막). ${k} × ${c} = ${k*c}(원)임.`}; },
+    () => { const x = R(12,48)/10; let y; do { y = R(12,48)/10; } while(y === x); const A = nn(x*y);
+      return {t:`넓이가 ${A} m²인 직사각형의 가로가 ${x} m임. 세로는 몇 m인지 구하고, 세로는 가로보다 몇 m 긴지(짧으면 짧은 만큼) 구하시오.`,
+        s:[{q:'세로', a:y, u:'m'}, {q:'가로와 세로의 차', a:Math.abs(nn(y-x)), u:'m'}],
+        sol:`세로 = ${A} ÷ ${x} = ${y} (m). 차 = ${Math.abs(nn(y-x))} (m)임.`}; },
+    () => { /* 정수로만 반올림: 나뉠 수 A/10, 나눌 수 B/10 */
+      const A = R(21,99), B = R(3,9); if(A % B === 0) return MATH_BANK.m8[5]();
+      const t10 = Math.floor(A*10/B), d2 = Math.floor(A*100/B) % 10, t100 = Math.floor(A*100/B), d3 = Math.floor(A*1000/B) % 10;
+      const r1 = (t10 + (d2 >= 5 ? 1 : 0))/10, r2 = (t100 + (d3 >= 5 ? 1 : 0))/100;
+      return {t:`${A/10} ÷ ${B/10} 의 몫은 나누어떨어지지 않음. 몫을 반올림하여 소수 첫째 자리까지, 소수 둘째 자리까지 각각 나타내시오.`,
+        s:[{q:'소수 첫째 자리까지', a:r1, u:''}, {q:'소수 둘째 자리까지', a:r2, u:''}],
+        sol:`${A/10} ÷ ${B/10} = ${A} ÷ ${B} = ${(Math.floor(A*10000/B)/10000).toFixed(4)}… 소수 둘째 자리 숫자 ${d2}에서 반올림하면 ${r1}, 소수 셋째 자리 숫자 ${d3}에서 반올림하면 ${r2} 임.`}; },
   ],
   m9: [
     () => { let g; do { g = Array.from({length:9}, () => P([0,1,1,2,2,3])); } while(g.filter(x=>x).length < 5 || !g.some(x => x >= 2));   /* 2층이 꼭 생기게 */
@@ -1200,6 +1307,26 @@ const MATH_BANK = {
       return {t:`쌓기나무로 모양을 만들었더니 1층에 ${a}개, 2층에 ${b}개, 3층에 ${c}개가 놓였음. 사용한 쌓기나무는 모두 몇 개인지 구하고, 위에서 본 모양은 몇 칸으로 보이는지 구하시오.`,
         s:[{q:'모두', a:a+b+c, u:'개'}, {q:'위에서 본 모양의 칸 수', a:a, u:'칸'}],
         sol:`${a} + ${b} + ${c} = ${a+b+c}(개). 위에서 보면 1층에 놓인 자리만큼 보이므로 ${a}칸임.`}; },
+    () => { const k = R(2,5);
+      return {t:`한 모서리가 쌓기나무 ${k}개인 큰 정육면체를 쌓기나무로 빈틈없이 만들려고 함. 한 층에 필요한 쌓기나무 수와 전체 쌓기나무 수를 구하시오.`,
+        s:[{q:'한 층', a:k*k, u:'개'}, {q:'전체', a:k*k*k, u:'개'}],
+        sol:`한 층은 ${k} × ${k} = ${k*k}(개), ${k}층이므로 ${k*k} × ${k} = ${k*k*k}(개)임.`}; },
+    () => { let g; do { g = Array.from({length:9}, () => P([0,1,2,3,3])); } while(g.filter(x=>x).length < 5 || !g.some(x => x >= 3));
+      const sum = g.reduce((t,x)=>t+x,0), third = g.filter(x=>x>=3).length, top = Math.max(...g);
+      const grid = `<table class="mq-grid">${[0,1,2].map(r=>'<tr>'+[0,1,2].map(c=>`<td>${g[r*3+c]||''}</td>`).join('')+'</tr>').join('')}</table>`;
+      return {t:`위에서 본 모양의 각 칸에 쌓인 쌓기나무 수를 적었음.${grid}사용한 쌓기나무는 모두 몇 개인지, 3층에는 몇 개가 있는지, 가장 높은 곳은 몇 층인지 구하시오.`,
+        s:[{q:'모두', a:sum, u:'개'}, {q:'3층', a:third, u:'개'}, {q:'가장 높은 층', a:top, u:'층'}],
+        sol:`모두 ${g.filter(x=>x).join(' + ')} = ${sum}(개). 3층에는 3이 적힌 칸마다 1개씩 ${third}개. 가장 큰 수가 ${top}이므로 ${top}층까지 쌓였음.`}; },
+    () => { const a = R(2,6), b = R(2,6), c = R(2,5);
+      return {t:`쌓기나무로 가로 ${a}개, 세로 ${b}개, ${c}층인 직육면체를 쌓았다가 맨 위층을 모두 내려놓았음. 처음 쌓기나무 수, 내려놓은 수, 남은 수를 구하시오.`,
+        s:[{q:'처음', a:a*b*c, u:'개'}, {q:'내려놓은 수', a:a*b, u:'개'}, {q:'남은 수', a:a*b*(c-1), u:'개'}],
+        sol:`처음 ${a} × ${b} × ${c} = ${a*b*c}(개). 맨 위층은 한 층이라 ${a} × ${b} = ${a*b}(개). 남은 것은 ${a*b*c} − ${a*b} = ${a*b*(c-1)}(개)임.`}; },
+    () => { let g; do { g = Array.from({length:9}, () => P([0,1,1,2,3])); } while([0,1,2].some(c => !Math.max(g[c], g[3+c], g[6+c])));
+      const col = c => Math.max(g[c], g[3+c], g[6+c]);
+      const grid = `<table class="mq-grid">${[0,1,2].map(r=>'<tr>'+[0,1,2].map(c=>`<td>${g[r*3+c]||''}</td>`).join('')+'</tr>').join('')}</table>`;
+      return {t:`위에서 본 모양의 각 칸에 쌓인 쌓기나무 수를 적었음 (아래쪽이 앞).${grid}앞에서 보면 왼쪽 줄, 가운데 줄, 오른쪽 줄이 각각 몇 층으로 보이는지 구하시오.`,
+        s:[{q:'왼쪽 줄', a:col(0), u:'층'}, {q:'가운데 줄', a:col(1), u:'층'}, {q:'오른쪽 줄', a:col(2), u:'층'}],
+        sol:`앞에서 보면 같은 세로줄에서 가장 높이 쌓인 칸만 보임. 왼쪽 줄 ${[g[0],g[3],g[6]].join('·')} → ${col(0)}층, 가운데 ${[g[1],g[4],g[7]].join('·')} → ${col(1)}층, 오른쪽 ${[g[2],g[5],g[8]].join('·')} → ${col(2)}층임.`}; },
   ],
   m10: [
     () => { const a = R(2,9), b = R(2,9), k = R(2,9);
@@ -1218,6 +1345,15 @@ const MATH_BANK = {
       return {t:`밀가루와 설탕을 ${a} : ${b}의 비로 섞어 반죽을 만듦. 밀가루를 ${a*k} g 넣었다면 설탕은 몇 g을 넣어야 하는지 구하고, 반죽 전체의 무게도 구하시오.`,
         s:[{q:'설탕', a:b*k, u:'g'}, {q:'반죽 전체', a:(a+b)*k, u:'g'}],
         sol:`${a} : ${b} = ${a*k} : □ 에서 □ = ${b} × ${k} = ${b*k} (g). 전체 = ${a*k} + ${b*k} = ${(a+b)*k} (g)임.`}; },
+    () => { let a, b; do { a = R(1,9); b = R(1,9); } while(a === b); const g = gcd(a*2, b*2), k = R(2,4);
+      const x = a*k, y = b*k, gx = gcd(x, y);
+      return {t:`${x/10} : ${y/10} 를 가장 간단한 자연수의 비로 나타내려고 함. 두 수에 10을 곱한 비를 쓰고, 최대공약수로 나누어 가장 간단한 비의 전항과 후항을 구하시오.`,
+        s:[{q:'10을 곱한 비의 전항', a:x, u:''}, {q:'가장 간단한 비의 전항', a:x/gx, u:''}, {q:'가장 간단한 비의 후항', a:y/gx, u:''}],
+        sol:`${x/10} : ${y/10} 에 10을 곱하면 ${x} : ${y}. 최대공약수 ${gx}로 나누면 ${x/gx} : ${y/gx} 임.`}; },
+    () => { const sc = P([10000, 20000, 25000, 50000]), x = R(2,12), m = x*sc/100;
+      return {t:`축척이 1 : ${sc.toLocaleString()} 인 지도에서 두 곳 사이의 거리가 ${x} cm임. 실제 거리는 몇 m인지 구하고, 몇 km인지도 나타내시오.`,
+        s:[{q:'실제 거리 (m)', a:m, u:'m'}, {q:'실제 거리 (km)', a:nn(m/1000), u:'km'}],
+        sol:`1 : ${sc.toLocaleString()} = ${x} : □ 에서 □ = ${(x*sc).toLocaleString()} cm = ${m.toLocaleString()} m = ${nn(m/1000)} km임.`}; },
   ],
   m11: [
     () => { const r = R(2,12), C = nn(2*r*PI()), A = nn(r*r*PI());
@@ -1236,6 +1372,14 @@ const MATH_BANK = {
       return {t:`넓이가 ${A} cm²인 원이 있음 (원주율 ${PI()}). 반지름 × 반지름의 값을 구하고, 반지름을 구하시오.`,
         s:[{q:'반지름 × 반지름', a:r*r, u:''}, {q:'반지름', a:r, u:'cm'}],
         sol:`넓이 ÷ 원주율 = ${A} ÷ ${PI()} = ${r*r}. ${r} × ${r} = ${r*r} 이므로 반지름은 ${r} cm임.`}; },
+    () => { const d = R(2,20), C = nn(d*PI());
+      return {t:`지름이 ${d} cm인 원의 원주를 재었더니 ${C} cm였음. 원주는 지름의 몇 배인지(원주율) 구하고, 지름이 2배인 원의 원주도 구하시오.`,
+        s:[{q:'원주 ÷ 지름', a:PI(), u:''}, {q:'지름이 2배인 원의 원주', a:nn(2*C), u:'cm'}],
+        sol:`원주율 = 원주 ÷ 지름 = ${C} ÷ ${d} = ${PI()}. 지름이 2배면 원주도 2배라 ${nn(2*C)} cm임.`}; },
+    () => { const r = R(2,10), sq = 4*r*r, ci = nn(r*r*PI()), out = nn(sq - ci);
+      return {t:`한 변이 ${2*r} cm인 정사각형 안에 꼭 맞는 원을 그렸음 (원주율 ${PI()}). 정사각형의 넓이, 원의 넓이, 원 밖으로 남는 부분의 넓이를 구하시오.`,
+        s:[{q:'정사각형의 넓이', a:sq, u:'cm²'}, {q:'원의 넓이', a:ci, u:'cm²'}, {q:'남는 부분의 넓이', a:out, u:'cm²'}],
+        sol:`정사각형 ${2*r} × ${2*r} = ${sq} (cm²). 원의 지름이 ${2*r} 이라 반지름 ${r}: ${r} × ${r} × ${PI()} = ${ci} (cm²). 남는 부분 = ${sq} − ${ci} = ${out} (cm²)임.`}; },
   ],
   m12: [
     () => { const r = R(2,8), h = R(3,12), W = nn(2*r*PI()), A = nn(W*h);
@@ -1254,8 +1398,21 @@ const MATH_BANK = {
       return {t:`원뿔을 옆에서 보니 밑면의 지름이 ${2*r} cm, 높이가 ${h} cm인 이등변삼각형으로 보였음 (원주율 ${PI()}). 밑면의 반지름과 밑면의 둘레를 구하시오.`,
         s:[{q:'밑면의 반지름', a:r, u:'cm'}, {q:'밑면의 둘레', a:nn(2*r*PI()), u:'cm'}],
         sol:`반지름 = ${2*r} ÷ 2 = ${r} cm. 밑면의 둘레 = 지름 × 원주율 = ${2*r} × ${PI()} = ${nn(2*r*PI())} (cm)임. (옆에서 본 삼각형의 높이 ${h} cm가 원뿔의 높이)`}; },
+    () => { const r = R(2,8), h = R(3,12), W = nn(2*r*PI()), per = nn(2*(W+h));
+      return {t:`밑면의 반지름이 ${r} cm, 높이가 ${h} cm인 원기둥의 전개도를 그렸음 (원주율 ${PI()}). 옆면(직사각형)의 가로를 구하고, 옆면의 둘레를 구하시오.`,
+        s:[{q:'옆면의 가로', a:W, u:'cm'}, {q:'옆면의 둘레', a:per, u:'cm'}],
+        sol:`옆면의 가로 = 밑면의 둘레 = ${2*r} × ${PI()} = ${W} (cm). 둘레 = (${W} + ${h}) × 2 = ${per} (cm)임.`}; },
+    () => { const d = R(2,10)*2, r = d/2;
+      return {t:`지름이 ${d} cm인 공(구)이 꼭 맞게 들어가는 원기둥 모양 통이 있음 (원주율 ${PI()}). 통의 높이, 통 밑면의 넓이, 밑면의 둘레를 구하시오.`,
+        s:[{q:'통의 높이', a:d, u:'cm'}, {q:'밑면의 넓이', a:nn(r*r*PI()), u:'cm²'}, {q:'밑면의 둘레', a:nn(d*PI()), u:'cm'}],
+        sol:`공이 꼭 맞으면 통의 높이와 밑면의 지름이 모두 공의 지름 ${d} cm. 밑면 넓이 = ${r} × ${r} × ${PI()} = ${nn(r*r*PI())} (cm²), 둘레 = ${d} × ${PI()} = ${nn(d*PI())} (cm)임.`}; },
   ],
 };
+/* 단원·문제 틀 번호·씨앗으로 문제 하나를 만듦 (같은 값이면 언제나 같은 문제) */
+function gen(unit, ti, seed){
+  const old = rnd; rnd = seeded(seed);
+  try { return MATH_BANK[unit][ti](); } finally { rnd = old; }
+}
 /* ---------- 답 읽기 — 3/4, 1과 3/4, 1 3/4, 0.75, 1,200 모두 받음 ---------- */
 function parseAns(str){
   let s = String(str||'').trim().replace(/,/g,'').replace(/\s+/g,' ');
@@ -1268,7 +1425,7 @@ function parseAns(str){
 }
 const ansOk = (input, a) => { const v = parseAns(input), t = fv(a); return isFinite(v) && Math.abs(v - t) <= 1e-6 * Math.max(1, Math.abs(t)); };
 
-return { CFG: MATH_CFG, BANK: MATH_BANK, parseAns, ansOk, fs };
+return { CFG: MATH_CFG, BANK: MATH_BANK, gen, parseAns, ansOk, fs };
 })();
 const MATH_CFG = MATH.CFG;
 /* ── 7일 출석판 — 하루 한 번, 빠진 날이 있어도 처음으로 돌아가지 않음 ── */
@@ -1330,7 +1487,7 @@ function freshState(){
     stats:{kills:0, bosses:0, summons:0, playtime:0, dmg:0},
     relicV:2, relicPity:0, codex:{},
     rebirth:{count:0, seals:0, best:0, spent:0, shop:{}}, attend:{day:0, last:''}, tut:{}, sessions:0,
-    math:{day:'', today:0, boxes:0, pending:0, correct:0, total:0, units:{}, sel:'all'},
+    math:{day:'', today:0, boxes:0, pending:0, correct:0, total:0, units:{}, sel:'all', wrong:[], fixed:0},
     opt:{sfx:true, fx:true, autoEquip:true, sleep:true, sleepMin:10, autoMove:true}, optV2:1,
     lastSave:now(), firstSeen:now()
   };
@@ -1357,7 +1514,8 @@ function loadSave(raw){
     S.rebirth = Object.assign({count:0, seals:0, best:0, spent:0, shop:{}}, o.rebirth||{});
     if(!S.rebirth.shop || typeof S.rebirth.shop !== 'object') S.rebirth.shop = {};
     S.attend = Object.assign({day:0, last:''}, o.attend||{});
-    S.math = Object.assign({day:'', today:0, boxes:0, pending:0, correct:0, total:0, units:{}, sel:'all'}, o.math||{});
+    S.math = Object.assign({day:'', today:0, boxes:0, pending:0, correct:0, total:0, units:{}, sel:'all', wrong:[], fixed:0}, o.math||{});
+    if(!Array.isArray(S.math.wrong)) S.math.wrong = [];
     if(!S.math.units || typeof S.math.units !== 'object') S.math.units = {};
     if(!S.tut || typeof S.tut !== 'object') S.tut = {};
     if(!(S.sessions >= 0)) S.sessions = 0;
@@ -4109,15 +4267,38 @@ function mathUnits(sel){
   const one = on.find(u => u.id === sel);
   return one ? [one] : on;
 }
-let MQ = null;   /* 지금 푸는 문제 {unit, q, vals, done, ok, box} */
+/* 지금 푸는 문제 {unit, ti, seed, q, vals, done, ok, box, mode, wid}
+   mode: 'new' 새 문제 · 'retry' 오답 노트의 같은 문제 · 'similar' 오답과 같은 틀에 숫자만 바꾼 문제 */
+let MQ = null;
+const WRONG_MAX = 30;   /* 오답 노트에 남기는 최대 문제 수 */
+function newSeed(){ return (Math.random()*4294967296) >>> 0; }
+function mathOpen(unit, ti, seed, mode, wid){
+  MQ = {unit, ti, seed, q: MATH.gen(unit, ti, seed), vals: [], done: false, ok: [], box: false, mode, wid};
+  mathModal();
+  setTimeout(() => { const f = document.querySelector('.mq-in'); if(f) f.focus(); }, 60);
+}
 function mathStart(){
   mathDay();
   const pool = mathUnits(S.math.sel);
   if(!pool.length){ toast('켜진 단원이 없음','bad'); return; }
   const u = pick(pool);
-  MQ = {unit: u.id, q: pick(MATH.BANK[u.id])(), vals: [], done: false, ok: [], box: false};
-  mathModal();
-  setTimeout(() => { const f = document.querySelector('.mq-in'); if(f) f.focus(); }, 60);
+  mathOpen(u.id, Math.floor(Math.random()*MATH.BANK[u.id].length), newSeed(), 'new');
+}
+function wrongFind(wid){ return S.math.wrong.find(w => w.id === wid); }
+function mathRetry(wid, similar){
+  const w = wrongFind(wid); if(!w || !MATH.BANK[w.u] || !MATH.BANK[w.u][w.ti]){ toast('문제를 찾지 못함','bad'); return; }
+  if(similar) mathOpen(w.u, w.ti, newSeed(), 'similar', wid);
+  else mathOpen(w.u, w.ti, w.seed, 'retry', wid);
+}
+/* 오답 노트에 넣기 · 해결하면 빼기 */
+function wrongAdd(){
+  if(MQ.mode === 'retry' || MQ.mode === 'similar'){ const w = wrongFind(MQ.wid); if(w){ w.tries++; w.at = now(); } return; }
+  S.math.wrong.unshift({id: newSeed().toString(36), u: MQ.unit, ti: MQ.ti, seed: MQ.seed, at: now(), tries: 1});
+  if(S.math.wrong.length > WRONG_MAX) S.math.wrong.length = WRONG_MAX;
+}
+function wrongSolve(){
+  const i = S.math.wrong.findIndex(w => w.id === MQ.wid);
+  if(i >= 0){ S.math.wrong.splice(i, 1); S.math.fixed = (S.math.fixed||0) + 1; }
 }
 function mathCheck(){
   if(!MQ || MQ.done) return;
@@ -4127,13 +4308,20 @@ function mathCheck(){
   MQ.done = true;
   mathDay();
   const all = MQ.ok.every(Boolean), rec = S.math.units[MQ.unit] || (S.math.units[MQ.unit] = [0,0]);
-  S.math.total++; rec[1]++;
-  if(all){
-    S.math.correct++; rec[0]++; S.math.today++;
-    S.shard += MATH_CFG.dustPerCorrect;
-    if(S.math.today % MATH_CFG.perBox === 0 && S.math.boxes < mathBoxMax()){ S.math.boxes++; S.math.pending++; MQ.box = true; }
-    sfx('lvup');
-  } else sfx('hit');
+  if(MQ.mode === 'retry'){
+    /* 같은 문제 다시 풀기 — 풀이를 이미 봤으므로 상자 진행에는 넣지 않고 가루만 조금 */
+    if(all){ wrongSolve(); S.shard += Math.floor(MATH_CFG.dustPerCorrect/2); sfx('lvup'); }
+    else { wrongAdd(); sfx('hit'); }
+  } else {
+    S.math.total++; rec[1]++;
+    if(all){
+      S.math.correct++; rec[0]++; S.math.today++;
+      S.shard += MATH_CFG.dustPerCorrect;
+      if(S.math.today % MATH_CFG.perBox === 0 && S.math.boxes < mathBoxMax()){ S.math.boxes++; S.math.pending++; MQ.box = true; }
+      if(MQ.mode === 'similar') wrongSolve();   /* 숫자를 바꾼 문제를 맞히면 그 오답도 해결로 봄 */
+      sfx('lvup');
+    } else { wrongAdd(); sfx('hit'); }
+  }
   markDirty(); saveNow();
   mathModal();
 }
@@ -4154,21 +4342,24 @@ function mathModal(){
   }).join('');
   mathDay();
   const left = MATH_CFG.perBox - (S.math.today % MATH_CFG.perBox), capped = S.math.boxes >= mathBoxMax();
+  const retry = MQ.mode === 'retry', fixedMsg = MQ.mode !== 'new' ? ' · 오답 노트에서 뺐음' : '';
   const reward = !done ? '' : all
-    ? `<div class="mq-res ok">정답! 유물 가루 +${MATH_CFG.dustPerCorrect}${MQ.box ? ' · <b>유물 상자 1회를 얻었음</b>' : capped ? ' · 오늘 상자는 다 받았음' : ' · 상자까지 '+left+'문제'}</div>`
-    : `<div class="mq-res ng">아쉬움. 풀이를 읽고 다음 문제에 도전할 것.</div>`;
+    ? (retry ? `<div class="mq-res ok">해결! 유물 가루 +${Math.floor(MATH_CFG.dustPerCorrect/2)}${fixedMsg}</div>`
+             : `<div class="mq-res ok">정답! 유물 가루 +${MATH_CFG.dustPerCorrect}${MQ.box ? ' · <b>유물 상자 1회를 얻었음</b>' : capped ? ' · 오늘 상자는 다 받았음' : ' · 상자까지 '+left+'문제'}${fixedMsg}</div>`)
+    : `<div class="mq-res ng">아쉬움. 풀이를 읽어 보고 오답 노트에서 다시 풀어 볼 것.</div>`;
+  const modeTag = MQ.mode === 'retry' ? ' · 오답 다시 풀기' : MQ.mode === 'similar' ? ' · 비슷한 문제' : '';
   openModal(`
     <div class="rl-m mq" style="${rcVars(all ? '#4ade80' : done ? '#fb923c' : '#38bdf8')}">
-      <div class="rl-rib">6학년 ${u.sem}학기 · ${u.n}</div>
+      <div class="rl-rib">6-${u.sem} · ${u.no}단원 ${u.n}</div>
       <button class="rl-x" data-act="closeModal" aria-label="닫기">✕</button>
-      <h3>수학 시련</h3>
+      <h3>수학 시련${modeTag}</h3>
       <div class="mq-text">${q.t}</div>
       <div class="mq-steps">${steps}</div>
       ${done ? '' : '<div class="mq-hint">분수는 3/4, 대분수는 1과 3/4 처럼 씀. 단위는 안 써도 됨.</div>'}
       ${done ? `<div class="mq-sol"><b>풀이</b>${q.sol}</div>` : ''}
       ${reward}
       ${done
-        ? `<div class="ctarow">${MQ.box ? '<button class="cta" data-act="mathBox">🎁 상자 열기</button>' : ''}<button class="cta ${MQ.box?'ghost':''}" data-act="mathStart">다음 문제</button></div>`
+        ? `<div class="ctarow">${MQ.box ? '<button class="cta" data-act="mathBox">🎁 상자 열기</button>' : ''}${!all ? `<button class="cta ghost" data-act="mathSimilar" data-id="${esc(MQ.mode==='new' ? S.math.wrong[0].id : MQ.wid)}">숫자 바꿔 다시</button>` : ''}<button class="cta ${MQ.box||!all?'ghost':''}" data-act="mathStart">다음 문제</button></div>`
         : `<button class="cta" data-act="mathCheck">채점하기</button>`}
     </div>`);
 }
@@ -4565,12 +4756,22 @@ function renderMath(){
       ${M.pending > 0 ? `<button class="rl-auto rl-claim" data-act="mathBox">🎁 받을 유물 상자 ${M.pending}개 — 열기</button>` : ''}
     </div>
     <div class="rl-sec" style="--rc:#4ade80">단원 고르기</div>
-    <div class="mq-chips">${chip('all','전체')}${chip('s1','1학기')}${chip('s2','2학기')}${on.map(u => chip(u.id, u.n+(u.sem===2?' ②':''))).join('')}</div>
+    <div class="mq-chips">${chip('all','전체')}${chip('s1','6-1')}${chip('s2','6-2')}</div>
+    <div class="mq-chips" style="margin-top:5px">${on.filter(u=>u.sem===1).map(u => chip(u.id, '6-1 '+u.no+'. '+u.n)).join('')}</div>
+    <div class="mq-chips" style="margin-top:5px">${on.filter(u=>u.sem===2).map(u => chip(u.id, '6-2 '+u.no+'. '+u.n)).join('')}</div>
     <button class="cta" data-act="mathStart" style="margin-top:10px">문제 풀기</button>
+    <div class="rl-sec" style="--rc:#ff7a8c;margin-top:16px">오답 노트 <i>${M.wrong.length}문제 · 해결 ${M.fixed||0}</i></div>
+    ${M.wrong.length ? M.wrong.map(w => {
+      const u = MATH_CFG.units.find(x => x.id === w.u), q = MATH.BANK[w.u] && MATH.BANK[w.u][w.ti] ? MATH.gen(w.u, w.ti, w.seed) : null;
+      if(!u || !q) return '';
+      const brief = q.t.replace(/<[^>]+>/g, ' ').replace(/\s+/g,' ').slice(0, 46);
+      return `<div class="mq-wrong"><div class="t"><i>6-${u.sem} ${u.no}. ${u.n}${w.tries > 1 ? ' · '+w.tries+'번 틀림' : ''}</i>${esc(brief)}…</div>
+        <div class="b"><button data-act="mathRetry" data-id="${esc(w.id)}">같은 문제</button><button data-act="mathSimilar" data-id="${esc(w.id)}">숫자 바꿔</button></div></div>`;
+    }).join('') : '<div class="tiny" style="margin-top:0">틀린 문제가 여기에 모임. 같은 문제를 다시 풀거나, 숫자만 바꾼 비슷한 문제로 연습할 수 있음.</div>'}
     <div class="rl-sec" style="--rc:#ffd98a;margin-top:16px">단원별 기록 <i>모두 ${M.correct} / ${M.total}</i></div>
     ${on.map(u => { const r = M.units[u.id] || [0,0];
-      return `<div class="mq-rec"><span class="s">${u.sem}학기</span><span class="n">${u.n}</span><span class="v">${r[0]} / ${r[1]}</span><span class="p">${rate(u.id)}</span></div>`; }).join('')}
-    <div class="tiny">문제는 풀 때마다 숫자가 새로 나옴. 단원 이름은 교과서마다 조금 다를 수 있음.</div>`;
+      return `<div class="mq-rec"><span class="s">6-${u.sem}</span><span class="n">${u.no}. ${u.n}</span><span class="v">${r[0]} / ${r[1]}</span><span class="p">${rate(u.id)}</span></div>`; }).join('')}
+    <div class="tiny">${MATH_CFG.book} 교과서 단원 순서 · 문제는 풀 때마다 숫자가 새로 나옴. 같은 문제 다시 풀기는 상자 진행에 들어가지 않음.</div>`;
   return {sub:`정답 ${M.correct} / ${M.total}`, html};
 }
 /* ---------- 월드 맵 ---------- */
@@ -5048,6 +5249,8 @@ function act(el){
     case 'mathStart': mathStart(); break;
     case 'mathCheck': mathCheck(); break;
     case 'mathBox': claimMathBox(); break;
+    case 'mathRetry': mathRetry(id, false); break;
+    case 'mathSimilar': mathRetry(id, true); break;
     case 'rebirth': {
       if(armed('rebirth')){ armAct = {k:'', t:0}; if(doRebirth()) closeSheet(); }
       else arm('rebirth');
