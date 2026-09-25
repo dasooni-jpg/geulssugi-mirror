@@ -1101,6 +1101,14 @@ function defenderBeaten(side, n) {
   }
   return true;
 }
+/* 외통이 되는 수를 하나만 찾아 바로 돌려줌 — 훈수처럼 하나면 되는 곳에 씀 */
+function firstMatingMove(side, n) {
+  for (const m of legalMoves(side)) {
+    const cap = mk(m); const ok = defenderBeaten(side, n); unmk(m, cap);
+    if (ok) return m;
+  }
+  return -1;
+}
 function matingMoves(side, n) {
   const out = [];
   for (const m of legalMoves(side)) {
@@ -1157,7 +1165,11 @@ const PUZZLES = [
   { n: 4, cho: 'K25 R87 J76 J45', han: 'K93 S95 S75' },
   { n: 4, cho: 'K24 P78 R77 E55', han: 'K93 S83' },
   { n: 4, cho: 'K24 R68 H54 P86', han: 'K95 S73' },
-  { n: 4, cho: 'K03 R41 H97 P57', han: 'K74 S94' }
+  { n: 4, cho: 'K03 R41 H97 P57', han: 'K74 S94' },
+
+  /* ── 5수 외통 ── */
+  { n: 5, cho: 'K23 R82 P87', han: 'K84 S83' },
+  { n: 5, cho: 'K24 R57 P76', han: 'K83' }
 ];
 const PZ_TYPE = { K: T_K, S: T_S, R: T_R, P: T_P, H: T_H, E: T_E, J: T_J };
 function setPuzzleBoard(p) {
@@ -1870,7 +1882,8 @@ function markSolved(i) {
   try { const st = loadSolved(); st.add(i); localStorage.setItem(PZKEY, JSON.stringify([...st])); } catch (e) {}
 }
 
-const PZ_HOW = { 1: '한 수로 끝내기', 2: '두 수 만에 몰아넣기', 3: '세 수 만에 몰아넣기', 4: '네 수 만에 몰아넣기' };
+const PZ_HOW = { 1: '한 수로 끝내기', 2: '두 수 만에 몰아넣기', 3: '세 수 만에 몰아넣기',
+                 4: '네 수 만에 몰아넣기', 5: '다섯 수 만에 몰아넣기' };
 /* '차로 / 상으로' 처럼 받침에 맞는 조사를 붙임 */
 function withRo(w) {
   const code = w.charCodeAt(w.length - 1) - 0xAC00;
@@ -1926,18 +1939,22 @@ function startPuzzle(i) {
   toast(p.n + '수 안에 외통을 만드세요.');
 }
 
-/* 수비는 가장 오래 버티는 수를 고름 */
+/* 수비의 응수를 고름 — 가장 오래 버티는 수.
+   덤으로 "사람이 제대로 두었는지"까지 여기서 가린다. 응수 가운데 하나라도
+   그 뒤에 외통이 서지 않는 것이 있으면, 사람이 둔 수가 틀린 것이므로 -1 을 돌려준다.
+   (사람이 둔 직후에는 수비 차례이므로, 외통 여부도 수비의 응수마다 따져야 맞다) */
 function stubbornReply(rep, k) {
   let best = [], bestJ = -1;
   for (const r of rep) {
     const cap = mk(r);
-    let j = k + 1;
+    let j = 0;
     for (let t = 1; t <= k; t++) { if (forcedMate(CHO, t)) { j = t; break; } }
     unmk(r, cap);
+    if (j === 0) return -1;                  /* 이 응수 뒤에는 외통이 없음 */
     if (j > bestJ) { bestJ = j; best = [r]; }
     else if (j === bestJ) best.push(r);
   }
-  return best[Math.floor(Math.random() * best.length)];
+  return best.length ? best[Math.floor(Math.random() * best.length)] : -1;
 }
 
 function afterPuzzleMove() {
@@ -1947,13 +1964,18 @@ function afterPuzzleMove() {
   const rep = legalMoves(HAN);
   if (rep.length === 0 && inCheck(HAN)) return puzzleSolved();
   const remain = G.puzzle.left - 1;
-  if (remain <= 0 || !forcedMate(CHO, remain)) return puzzleFailed();
-  G.puzzle.left = remain;
+  if (remain <= 0) return puzzleFailed();
+  if (rep.length === 0) {                     /* 장군이 아닌데 둘 수가 없으면 한수쉼 */
+    G.puzzle.left = remain;
+    return setTimeout(() => doPass(true), 320);
+  }
   G.thinking = true; updateStatus(); updatePanel();
   requestAnimationFrame(() => setTimeout(() => {
+    const reply = stubbornReply(rep, remain);
     G.thinking = false;
-    if (rep.length === 0) { doPass(true); return; }
-    applyMove(stubbornReply(rep, remain));
+    if (reply < 0) return puzzleFailed();     /* 응수 하나라도 빠져나가면 잘못 둔 수 */
+    G.puzzle.left = remain;
+    applyMove(reply);
   }, 320));
 }
 
@@ -2064,8 +2086,7 @@ $('btn-hint').addEventListener('click', () => {
     let mv = -1;
     try {
       if (G.mode === 'puzzle') {
-        const list = matingMoves(CHO, G.puzzle.left);
-        if (list.length) mv = list[0];
+        mv = firstMatingMove(CHO, G.puzzle.left);
       } else {
         const res = await searchBest(G.turn, 'hard');
         if (res) mv = res.move;
