@@ -231,11 +231,11 @@ const APP_HTML = `<!DOCTYPE html>
       linear-gradient(160deg,var(--wood-pc1) 0%, var(--wood-pc2) 100%);
     display:flex; align-items:center; justify-content:center;
     font-family:'Noto Serif KR','Gowun Batang',serif; font-weight:900;
-    font-size:calc(var(--u)*var(--pz)*.58); line-height:1;
+    font-size:calc(var(--u)*var(--pz)*.52); line-height:1;
     filter:drop-shadow(0 calc(var(--u)*.05) calc(var(--u)*.07) rgba(60,32,8,.55));
     transition:left .16s ease, top .16s ease;
   }
-  .pc.ko { font-family:'Noto Sans KR',sans-serif; font-size:calc(var(--u)*var(--pz)*.50); }
+  .pc.ko { font-family:'Noto Sans KR',sans-serif; font-size:calc(var(--u)*var(--pz)*.45); }
   .pc.han { color:var(--han); }
   .pc.cho { color:var(--cho); }
   .pc::after {
@@ -594,8 +594,9 @@ const APP_HTML = `<!DOCTYPE html>
         <h3>🚫 반복수는 반칙</h3>
         <p>질 것 같다고 <b>같은 자리만 오가며 판을 끄는 것은 반칙</b>입니다. 이 게임에서는 두 가지로 잡아냅니다.</p>
         <p>① 똑같은 판 모양이 <b>세 번</b> 나오면, 그렇게 만든 쪽이 집니다.<br>
-           ② 한 기물이 같은 두 점 사이를 <b>세 번 왕복</b>하는 동안 아무 기물도 잡히지 않으면, 그 쪽이 집니다.</p>
-        <p>두 번째 왕복에서 <b>미리 알려 드리니</b> 그때 다른 수를 두면 됩니다. 기물을 잡는 수가 한 번이라도 끼면 판이 움직인 것이므로 세지 않습니다.</p>
+           ② 한 기물이 같은 두 점 사이를 <b>두 번 왕복</b>하는 동안 아무 기물도 잡히지 않으면, 그 쪽이 집니다.</p>
+        <p>반칙이 되기 <b>한 수 전에 미리 알려 드리니</b> 그때 다른 수를 두면 됩니다. 기물을 잡는 수가 한 번이라도 끼면 판이 움직인 것이므로 세지 않습니다.</p>
+        <p><b>장군을 받아 어쩔 수 없이 피한 수는 세지 않습니다.</b> 장군을 연달아 거는 쪽이 있으면, 판 모양을 되풀이하는 쪽은 장군을 건 쪽이므로 ①에 걸립니다.</p>
       </div>
       <div class="rule-card">
         <h3>🏆 이기는 방법 · 점수제</h3>
@@ -1162,11 +1163,18 @@ const PUZZLES = [
   { n: 3, cho: 'K25 R53 P42 H58', han: 'K74 S83' },
   { n: 3, cho: 'K13 R54 P73 J60', han: 'K83 S95 S74' },
   { n: 3, cho: 'K24 R48 P71 J67', han: 'K74' },
+  { n: 3, cho: 'K23 R43 H96 P80', han: 'K95 S85 S83' },
+  { n: 3, cho: 'K05 R62 P71 H43', han: 'K83 S94' },
+  { n: 3, cho: 'K05 R44 P60 J54', han: 'K83' },
 
   /* ── 4수 외통 ── */
   { n: 4, cho: 'K15 R42 H70 P80', han: 'K85 S94 S93' },
   { n: 4, cho: 'K13 R63 H84 P66', han: 'K94 S85' },
-  { n: 4, cho: 'K05 R46 P94 H48', han: 'K75 S73' }
+  { n: 4, cho: 'K05 R46 P94 H48', han: 'K75 S73' },
+  { n: 4, cho: 'K25 R87 J76 J45', han: 'K93 S95 S75' },
+  { n: 4, cho: 'K24 P78 R77 E55', han: 'K93 S83' },
+  { n: 4, cho: 'K24 R68 H54 P86', han: 'K95 S73' },
+  { n: 4, cho: 'K03 R41 H97 P57', han: 'K74 S94' }
 ];
 const PZ_TYPE = { K: T_K, S: T_S, R: T_R, P: T_P, H: T_H, E: T_E, J: T_J };
 function setPuzzleBoard(p) {
@@ -1199,22 +1207,29 @@ function sideScore(side) {
    화면과 떼어 두어 자체 대국으로도 그대로 검증할 수 있게 했다.
    stack 의 각 칸은 { m, cap, turn } 이고 posKeys 는 매 수 뒤의 판 모양 열쇠다.
    ============================================================================ */
-const SHUTTLE_LIMIT = 6;      /* 같은 두 점을 오간 자기 수 여섯 번 = 세 왕복 */
+const SHUTTLE_LIMIT = 4;      /* 같은 두 점을 오간 자기 수 네 번 = 두 왕복 */
 const NOCAP_LIMIT = 120;      /* 이만큼 서로 한 점도 못 잡으면 점수로 가림 */
 
+/* 그 진영이 둔 수만 차례대로.
+   장군을 받아 어쩔 수 없이 둔 수는 -1 로 끊어, 왕복 세기가 이어지지 않게 한다.
+   (장군을 연달아 받으면 궁이 오갈 수밖에 없는데, 그때 쫓기는 쪽이 지면 안 됨.
+    그런 자리는 장군을 건 쪽이 판 모양을 되풀이하므로 ① 동형반복으로 걸린다.) */
 function ownMoveList(stack, side) {
   const out = [];
-  for (const r of stack) if (r.turn === side && r.m !== -1) out.push(r.m);
+  for (const r of stack) if (r.turn === side && r.m !== -1) out.push(r.chk ? -1 : r.m);
   return out;
 }
 /* 마지막 수부터 거슬러 올라가며, 같은 두 점을 오간 수가 몇 번 이어졌는지 */
 function shuttleRun(moves) {
   if (!moves.length) return 0;
   const last = moves[moves.length - 1];
+  if (last < 0) return 0;                    /* 끊김 표시(-1)로 끝나면 셀 것이 없음 */
   const a = (last / 90) | 0, b = last % 90;
   let n = 0;
   for (let i = moves.length - 1; i >= 0; i--) {
-    const f = (moves[i] / 90) | 0, t = moves[i] % 90;
+    const mv = moves[i];
+    if (mv < 0) break;                       /* 장군을 피한 수에서 끊음 */
+    const f = (mv / 90) | 0, t = mv % 90;
     if (!((f === a && t === b) || (f === b && t === a))) break;
     n++;
   }
@@ -1245,6 +1260,7 @@ function wouldLoseByRepeat(m, side, stack, posKeys) {
   unmk(m, cap);
   if (countKey(posKeys, key) >= 2) return true;   /* 이 수를 두면 같은 모양이 세 번째 */
   if (cap) return false;                          /* 잡는 수는 판을 움직이므로 반복이 아님 */
+  if (inCheck(side)) return false;                /* 장군을 피하는 수는 반복으로 세지 않음 */
   const list = ownMoveList(stack, side); list.push(m);
   const run = shuttleRun(list);
   return run >= SHUTTLE_LIMIT && !capturedWithin(stack, run * 2);
@@ -1778,7 +1794,7 @@ function applyMove(m) {
   const f = (m / 90) | 0, t = m % 90;
   const mover = bd[f], cap = bd[t];
   const label = nameOf(mover) + ' ' + coordLabel(f) + '→' + coordLabel(t) + (cap ? ' ×' + nameOf(cap) : '');
-  G.stack.push({ m, cap, turn: G.turn });
+  G.stack.push({ m, cap, turn: G.turn, chk: inCheck(G.turn) });   /* 장군을 받고 둔 수인지 */
   if (cap) G.captured[G.turn].push(cap);
   mk(m);
   G.lastMove = { f, t };
@@ -1793,7 +1809,7 @@ function applyMove(m) {
 }
 
 function doPass(auto) {
-  G.stack.push({ m: -1, cap: 0, turn: G.turn });
+  G.stack.push({ m: -1, cap: 0, turn: G.turn, chk: false });
   pushLog('한수쉼', G.turn);
   G.turn = other(G.turn);
   G.posKeys.push(posKey());
@@ -1833,7 +1849,7 @@ function afterMove() {
   if (foul === 'shuttle') return endGame('shuttle', G.turn, who + '이(가) 같은 자리만 오가며 판을 끌었습니다.');
 
   const run = shuttleRun(ownMoveList(G.stack, mover));
-  if (run >= SHUTTLE_LIMIT - 2 && !capturedWithin(G.stack, run * 2)) {
+  if (run === SHUTTLE_LIMIT - 1 && !capturedWithin(G.stack, run * 2)) {
     toast(who + ' 같은 자리를 되풀이하고 있습니다. 한 번 더 오가면 반칙으로 집니다.');
   }
 
