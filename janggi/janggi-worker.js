@@ -591,9 +591,16 @@ const APP_HTML = `<!DOCTYPE html>
         <p><b>빅장</b>은 두 궁이 사이에 말 없이 마주 보는 자리입니다. 요즘 규칙에서는 그대로 두고, 옛 규칙에서는 무승부로 봅니다(설정에서 선택).</p>
       </div>
       <div class="rule-card">
+        <h3>🚫 반복수는 반칙</h3>
+        <p>질 것 같다고 <b>같은 자리만 오가며 판을 끄는 것은 반칙</b>입니다. 이 게임에서는 두 가지로 잡아냅니다.</p>
+        <p>① 똑같은 판 모양이 <b>세 번</b> 나오면, 그렇게 만든 쪽이 집니다.<br>
+           ② 한 기물이 같은 두 점 사이를 <b>세 번 왕복</b>하는 동안 아무 기물도 잡히지 않으면, 그 쪽이 집니다.</p>
+        <p>두 번째 왕복에서 <b>미리 알려 드리니</b> 그때 다른 수를 두면 됩니다. 기물을 잡는 수가 한 번이라도 끼면 판이 움직인 것이므로 세지 않습니다.</p>
+      </div>
+      <div class="rule-card">
         <h3>🏆 이기는 방법 · 점수제</h3>
-        <p><b>외통</b>이면 바로 승리입니다. 수가 길어져 판가름이 안 나면 <b>남은 기물 점수</b>로 가립니다.</p>
-        <p>초(楚)가 먼저 두므로, 한(漢)에게 <b>1.5점 덤</b>을 줍니다. 같은 자리가 세 번 반복되면 점수로 판정합니다.</p>
+        <p><b>외통</b>이면 바로 승리입니다. 반복수는 <b>반칙패</b>이고, 그 밖에 판가름이 안 나면 <b>남은 기물 점수</b>로 가립니다.</p>
+        <p>초(楚)가 먼저 두므로, 한(漢)에게 <b>1.5점 덤</b>을 줍니다. 오랫동안 서로 한 점도 잡지 못하면 점수로 판정합니다.</p>
         <div class="tbl-wrap">
           <table class="tbl">
             <tr><th>기물</th><th class="n">점수</th><th>기물</th><th class="n">점수</th></tr>
@@ -1186,6 +1193,64 @@ function sideScore(side) {
 }
 
 /* ============================================================================
+   2-2. 반복수(얌생이) 판정
+   장기에서는 같은 자리를 되풀이해 판을 끄는 쪽이 진다.
+   질 듯하다고 한 기물을 같은 두 점 사이에서 왔다 갔다 하면 반칙패로 본다.
+   화면과 떼어 두어 자체 대국으로도 그대로 검증할 수 있게 했다.
+   stack 의 각 칸은 { m, cap, turn } 이고 posKeys 는 매 수 뒤의 판 모양 열쇠다.
+   ============================================================================ */
+const SHUTTLE_LIMIT = 6;      /* 같은 두 점을 오간 자기 수 여섯 번 = 세 왕복 */
+const NOCAP_LIMIT = 120;      /* 이만큼 서로 한 점도 못 잡으면 점수로 가림 */
+
+function ownMoveList(stack, side) {
+  const out = [];
+  for (const r of stack) if (r.turn === side && r.m !== -1) out.push(r.m);
+  return out;
+}
+/* 마지막 수부터 거슬러 올라가며, 같은 두 점을 오간 수가 몇 번 이어졌는지 */
+function shuttleRun(moves) {
+  if (!moves.length) return 0;
+  const last = moves[moves.length - 1];
+  const a = (last / 90) | 0, b = last % 90;
+  let n = 0;
+  for (let i = moves.length - 1; i >= 0; i--) {
+    const f = (moves[i] / 90) | 0, t = moves[i] % 90;
+    if (!((f === a && t === b) || (f === b && t === a))) break;
+    n++;
+  }
+  return n;
+}
+/* 최근 몇 수 안에 기물을 잡은 적이 있는지 — 잡았으면 판이 움직인 것이라 반복이 아님 */
+function capturedWithin(stack, plies) {
+  for (let i = Math.max(0, stack.length - plies); i < stack.length; i++) if (stack[i].cap) return true;
+  return false;
+}
+function countKey(posKeys, key) {
+  let n = 0;
+  for (const k of posKeys) if (k === key) n++;
+  return n;
+}
+/* side 가 방금 둔 뒤, 반복 반칙에 걸렸는지 — 걸렸으면 사유 문자열 */
+function repeatFoul(stack, posKeys, side) {
+  if (countKey(posKeys, posKeys[posKeys.length - 1]) >= 3) return 'same';
+  const run = shuttleRun(ownMoveList(stack, side));
+  if (run >= SHUTTLE_LIMIT && !capturedWithin(stack, run * 2)) return 'shuttle';
+  return '';
+}
+/* side 가 m 을 두면 반복으로 지는가 — 컴퓨터가 그런 수를 피하는 데 씀 */
+function wouldLoseByRepeat(m, side, stack, posKeys) {
+  if (m < 0) return false;
+  const cap = mk(m);
+  const key = h1 + '|' + h2 + '|' + other(side);
+  unmk(m, cap);
+  if (countKey(posKeys, key) >= 2) return true;   /* 이 수를 두면 같은 모양이 세 번째 */
+  if (cap) return false;                          /* 잡는 수는 판을 움직이므로 반복이 아님 */
+  const list = ownMoveList(stack, side); list.push(m);
+  const run = shuttleRun(list);
+  return run >= SHUTTLE_LIMIT && !capturedWithin(stack, run * 2);
+}
+
+/* ============================================================================
    3. 형세 판단(평가 함수)
    ============================================================================ */
 const CEN = [0, 1, 2, 3, 4, 3, 2, 1, 0];      /* 세로줄 중앙성 */
@@ -1390,6 +1455,7 @@ const LEVELS = {
 
 /* 뿌리 탐색: 합법수만 대상으로 점수를 매겨 돌려줌 */
 let yieldNow = null;
+let rootBan = null;      /* 뿌리에서 걸러낼 수를 가려내는 검사기 (반복수 등) */
 async function searchBest(side, level) {
   const cfg = LEVELS[level] || LEVELS.normal;
   const roots = legalMoves(side);
@@ -1410,7 +1476,13 @@ async function searchBest(side, level) {
   curStamp = (curStamp % 100) + 1;
   history.fill(0); killers.fill(0);
 
-  const scored = roots.map(m => ({ m, s: -INF }));
+  let scored = roots.map(m => ({ m, s: -INF }));
+  /* 반복이 반칙패이므로, 반복이 되는 수는 아예 후보에서 뺀다.
+     (그런 수밖에 없을 때만 그대로 둔다) */
+  if (rootBan) {
+    const keep = scored.filter(x => !rootBan(x.m));
+    if (keep.length) scored = keep;
+  }
   let doneDepth = 0, lastGood = null;
 
   /* 뿌리에서는 창을 좁히지 않는다.
@@ -1732,12 +1804,7 @@ function doPass(auto) {
   afterMove();
 }
 
-function repeatCount() {
-  const k = G.posKeys[G.posKeys.length - 1];
-  let n = 0;
-  for (const x of G.posKeys) if (x === k) n++;
-  return n;
-}
+/* 반복수 판정은 엔진 쪽(4-2)에 있음 */
 
 function afterMove() {
   if (G.mode === 'puzzle') return afterPuzzleMove();
@@ -1757,7 +1824,22 @@ function afterMove() {
     return setTimeout(() => doPass(true), 500);
   }
   if (chk) sndChk();
-  if (repeatCount() >= 3) return endGame('repeat', null, '같은 자리가 세 번 되풀이되어 점수로 가립니다.');
+
+  /* 반복수는 반칙 — 같은 자리를 되풀이한 쪽이 진다 */
+  const mover = other(G.turn);
+  const foul = repeatFoul(G.stack, G.posKeys, mover);
+  const who = sideKo(mover) + '(' + sideHanja(mover) + ')';
+  if (foul === 'same') return endGame('repeat', G.turn, who + '이(가) 같은 판 모양을 세 번 되풀이했습니다.');
+  if (foul === 'shuttle') return endGame('shuttle', G.turn, who + '이(가) 같은 자리만 오가며 판을 끌었습니다.');
+
+  const run = shuttleRun(ownMoveList(G.stack, mover));
+  if (run >= SHUTTLE_LIMIT - 2 && !capturedWithin(G.stack, run * 2)) {
+    toast(who + ' 같은 자리를 되풀이하고 있습니다. 한 번 더 오가면 반칙으로 집니다.');
+  }
+
+  if (G.stack.length >= NOCAP_LIMIT && !capturedWithin(G.stack, NOCAP_LIMIT)) {
+    return endGame('score', null, '오랫동안 서로 한 점도 잡지 못해 점수로 가립니다.');
+  }
   if (G.stack.length >= 400) return endGame('score', null, '수가 너무 길어져 점수로 가립니다.');
 
   if (G.mode === 'ai' && G.turn !== G.humanSide) setTimeout(aiTurn, 220);
@@ -2155,6 +2237,8 @@ $('setup-board').addEventListener('click', ev => {
   S[key] = setupByWings(l, r).id;
   if (who === 'opp') S.oppRandom = false;
   saveSettings(); renderSetupBoard();
+/* 컴퓨터가 반복수를 아예 고르지 않도록 */
+rootBan = m => (G.mode !== 'puzzle' && !G.over && wouldLoseByRepeat(m, G.turn, G.stack, G.posKeys));
 });
 $('opt-opp-random').addEventListener('change', e => {
   S.oppRandom = e.target.checked; saveSettings(); renderSetupBoard();
