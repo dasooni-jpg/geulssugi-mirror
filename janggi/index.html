@@ -197,8 +197,9 @@
     overflow:hidden;
   }
   #grid-svg { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:1; }
-  #layer-mark, #layer-pieces, #layer-cells { position:absolute; inset:0; }
+  #layer-mark, #layer-pieces, #layer-cells, #layer-arrow { position:absolute; inset:0; }
   #layer-mark { z-index:2; pointer-events:none; }
+  #layer-arrow { z-index:5; pointer-events:none; width:100%; height:100%; }
   #layer-pieces { z-index:3; pointer-events:none; }
   #layer-cells { z-index:4; }
 
@@ -240,8 +241,24 @@
     background:rgba(24,110,72,.62); box-shadow:0 0 calc(var(--u)*.12) rgba(24,110,72,.55); }
   .mk.cap { width:calc(var(--u)*1.02); height:calc(var(--u)*1.02); border-radius:50%;
     border:calc(var(--u)*.07) solid rgba(192,57,43,.72); background:transparent; }
-  .mk.last { width:calc(var(--u)*.96); height:calc(var(--u)*.96); border-radius:5px;
-    background:rgba(220,180,99,.28); box-shadow:inset 0 0 0 2px rgba(220,180,99,.75); }
+  /* 방금 둔 수 — 떠난 자리와 놓인 자리를 다르게 보여 줌 */
+  .mk.lastfrom {
+    width:calc(var(--u)*.74); height:calc(var(--u)*.74); border-radius:50%;
+    border:calc(var(--u)*.055) dashed rgba(120,72,20,.85);
+    background:rgba(120,72,20,.14);
+  }
+  .mk.lastto {
+    width:calc(var(--u)*1.24); height:calc(var(--u)*1.24); border-radius:50%;
+    border:calc(var(--u)*.085) solid #ff9d2e;
+    box-shadow:0 0 0 calc(var(--u)*.03) rgba(60,30,0,.55),
+               0 0 calc(var(--u)*.30) rgba(255,157,46,.85);
+    animation:landpulse 1.6s ease-out 1;
+  }
+  @keyframes landpulse {
+    0%   { transform:translate(-50%,-50%) scale(1.5); opacity:0; }
+    35%  { transform:translate(-50%,-50%) scale(1);   opacity:1; }
+    100% { transform:translate(-50%,-50%) scale(1);   opacity:1; }
+  }
   .mk.checkmk { width:calc(var(--u)*1.14); height:calc(var(--u)*1.14); border-radius:50%;
     border:calc(var(--u)*.07) solid var(--han); animation:pulse2 .9s infinite; }
   @keyframes pulse2 { 0%,100%{opacity:.45; transform:translate(-50%,-50%) scale(.94);} 50%{opacity:1; transform:translate(-50%,-50%) scale(1.06);} }
@@ -399,8 +416,8 @@
         <span class="md">기물별 움직임 · 점수제 · 빅장 · 기보 읽는 법</span>
       </button>
       <button class="menu-btn" data-go="stats">
-        <span class="mi">🏅</span><span class="mt">내 전적</span>
-        <span class="md">난이도별 승 · 무 · 패 기록</span>
+        <span class="mi">🏅</span><span class="mt">내 전적 · 학습</span>
+        <span class="md">난이도별 승 · 무 · 패와, 컴퓨터가 배운 것</span>
       </button>
     </div>
     <div class="footer-note">
@@ -452,6 +469,7 @@
       <div class="toggle-row"><input type="checkbox" id="opt-korean"><label for="opt-korean">기물을 한글로 표시 (궁·사·차·포·마·상·졸)</label></div>
       <div class="toggle-row"><input type="checkbox" id="opt-bikjang"><label for="opt-bikjang">빅장(양 궁이 마주 봄)을 무승부로 처리 — 옛 규칙</label></div>
       <div class="toggle-row"><input type="checkbox" id="opt-sound" checked><label for="opt-sound">말 놓는 소리 켜기</label></div>
+      <div class="toggle-row"><input type="checkbox" id="opt-learn" checked><label for="opt-learn">둔 대국에서 배우기 — 컴퓨터가 지난 판을 기억해 초반 수를 고칩니다</label></div>
 
       <div style="text-align:center; margin-top:22px;"><button class="btn" id="ai-start-btn">대국 시작</button></div>
     </div>
@@ -489,6 +507,7 @@
         <div id="board">
           <svg id="grid-svg" viewBox="0 0 924 1024" aria-hidden="true"></svg>
           <div id="layer-mark"></div>
+          <svg id="layer-arrow" viewBox="0 0 924 1024" aria-hidden="true"></svg>
           <div id="layer-pieces"></div>
           <div id="layer-cells"></div>
         </div>
@@ -574,16 +593,14 @@
         <p><b>빅장</b>은 두 궁이 사이에 말 없이 마주 보는 자리입니다. 요즘 규칙에서는 그대로 두고, 옛 규칙에서는 무승부로 봅니다(설정에서 선택).</p>
       </div>
       <div class="rule-card">
-        <h3>🚫 반복수는 반칙</h3>
-        <p>질 것 같다고 <b>같은 자리만 오가며 판을 끄는 것은 반칙</b>입니다. 이 게임에서는 두 가지로 잡아냅니다.</p>
-        <p>① 똑같은 판 모양이 <b>세 번</b> 나오면, 그렇게 만든 쪽이 집니다.<br>
-           ② 한 기물이 같은 두 점 사이를 <b>두 번 왕복</b>하는 동안 아무 기물도 잡히지 않으면, 그 쪽이 집니다.</p>
-        <p>반칙이 되기 <b>한 수 전에 미리 알려 드리니</b> 그때 다른 수를 두면 됩니다. 기물을 잡는 수가 한 번이라도 끼면 판이 움직인 것이므로 세지 않습니다.</p>
-        <p><b>장군을 받아 어쩔 수 없이 피한 수는 세지 않습니다.</b> 장군을 연달아 거는 쪽이 있으면, 판 모양을 되풀이하는 쪽은 장군을 건 쪽이므로 ①에 걸립니다.</p>
+        <h3>🔁 같은 자리 되풀이</h3>
+        <p>같은 자리를 여러 번 오가도 <b>벌칙은 없습니다.</b> 마음 놓고 두셔도 됩니다.</p>
+        <p>같은 판 모양이 여러 번 나와도 판을 끊지 않습니다. 다만 서로 <b>한 점도 잡지 못한 채 100수</b>가 지나면, 판이 더 나아가지 않는 것으로 보고 남은 기물 점수로 가립니다.</p>
+        <p>컴퓨터는 <b>뜻 없이 같은 자리를 오가지 않도록</b> 되어 있어, 질 것 같다고 판을 끄는 일은 없습니다.</p>
       </div>
       <div class="rule-card">
         <h3>🏆 이기는 방법 · 점수제</h3>
-        <p><b>외통</b>이면 바로 승리입니다. 반복수는 <b>반칙패</b>이고, 그 밖에 판가름이 안 나면 <b>남은 기물 점수</b>로 가립니다.</p>
+        <p><b>외통</b>이면 바로 승리입니다. 그 밖에 판가름이 안 나면 <b>남은 기물 점수</b>로 가립니다.</p>
         <p>초(楚)가 먼저 두므로, 한(漢)에게 <b>1.5점 덤</b>을 줍니다. 오랫동안 서로 한 점도 잡지 못하면 점수로 판정합니다.</p>
         <div class="tbl-wrap">
           <table class="tbl">
@@ -632,6 +649,21 @@
       <div class="section-label first">난이도별 기록</div>
       <div class="tbl-wrap"><table class="tbl" id="stats-table"></table></div>
       <div style="text-align:center; margin-top:18px;"><button class="btn ghost" id="btn-reset-stats">기록 지우기</button></div>
+    </div>
+
+    <div class="card" style="max-width:620px; margin:18px auto 0;">
+      <div class="section-label first">📖 컴퓨터가 배운 것</div>
+      <p class="hint-line" style="margin-top:0;">
+        대국이 끝날 때마다 <b>컴퓨터가 두었던 초반 서른 수</b>를 자리별 승·무·패로 적어 둡니다.
+        다음에 같은 자리를 만나면 그 성적을 보고 수를 고칩니다. 전에 졌던 수는 덜 두고, 이겼던 수는 더 둡니다.
+        기보에 <b>📖</b> 가 붙은 수가 장부를 참고한 수입니다.
+      </p>
+      <div id="book-summary"></div>
+      <p class="hint-line">
+        같은 자리를 <b>두 판 이상</b> 겪어야 반영되고, 최선수와 차이가 큰 수까지 억지로 두지는 않습니다.
+        기록은 이 기기의 브라우저 안에만 남고 어디로도 보내지 않습니다.
+      </p>
+      <div style="text-align:center; margin-top:14px;"><button class="btn ghost" id="btn-reset-book">배운 것 지우기</button></div>
     </div>
   </section>
 </div>
@@ -1202,8 +1234,10 @@ function sideScore(side) {
    화면과 떼어 두어 자체 대국으로도 그대로 검증할 수 있게 했다.
    stack 의 각 칸은 { m, cap, turn } 이고 posKeys 는 매 수 뒤의 판 모양 열쇠다.
    ============================================================================ */
-const SHUTTLE_LIMIT = 4;      /* 같은 두 점을 오간 자기 수 네 번 = 두 왕복 */
-const NOCAP_LIMIT = 120;      /* 이만큼 서로 한 점도 못 잡으면 점수로 가림 */
+/* 같은 자리를 오가도 벌칙은 없다. 아래 값은 컴퓨터가 뜻 없이 왔다 갔다 하지
+   않도록 스스로 피하는 데에만 쓴다(사람에게는 아무 불이익이 없음). */
+const SHUTTLE_LIMIT = 4;      /* 컴퓨터가 피하기 시작하는 왕복 횟수 */
+const NOCAP_LIMIT = 100;      /* 이만큼 서로 한 점도 못 잡으면 점수로 가림 */
 
 /* 그 진영이 둔 수만 차례대로.
    장군을 받아 어쩔 수 없이 둔 수는 -1 로 끊어, 왕복 세기가 이어지지 않게 한다.
@@ -1240,15 +1274,8 @@ function countKey(posKeys, key) {
   for (const k of posKeys) if (k === key) n++;
   return n;
 }
-/* side 가 방금 둔 뒤, 반복 반칙에 걸렸는지 — 걸렸으면 사유 문자열 */
-function repeatFoul(stack, posKeys, side) {
-  if (countKey(posKeys, posKeys[posKeys.length - 1]) >= 3) return 'same';
-  const run = shuttleRun(ownMoveList(stack, side));
-  if (run >= SHUTTLE_LIMIT && !capturedWithin(stack, run * 2)) return 'shuttle';
-  return '';
-}
-/* side 가 m 을 두면 반복으로 지는가 — 컴퓨터가 그런 수를 피하는 데 씀 */
-function wouldLoseByRepeat(m, side, stack, posKeys) {
+/* 이 수가 '뜻 없는 되풀이'인가 — 컴퓨터가 그런 수를 피하는 데에만 씀 */
+function isPointlessRepeat(m, side, stack, posKeys) {
   if (m < 0) return false;
   const cap = mk(m);
   const key = h1 + '|' + h2 + '|' + other(side);
@@ -1466,7 +1493,9 @@ const LEVELS = {
 
 /* 뿌리 탐색: 합법수만 대상으로 점수를 매겨 돌려줌 */
 let yieldNow = null;
-let rootBan = null;      /* 뿌리에서 걸러낼 수를 가려내는 검사기 (반복수 등) */
+let rootBan = null;      /* 뿌리에서 걸러낼 수를 가려내는 검사기 (뜻 없는 되풀이 등) */
+let bookBonus = null;    /* 지난 대국에서 배운 점수 보정 (수 → 가감점) */
+const BOOK_WINDOW = 45;  /* 최선수와 이만큼 안쪽인 수들 사이에서만 배운 것을 반영 */
 async function searchBest(side, level) {
   const cfg = LEVELS[level] || LEVELS.normal;
   const roots = legalMoves(side);
@@ -1528,6 +1557,17 @@ async function searchBest(side, level) {
   const list = (lastGood && lastGood.length) ? lastGood.slice() : scored.map(x => ({ m: x.m, s: 0 }));
   list.sort((a, b) => b.s - a.s);
 
+  /* 지난 대국에서 배운 것 반영 —
+     최선수와 큰 차이가 없는 수들 사이에서만 손질한다. 배운 것 때문에
+     기물을 그냥 내주는 일이 없도록 창을 좁게 둔다. */
+  if (bookBonus && list.length > 1) {
+    const top = list[0].s;
+    for (const it of list) {
+      if (it.s >= top - BOOK_WINDOW) it.s += bookBonus(it.m);
+    }
+    list.sort((a, b) => b.s - a.s);
+  }
+
   /* 난이도에 따른 흔들림 */
   if (cfg.blunder > 0 && Math.random() < cfg.blunder) {
     const pick = list[Math.floor(Math.random() * list.length)];
@@ -1555,7 +1595,7 @@ function pctY(r) { return ((PAD + r * CELL) / VH) * 100; }
 const SKEY = 'daram-janggi-v1';
 const S = {
   level: 'normal', side: 'han', setup: 'gwima_l', oppSetup: 'gwima_r', oppRandom: false,
-  korean: false, bikjang: false, sound: true
+  korean: false, bikjang: false, sound: true, learn: true
 };
 function loadSettings() {
   try {
@@ -1691,17 +1731,42 @@ function renderPieces() {
   layPieces.innerHTML = html;
 }
 
+/* 판 좌표(0~8, 0~9)를 SVG 눈금으로 */
+const svgX = c => PAD + c * CELL;
+const svgY = r => PAD + r * CELL;
+
 function renderMarks() {
   let html = '';
   const mk = (sq, cls) => {
     const [r, c] = dispRC(sq);
     html += `<div class="mk ${cls}" style="left:${pctX(c)}%; top:${pctY(r)}%"></div>`;
   };
-  if (G.lastMove) { mk(G.lastMove.f, 'last'); mk(G.lastMove.t, 'last'); }
+  if (G.lastMove) { mk(G.lastMove.f, 'lastfrom'); mk(G.lastMove.t, 'lastto'); }
   if (G.hint) { mk(G.hint.f, 'hint'); mk(G.hint.t, 'hint'); }
   for (const m of G.selMoves) mk(m % 90, bd[m % 90] ? 'cap' : 'dot');
   if (!G.over && inCheck(G.turn)) mk(kpos[kIdx(G.turn)], 'checkmk');
   layMark.innerHTML = html;
+  renderArrow();
+}
+
+/* 떠난 자리 → 놓인 자리로 화살표를 그림. 말에 가리지 않게 양끝을 잘라 둠. */
+function renderArrow() {
+  const svg = $('layer-arrow');
+  if (!G.lastMove) { svg.innerHTML = ''; return; }
+  const [fr, fc] = dispRC(G.lastMove.f), [tr, tc] = dispRC(G.lastMove.t);
+  const x1 = svgX(fc), y1 = svgY(fr), x2 = svgX(tc), y2 = svgY(tr);
+  const dx = x2 - x1, dy = y2 - y1;
+  const len = Math.hypot(dx, dy) || 1;
+  const ux = dx / len, uy = dy / len;
+  const cut1 = 40, cut2 = 66;                      /* 말 지름의 절반쯤 비워 둠 */
+  if (len <= cut1 + cut2 + 12) { svg.innerHTML = ''; return; }   /* 한 칸 이동이면 화살표 생략 */
+  const ax1 = x1 + ux * cut1, ay1 = y1 + uy * cut1;
+  const ax2 = x2 - ux * cut2, ay2 = y2 - uy * cut2;
+  svg.innerHTML =
+    `<defs><marker id="arrowhead" markerWidth="4" markerHeight="4" refX="2.6" refY="2" orient="auto">` +
+    `<polygon points="0 0, 4 2, 0 4" fill="#ff9d2e"/></marker></defs>` +
+    `<line x1="${ax1}" y1="${ay1}" x2="${ax2}" y2="${ay2}" stroke="rgba(60,30,0,.5)" stroke-width="18" stroke-linecap="round"/>` +
+    `<line x1="${ax1}" y1="${ay1}" x2="${ax2}" y2="${ay2}" stroke="#ff9d2e" stroke-width="11" stroke-linecap="round" marker-end="url(#arrowhead)"/>`;
 }
 
 function renderAll() { renderPieces(); renderMarks(); updatePanel(); }
@@ -1785,10 +1850,10 @@ function renderLog() {
    ============================================================================ */
 function posKey() { return h1 + '|' + h2 + '|' + G.turn; }
 
-function applyMove(m) {
+function applyMove(m, tag) {
   const f = (m / 90) | 0, t = m % 90;
   const mover = bd[f], cap = bd[t];
-  const label = nameOf(mover) + ' ' + coordLabel(f) + '→' + coordLabel(t) + (cap ? ' ×' + nameOf(cap) : '');
+  const label = nameOf(mover) + ' ' + coordLabel(f) + '→' + coordLabel(t) + (cap ? ' ×' + nameOf(cap) : '') + (tag || '');
   G.stack.push({ m, cap, turn: G.turn, chk: inCheck(G.turn) });   /* 장군을 받고 둔 수인지 */
   if (cap) G.captured[G.turn].push(cap);
   mk(m);
@@ -1836,18 +1901,8 @@ function afterMove() {
   }
   if (chk) sndChk();
 
-  /* 반복수는 반칙 — 같은 자리를 되풀이한 쪽이 진다 */
-  const mover = other(G.turn);
-  const foul = repeatFoul(G.stack, G.posKeys, mover);
-  const who = sideKo(mover) + '(' + sideHanja(mover) + ')';
-  if (foul === 'same') return endGame('repeat', G.turn, who + '이(가) 같은 판 모양을 세 번 되풀이했습니다.');
-  if (foul === 'shuttle') return endGame('shuttle', G.turn, who + '이(가) 같은 자리만 오가며 판을 끌었습니다.');
-
-  const run = shuttleRun(ownMoveList(G.stack, mover));
-  if (run === SHUTTLE_LIMIT - 1 && !capturedWithin(G.stack, run * 2)) {
-    toast(who + ' 같은 자리를 되풀이하고 있습니다. 한 번 더 오가면 반칙으로 집니다.');
-  }
-
+  /* 같은 자리를 오가는 데에는 아무 벌칙도, 판을 끊는 일도 없다.
+     한 점도 잡히지 않은 채 아주 오래 끌 때에만 점수로 가린다. */
   if (G.stack.length >= NOCAP_LIMIT && !capturedWithin(G.stack, NOCAP_LIMIT)) {
     return endGame('score', null, '오랫동안 서로 한 점도 잡지 못해 점수로 가립니다.');
   }
@@ -1867,8 +1922,83 @@ function aiTurn() {
     G.thinking = false;
     if (G.over) { updateStatus(); updatePanel(); return; }   /* 생각하는 사이에 판이 끝났으면 */
     if (!res || res.move === -1) { doPass(true); return; }
-    applyMove(res.move);
+    /* 장부에 적힌 적이 있는 수면 기보에 표시 */
+    const known = (G.mode === 'ai' && S.learn && bookDelta(posKey(), res.move) !== 0) ? ' 📖' : '';
+    applyMove(res.move, known);
   }, 30));
+}
+
+/* ============================================================================
+   6-1. 대국에서 배우기 (학습 장부)
+   ----------------------------------------------------------------------------
+   대국이 끝나면, 그 판에서 컴퓨터가 두었던 수를 자리마다 승·무·패로 적어 둔다.
+   다음에 같은 자리를 만나면 그 성적을 보고 수를 고른다.
+   즉 "전에 이 자리에서 이렇게 두었다가 졌으니 다른 수를 보자"를 익히는 것이다.
+   신경망 같은 것이 아니라 제 대국 기록으로 만드는 정석책(오프닝 북)이다.
+   기록은 이 기기의 브라우저 안에만 남고 어디로도 보내지 않는다.
+   ============================================================================ */
+const BOOKKEY = 'daram-janggi-book-v1';
+const BOOK_PLIES = 30;        /* 초반 서른 수까지만 적어 둠 */
+const BOOK_MAX = 4000;        /* 저장소가 넘치지 않게 자리 수 상한 */
+const BOOK_MIN_N = 2;         /* 두 판 이상 겪은 자리부터 반영 */
+
+let BOOK = null;              /* { games, wins, draws, losses, pos: { 자리: { 수: [승,무,패] } } } */
+function loadBook() {
+  if (BOOK) return BOOK;
+  try {
+    const raw = localStorage.getItem(BOOKKEY);
+    BOOK = raw ? JSON.parse(raw) : null;
+  } catch (e) { BOOK = null; }
+  if (!BOOK || !BOOK.pos) BOOK = { games: 0, wins: 0, draws: 0, losses: 0, pos: {} };
+  return BOOK;
+}
+function saveBook() {
+  try { localStorage.setItem(BOOKKEY, JSON.stringify(BOOK)); } catch (e) { /* 저장 못 해도 대국은 계속됨 */ }
+}
+function bookSize() { return Object.keys(loadBook().pos).length; }
+
+/* 자리마다 적힌 성적을 점수 가감으로 바꿈.
+   이겼던 수는 올리고 졌던 수는 내린다. 겪은 판이 적으면 조금만 움직인다. */
+function bookDelta(key, mv) {
+  const rec = loadBook().pos[key];
+  if (!rec) return 0;
+  const e = rec[mv];
+  if (!e) return 0;
+  const [w, d, l] = e, n = w + d + l;
+  if (n < BOOK_MIN_N) return 0;
+  return Math.round(40 * (w - l) / (n + 1));      /* 최대 ±40 (점수제 4점어치) */
+}
+
+/* 대국이 끝나면 그 판을 장부에 적음. res: 'w' | 'd' | 'l' (컴퓨터 기준) */
+function learnFromGame(aiSide, res) {
+  if (!S.learn || G.mode !== 'ai') return;
+  const bk = loadBook();
+  bk.games++;
+  if (res === 'w') bk.wins++; else if (res === 'd') bk.draws++; else bk.losses++;
+  const slot = res === 'w' ? 0 : (res === 'd' ? 1 : 2);
+  let added = 0;
+  for (let i = 0; i < G.stack.length && i < BOOK_PLIES; i++) {
+    const r = G.stack[i];
+    if (r.turn !== aiSide || r.m === -1) continue;
+    const key = G.posKeys[i];                       /* 그 수를 두기 직전의 자리 */
+    if (!key) continue;
+    let rec = bk.pos[key];
+    if (!rec) {
+      if (bookSize() >= BOOK_MAX) continue;         /* 상한을 넘으면 새 자리는 적지 않음 */
+      rec = bk.pos[key] = {}; added++;
+    }
+    const e = rec[r.m] || (rec[r.m] = [0, 0, 0]);
+    e[slot]++;
+  }
+  void added;
+  saveBook();
+}
+
+/* 탐색이 쓸 보정 함수를 대국 시작 때 걸어 둔다 */
+function hookBook() {
+  bookBonus = (G.mode === 'ai' && S.learn)
+    ? (mv => bookDelta(posKey(), mv))
+    : null;
 }
 
 /* ============================================================================
@@ -1934,6 +2064,7 @@ function startPuzzle(i) {
   G.thinking = false; G.noMoveStreak = 0;
   G.names[CHO] = '나 (초)'; G.names[HAN] = '수비 (컴퓨터)';
   $('game-title').textContent = `🧩 묘수풀이 ${i + 1}번 · ${p.n}수 외통`;
+  hookBook();
   show('game');
   positionCells(); renderLog(); renderAll(); updateStatus(); syncUnit();
   toast(p.n + '수 안에 외통을 만드세요.');
@@ -2035,6 +2166,8 @@ function endGame(reason, winner, detail) {
   if (G.mode === 'ai') {
     const r = w === null ? 'd' : (w === G.humanSide ? 'w' : 'l');
     saveStat(G.level, r);
+    /* 컴퓨터 기준으로 뒤집어 장부에 적음 */
+    learnFromGame(other(G.humanSide), r === 'w' ? 'l' : (r === 'l' ? 'w' : 'd'));
   }
   setModalButtons();
   updateStatus(); updatePanel(); renderMarks();
@@ -2258,14 +2391,31 @@ $('setup-board').addEventListener('click', ev => {
   if (who === 'opp') S.oppRandom = false;
   saveSettings(); renderSetupBoard();
 /* 컴퓨터가 반복수를 아예 고르지 않도록 */
-rootBan = m => (G.mode !== 'puzzle' && !G.over && wouldLoseByRepeat(m, G.turn, G.stack, G.posKeys));
+rootBan = m => (G.mode !== 'puzzle' && !G.over && isPointlessRepeat(m, G.turn, G.stack, G.posKeys));
 });
 $('opt-opp-random').addEventListener('change', e => {
   S.oppRandom = e.target.checked; saveSettings(); renderSetupBoard();
 });
 
 /* --- 전적 --- */
+function renderBookSummary() {
+  const bk = loadBook();
+  const n = bookSize();
+  const tiles = [
+    ['배운 대국', bk.games], ['익힌 자리', n],
+    ['컴퓨터 승', bk.wins], ['무', bk.draws], ['컴퓨터 패', bk.losses]
+  ];
+  $('book-summary').innerHTML =
+    '<div id="stats-summary" style="margin:12px 0 4px;">' +
+    tiles.map(([k, v]) => `<div class="stat-tile"><div class="sv">${v}</div><div class="sl">${k}</div></div>`).join('') +
+    '</div>' +
+    (bk.games === 0
+      ? '<p class="hint-line" style="text-align:center;">아직 배운 대국이 없습니다. 컴퓨터와 한 판 두고 나면 쌓이기 시작합니다.</p>'
+      : (n === 0 ? '<p class="hint-line" style="text-align:center;">적어 둔 자리가 없습니다.</p>' : ''));
+}
+
 function renderStats() {
+  renderBookSummary();
   const st = loadStats();
   let w = 0, d = 0, l = 0;
   for (const k in st) { w += st[k].w || 0; d += st[k].d || 0; l += st[k].l || 0; }
@@ -2281,6 +2431,12 @@ function renderStats() {
   }
   $('stats-table').innerHTML = rows;
 }
+$('btn-reset-book').addEventListener('click', () => {
+  askConfirm('배운 것을 지우시겠습니까?', '컴퓨터가 지금까지 익힌 자리 기록이 모두 사라집니다.', () => {
+    try { localStorage.removeItem(BOOKKEY); } catch (e) {}
+    BOOK = null; renderBookSummary(); toast('배운 것을 지웠습니다.');
+  });
+});
 $('btn-reset-stats').addEventListener('click', () => {
   askConfirm('기록을 지우시겠습니까?', '승·무·패 기록이 모두 사라집니다.', () => {
     try { localStorage.removeItem(STATKEY); } catch (e) {}
@@ -2329,6 +2485,7 @@ function startGame(mode) {
     ? LEVELS[G.level].icon + ' ' + LEVELS[G.level].name + ' · 컴퓨터와 대국'
     : '👥 둘이서 대국';
 
+  hookBook();
   show('game');
   positionCells(); renderLog(); renderAll(); updateStatus(); syncUnit();
 
@@ -2355,9 +2512,11 @@ renderSetupBoard();
 $('opt-korean').checked = S.korean;
 $('opt-bikjang').checked = S.bikjang;
 $('opt-sound').checked = S.sound;
+$('opt-learn').checked = S.learn !== false;
 $('opt-korean').addEventListener('change', e => { S.korean = e.target.checked; saveSettings(); renderPieces(); });
 $('opt-bikjang').addEventListener('change', e => { S.bikjang = e.target.checked; saveSettings(); });
 $('opt-sound').addEventListener('change', e => { S.sound = e.target.checked; saveSettings(); });
+$('opt-learn').addEventListener('change', e => { S.learn = e.target.checked; saveSettings(); hookBook(); });
 
 $('ai-start-btn').addEventListener('click', () => startGame('ai'));
 $('pvp-start-btn').addEventListener('click', () => startGame('pvp'));
