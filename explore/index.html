@@ -143,7 +143,36 @@ canvas#game.dragging{cursor:grabbing}
 .reward{display:flex;gap:10px;align-items:center;font-size:14px;color:#7a4a28}
 .reward img{width:22px;height:22px;object-fit:contain;vertical-align:middle}
 
+/* 생산·건물 창 */
+.prodhead{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:14px}
+.slots{display:flex;gap:10px;flex-wrap:wrap}
+.slot{width:86px;height:96px;border-radius:14px;background:#fff;border:2px solid var(--paper-d);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:2px;font-size:12px;color:#7a4a28;position:relative}
+.slot img{width:52px;height:52px;object-fit:contain}
+.slot.ready{border-color:#3fae2a;background:#effbe6;animation:readyglow 1.2s ease-in-out infinite alternate}
+@keyframes readyglow{to{box-shadow:0 0 0 4px rgba(95,209,58,.35)}}
+.empty-slot{color:#c9b08a;border-style:dashed}
+.sbar{display:block;width:70px;height:7px;border-radius:4px;background:#eadbc2;overflow:hidden}
+.sbar b{display:block;height:100%;background:linear-gradient(90deg,#8fd14f,#3fae2a)}
+.prodbtns{display:flex;flex-direction:column;gap:8px}
+.bldtop{display:flex;gap:16px;align-items:center}
+.bldimg{width:130px;height:120px;object-fit:contain;filter:drop-shadow(0 3px 2px rgba(0,0,0,.25))}
+.stars{font-size:26px;letter-spacing:2px;color:#e2d2b4}
+.stars .on{color:#ffc21a;text-shadow:0 2px 0 #c98800}
+.fxnow,.fxnext{margin:6px 0;font-size:15px}
+.subh{margin:14px 0 6px;color:var(--wood-d);font-size:17px}
+.chnav{position:absolute;top:1.5%;display:flex;gap:8px;z-index:2}
+.chnav.l{left:2%}.chnav.r{right:2%}
+.chbtn{width:46px;height:46px;border-radius:50%;background:linear-gradient(#f5d9a6,#dcae6a);border:2px solid #9a6a33;
+  font-size:22px;color:#5a3510;display:grid;place-items:center}
+.chbtn:disabled{opacity:.35}
+.scroll.ch2{background:
+    radial-gradient(ellipse at 50% 60%,rgba(80,170,210,.28),transparent 65%),
+    repeating-radial-gradient(circle at 40% 50%,rgba(150,110,60,.06) 0 3px,transparent 3px 14px),
+    linear-gradient(#f6e6c4,#ecd3a3)}
 /* 월드맵 */
+.chlock{position:absolute;left:50%;bottom:4%;transform:translateX(-50%);background:rgba(90,53,16,.88);color:#fff;
+  padding:8px 16px;border-radius:12px;font-size:clamp(12px,1.6vw,16px);white-space:nowrap}
 .worldmap{position:fixed;inset:0;z-index:40;display:grid;place-items:center;background:rgba(20,24,40,.6);padding:10px}
 .scroll{position:relative;width:min(1100px,100%);aspect-ratio:16/8.4;max-height:calc(100vh - 20px);border-radius:10px;
   background:
@@ -272,6 +301,9 @@ const CONFIG = {
   runesPerRegion: 3,
   chestsPerRegion: 5,
   mapSize: 22,
+  prodSpeed: 1,           // 요리·제작 시간 배율(0.5면 두 배 빠름)
+  chapter2Level: 10,      // 2장 지도가 열리는 레벨
+  buildingMaxLevel: 5,
 };
 const SAVE_KEY = 'daram-explore-v1';
 
@@ -285,8 +317,20 @@ const ITEMS = {
   coal:    {name:'석탄',     img:'i_coal',  tab:'res',  value:12},
   ore:     {name:'철광석',   img:'i_ore',   tab:'res',  value:16},
   ice:     {name:'얼음',     img:'i_ice',   tab:'res',  value:10},
+  coconut: {name:'코코넛',   img:'i_coconut', tab:'food', value:8, eat:4},
+  shell:   {name:'조개껍데기',img:'i_shell', tab:'res',  value:9},
+  mushroom:{name:'보라 버섯', img:'i_mushroom', tab:'res', value:8},
+  reed:    {name:'갈대',     img:'i_reed',  tab:'res',  value:5},
+  sandstone:{name:'사암 벽돌',img:'i_sandstone', tab:'res', value:9},
+  gold:    {name:'금덩이',   img:'i_gold',  tab:'res',  value:30},
+  obsidian:{name:'흑요석',   img:'i_obsidian', tab:'res', value:22},
+  fire:    {name:'불꽃 수정', img:'firecrystal', tab:'res', value:26},
+  plank:   {name:'판자',     img:'i_plank', tab:'craft', value:22},
+  ironbar: {name:'철 주괴',  img:'i_ironbar', tab:'craft', value:50},
   porridge:{name:'베리 죽',  img:'i_porridge', tab:'food', eat:14},
   pie:     {name:'베리 파이',img:'i_pie',   tab:'food', eat:32},
+  soup:    {name:'버섯 수프',img:'i_soup',  tab:'food', eat:26},
+  pudding: {name:'코코넛 푸딩',img:'i_pudding', tab:'food', eat:45},
   rune:    {name:'룬 석판',  img:'rune',    tab:'treasure'},
 };
 
@@ -304,13 +348,27 @@ const OBJS = {
   coalrock: {name:'석탄 바위',   img:'coalrock', cost:7, drops:{coal:3,stone:1},w:.9,  fx:'#333'},
   orerock:  {name:'철광석 바위', img:'orerock',  cost:8, drops:{ore:2,stone:1}, w:.9,  fx:'#b4572a'},
   icerock:  {name:'얼음 결정',   img:'icerock',  cost:5, drops:{ice:3},         w:.85, fx:'#8fd3ff'},
+  // 2장 장애물
+  palm:     {name:'야자수',      img:'palm',     cost:6, drops:{coconut:2,wood:1}, w:.78, fx:'#5fa32a'},
+  driftwood:{name:'떠밀려 온 나무',img:'driftwood',cost:2,drops:{wood:1,twig:2},  w:.9,  fx:'#d8c8a8'},
+  shells:   {name:'조개 무더기', img:'shells',   cost:3, drops:{shell:2},       w:.85, fx:'#ff9aa8'},
+  sandstone:{name:'사암 바위',   img:'sandstone',cost:7, drops:{sandstone:3},   w:.92, fx:'#e8843a'},
+  mushrooms:{name:'거대 버섯',   img:'mushrooms',cost:4, drops:{mushroom:3},    w:.9,  fx:'#a85be0'},
+  reeds:    {name:'늪 갈대',     img:'reeds',    cost:2, drops:{reed:3},        w:.78, fx:'#7a9a30'},
+  cactus:   {name:'선인장',      img:'cactus',   cost:4, drops:{reed:2,flower:1},w:.62,fx:'#4f9a3a'},
+  goldrock: {name:'금맥 바위',   img:'goldrock', cost:9, drops:{gold:2,stone:1},w:.92, fx:'#ffcf3a'},
+  obsidian: {name:'흑요석 바위', img:'obsidian', cost:8, drops:{obsidian:2},    w:.88, fx:'#ff6a2a'},
+  burnttree:{name:'불탄 나무',   img:'burnttree',cost:5, drops:{coal:2,wood:1}, w:.8,  fx:'#555'},
+  firecrystal:{name:'불꽃 수정', img:'firecrystal',cost:9,drops:{fire:2},       w:.85, fx:'#ff5a2a'},
   chest:    {name:'보물 상자',   img:'chest',    cost:3, drops:{},              w:.7,  fx:'#ffcf3a', chest:true},
   rune:     {name:'룬 석판',     img:'rune',     cost:10,drops:{rune:1},        w:.66, fx:'#ffcf3a', rune:true},
   // 캠프 전용(치울 수 없음)
-  cabin:    {name:'통나무집',    img:'cabin',    w:1.7, fixed:true, act:'bag',   label:'창고'},
-  kitchen:  {name:'캠프 부엌',   img:'kitchen',  w:1.5, fixed:true, act:'cook',  label:'요리'},
-  board:    {name:'주문판',      img:'board',    w:1.05,fixed:true, act:'order', label:'주문'},
-  tent:     {name:'탐험 텐트',   img:'tent',     w:1.45,fixed:true, act:'nap',   label:'낮잠'},
+  cabin:    {name:'통나무집',    img:'cabin',    w:1.7, fixed:true, act:'cabin',  label:'통나무집', bld:'cabin'},
+  kitchen:  {name:'캠프 부엌',   img:'kitchen',  w:1.5, fixed:true, act:'kitchen',label:'부엌',     bld:'kitchen'},
+  board:    {name:'주문판',      img:'board',    w:1.05,fixed:true, act:'order',  label:'주문판',   bld:'board'},
+  tent:     {name:'탐험 텐트',   img:'tent',     w:1.45,fixed:true, act:'tent',   label:'텐트',     bld:'tent'},
+  sawmill:  {name:'제재소',      img:'sawmill',  w:1.5, fixed:true, act:'sawmill',label:'제재소',   bld:'sawmill'},
+  forge:    {name:'대장간',      img:'forge',    w:1.4, fixed:true, act:'forge',  label:'대장간',   bld:'forge'},
   husky:    {name:'썰매견 눈송이',img:'husky',   w:.72, fixed:true, act:'pet'},
   deco_spruce:{img:'spruce',w:.8,fixed:true}, deco_oak:{img:'oak',w:.98,fixed:true}, deco_redwood:{img:'redwood',w:.62,fixed:true},
   deco_flowers:{img:'flowers',w:.72,fixed:true}, deco_bush:{img:'berrybush',w:.72,fixed:true},
@@ -318,34 +376,73 @@ const OBJS = {
 
 /* ── 탐험 지역 ── */
 const REGIONS = {
-  canyon:  {name:'이끼 폭포 계곡', img:'m_canyon',  lv:1, tex:'t_grass', tint:'rgba(120,170,40,.10)',
+  canyon:  {ch:1, name:'이끼 폭포 계곡', img:'m_canyon',  lv:1, tex:'t_grass', tint:'rgba(120,170,40,.10)',
             mix:{redwood:10,spruce:12,log:10,twigpile:14,berrybush:10,boulder:10,flowers:10,wall:6,oak:6}},
-  nest:    {name:'거인 나무 둥지', img:'m_nest',    lv:3, tex:'t_grass', tint:'rgba(200,160,40,.12)',
+  nest:    {ch:1, name:'거인 나무 둥지', img:'m_nest',    lv:3, tex:'t_grass', tint:'rgba(200,160,40,.12)',
             mix:{oak:16,berrybush:16,flowers:14,twigpile:12,log:10,spruce:6,boulder:8,wall:6,redwood:4}},
-  windmill:{name:'라벤더 풍차 언덕', img:'m_windmill', lv:5, tex:'t_meadow', tint:'rgba(0,0,0,0)',
+  windmill:{ch:1, name:'라벤더 풍차 언덕', img:'m_windmill', lv:5, tex:'t_meadow', tint:'rgba(0,0,0,0)',
             mix:{boulder:14,wall:14,coalrock:12,flowers:14,twigpile:8,berrybush:8,oak:8,log:6,orerock:4}},
-  snow:    {name:'서리 얼음 고개', img:'m_snow',    lv:8, tex:'t_snow', tint:'rgba(0,0,0,0)',
+  snow:    {ch:1, name:'서리 얼음 고개', img:'m_snow',    lv:8, tex:'t_snow', tint:'rgba(0,0,0,0)',
             mix:{icerock:18,spruce:16,orerock:12,coalrock:8,boulder:10,log:6,twigpile:6,wall:4}},
+  // 2장. 바다 건너 섬들
+  beach:   {ch:2, name:'산호 해변 만',   img:'m_beach',   lv:10, tex:'t_sand', tint:'rgba(0,0,0,0)',
+            mix:{palm:16,driftwood:14,shells:14,sandstone:8,berrybush:4,boulder:6,log:6,reeds:4}},
+  swamp:   {ch:2, name:'반딧불 버섯 늪', img:'m_swamp',   lv:12, tex:'t_swamp', tint:'rgba(0,0,0,0)',
+            mix:{mushrooms:16,reeds:16,log:10,spruce:8,oak:6,twigpile:10,berrybush:6,coalrock:4,wall:4}},
+  desert:  {ch:2, name:'붉은 모래 협곡', img:'m_desert',  lv:14, tex:'t_sand', tint:'rgba(230,120,40,.12)',
+            mix:{cactus:16,sandstone:16,goldrock:8,boulder:8,driftwood:6,twigpile:8,wall:6,orerock:6}},
+  volcano: {ch:2, name:'잠든 화산 기슭', img:'m_volcano', lv:17, tex:'t_ash', tint:'rgba(0,0,0,0)',
+            mix:{obsidian:16,burnttree:16,firecrystal:8,coalrock:10,boulder:8,goldrock:4,orerock:6}},
 };
 
-/* ── 요리법 ── */
-const RECIPES = [
-  {id:'porridge', need:{berry:4,twig:1}},
-  {id:'pie',      need:{berry:6,wood:1,coal:1}},
-];
+/* ── 생산 건물 제조법(분 단위, CONFIG.prodSpeed 배율 적용) ── */
+const PROD = {
+  kitchen:[{id:'porridge', need:{berry:4,twig:1},        min:2, xp:3},
+           {id:'pie',      need:{berry:6,wood:1,coal:1}, min:5, xp:6},
+           {id:'soup',     need:{mushroom:4,ice:1},      min:4, xp:6},
+           {id:'pudding',  need:{coconut:3,berry:3},     min:6, xp:8}],
+  sawmill:[{id:'plank',    need:{wood:3},                min:1, xp:2}],
+  forge:  [{id:'ironbar',  need:{ore:2,coal:1},          min:3, xp:5}],
+};
+
+/* ── 캠프 건물: 건설 조건·업그레이드 비용(현재 레벨 l → l+1)·효과 ── */
+const BUILDINGS = {
+  cabin:  {start:1, cost:l => ({plank:3*l, stone:6*l, coins:100*l}),
+           fx:l => `최대 에너지 +${10*(l-1)}`},
+  kitchen:{start:1, cost:l => ({plank:2*l, stone:4*l, ...(l>=2?{ironbar:l-1}:{}), coins:120*l}),
+           fx:l => `조리 칸 ${slotsOf(l)}개 · 조리 시간 -${Math.round(10*(l-1))}%`},
+  tent:   {start:1, cost:l => ({plank:2*l, flower:5*l, coins:80*l}),
+           fx:l => `낮잠 +${napEnergy(l)} 에너지 · ${napHoursOf(l).toFixed(1)}시간마다`},
+  board:  {start:1, cost:l => ({plank:2*l, coins:150*l}),
+           fx:l => `주문 ${3+Math.floor((l-1)/2)}개 · 코인 보상 +${15*(l-1)}%`},
+  sawmill:{start:0, unlock:2, build:{wood:10, stone:5, coins:50}, cost:l => ({wood:10*l, stone:5*l, coins:100*l}),
+           fx:l => `작업 칸 ${slotsOf(l)}개 · 작업 시간 -${Math.round(10*(l-1))}%`},
+  forge:  {start:0, unlock:4, build:{plank:4, stone:10, coal:3, coins:120}, cost:l => ({plank:3*l, stone:8*l, coal:3*l, coins:150*l}),
+           fx:l => `작업 칸 ${slotsOf(l)}개 · 작업 시간 -${Math.round(10*(l-1))}%`},
+};
+const slotsOf = l => 1 + Math.floor(l/2);
+const napEnergy = l => CONFIG.napEnergy + 10*(l-1);
+const napHoursOf = l => CONFIG.napHours * (1 - 0.1*(l-1));
+const upgradeNeedLevel = l => 2*l;   // l → l+1 업그레이드에 필요한 탐험가 레벨
 
 /* ══════════ 이미지 불러오기 ══════════ */
 const IMG = {};
 const IMG_LIST = ['avatar','berrybush','board','boulder','cabin','chest','cloud','coalrock','explorer','flowers','husky',
   'i_berry','i_coal','i_coin','i_energy','i_gem','i_ice','i_ore','i_pie','i_porridge','i_stone','i_twig','i_wood',
   'icerock','kitchen','log','m_canyon','m_home','m_nest','m_snow','m_windmill','oak','orerock','redwood','rune',
-  'spruce','t_grass','t_meadow','t_snow','tent','twigpile','wall'];
+  'spruce','t_grass','t_meadow','t_snow','tent','twigpile','wall',
+  'palm','driftwood','shells','sandstone','mushrooms','reeds','cactus','goldrock','obsidian','burnttree','firecrystal',
+  'i_coconut','i_shell','i_mushroom','i_reed','i_sandstone','i_gold','i_obsidian','i_plank','i_ironbar','i_soup','i_pudding',
+  'm_beach','m_swamp','m_desert','m_volcano','t_sand','t_swamp','t_ash','sawmill','forge'];
 function loadImages(){
   let done = 0;
   return Promise.all(IMG_LIST.map(n => new Promise(res => {
     const im = new Image();
-    im.onload = im.onerror = () => { done++; document.getElementById('lbar').style.width = (done/IMG_LIST.length*100)+'%'; res(); };
-    im.src = 'img/' + n + '.webp'; IMG[n] = im;
+    im.onerror = () => {   // 그림이 없으면 회색 자리표시로 대체(게임은 계속 동작)
+      const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
+      g.fillStyle = '#b9a58a'; g.beginPath(); g.arc(32,32,28,0,7); g.fill(); IMG[n] = c; fin(); };
+    const fin = () => { done++; document.getElementById('lbar').style.width = (done/IMG_LIST.length*100)+'%'; res(); };
+    im.onload = fin; im.src = 'img/' + n + '.webp'; IMG[n] = im;
   })));
 }
 const src = n => 'img/' + n + '.webp';
@@ -355,12 +452,18 @@ let S;
 function freshState(){
   return {v:1, energy:CONFIG.energyBase, energyTs:Date.now(), xp:0, level:1, coins:150, gems:10,
     inv:{}, seen:{wood:1,twig:1,berry:1,stone:1,flower:1}, regions:{}, orders:[], nextOrderId:1,
-    where:'home', napTs:0, sound:true, cfg:{}};
+    where:'home', napTs:0, sound:true, cfg:{}, bld:{}, prod:{}, mapCh:1};
+}
+function migrate(){   // 예전 저장본에 새 항목 채우기
+  S.bld = S.bld || {}; S.prod = S.prod || {}; S.mapCh = S.mapCh || 1;
+  for (const [k,b] of Object.entries(BUILDINGS)) if (S.bld[k] == null) S.bld[k] = b.start;
+  for (const k of Object.keys(PROD)) S.prod[k] = S.prod[k] || [];
 }
 function load(){
   try { S = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch(e){ S = null; }
   if (!S || S.v !== 1) S = freshState();
   Object.assign(CONFIG, S.cfg || {});
+  migrate();
 }
 let saveTimer = 0;
 function save(){
@@ -370,7 +473,7 @@ function save(){
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch(e){}
   }, 150);
 }
-const maxEnergy = () => CONFIG.energyBase + (S.level-1)*CONFIG.energyPerLevel;
+const maxEnergy = () => CONFIG.energyBase + (S.level-1)*CONFIG.energyPerLevel + 10*((S.bld.cabin||1)-1);
 const regenMs = () => Math.max(0.1, CONFIG.regenMinutes) * 60000;
 const xpNeed = l => 40*l + 10*l*l;
 
@@ -442,19 +545,21 @@ function buildRegion(key){
 }
 OBJS.tent_camp = {img:'tent', w:1.3, fixed:true};
 
+const HOME_POS = {cabin:[4,3], kitchen:[9,3], board:[2,7], tent:[5,9], sawmill:[9,7], forge:[8,10]};
 function buildHome(){
-  const N = 12, tiles = [];
+  const N = 13, tiles = [];
   for (let i=0;i<N*N;i++) tiles.push({o:null, rev:true, seed:Math.random()});
   const put = (x,y,o) => tiles[y*N+x].o = o;
-  put(4,3,'cabin'); put(8,4,'kitchen'); put(3,7,'board'); put(7,8,'tent'); put(4,6,'husky');
+  for (const [k,[x,y]] of Object.entries(HOME_POS)) put(x,y,k);
+  put(4,6,'husky');
   const r = rng(77);
   for (let y=0;y<N;y++) for (let x=0;x<N;x++){
     const edge = x<2 || y<2 || x>N-3 || y>N-3;
     if (edge && !tiles[y*N+x].o && r() < .62) put(x,y, ['deco_spruce','deco_oak','deco_redwood','deco_spruce'][Math.floor(r()*4)]);
     else if (!edge && !tiles[y*N+x].o && r() < .08) put(x,y, r()<.6 ? 'deco_flowers':'deco_bush');
   }
-  tiles[5*N+6].o = null; tiles[6*N+5].o = null;
-  return {key:'home', N, tiles, start:{x:6, y:5}, tex:'t_grass', tint:'rgba(120,190,60,.12)', region:null, home:true};
+  for (let y=5;y<=7;y++) for (let x=5;x<=7;x++) if (tiles[y*N+x].o && tiles[y*N+x].o.startsWith('deco')) tiles[y*N+x].o = null;
+  return {key:'home', N, tiles, start:{x:6, y:6}, tex:'t_grass', tint:'rgba(120,190,60,.12)', region:null, home:true};
 }
 
 function revealAround(w, cx, cy, rad){
@@ -545,12 +650,12 @@ function renderGround(){
   sh.addColorStop(0,'rgba(255,255,255,.08)'); sh.addColorStop(1,'rgba(0,0,0,.10)');
   c.fillStyle = sh; c.fillRect(b.x,b.y,b.w,b.h);
   c.restore();
-  if (w.home){ // 캠프 돌길
-    c.fillStyle = 'rgba(190,180,160,.9)';
+  if (w.home){ // 캠프 돌길: 가운데에서 건물마다 이어지는 징검돌
     const rr = rng(5);
-    for (const [x0,y0] of [[4.5,4],[5,4.6],[5.6,5.2],[6,5.8],[6.6,6.3],[7.1,6.9],[7.4,7.5],[6.9,5.1],[7.6,4.8],[5.2,6.2],[4.6,6.7],[4,7.1]]){
-      const p = iso(x0,y0);
-      for (let k=0;k<3;k++){ c.beginPath(); c.ellipse(p.x+(rr()-.5)*40, p.y+(rr()-.5)*20, 11+rr()*6, 6+rr()*3, 0, 0, 7);
+    for (const [bx,by] of Object.values(HOME_POS)){
+      const len = Math.hypot(bx-6, by-6), n = Math.floor(len/0.55);
+      for (let k=1;k<n-1;k++){ const t = k/n, p = iso(6+(bx-6)*t, 6+(by-6)*t);
+        c.beginPath(); c.ellipse(p.x+(rr()-.5)*26, p.y+(rr()-.5)*12, 12+rr()*6, 6+rr()*3, 0, 0, 7);
         c.fillStyle = `rgba(${170+rr()*30|0},${165+rr()*25|0},${150+rr()*20|0},.95)`; c.fill();
         c.strokeStyle='rgba(80,70,50,.35)'; c.lineWidth=1.5; c.stroke(); }
     }
@@ -654,7 +759,7 @@ function enter(key){
   S.where = key;
   player.x = world.start.x; player.y = world.start.y; player.path = []; player.work = 0; player.target = null;
   renderGround(); renderFog(); computeReach();
-  const p = iso(player.x, player.y); cam.x = p.x; cam.y = p.y - 60; cam.z = Math.max(cam.zMin || .35, Math.min(1, W < 700 ? W/680 : W/1100));
+  const p = iso(player.x, player.y); cam.x = p.x; cam.y = p.y - (world.home ? 20 : 60); cam.z = Math.max(cam.zMin || .35, Math.min(1, world.home ? (W < 700 ? W/900 : Math.min(H/1000, W/1500)) : (W < 700 ? W/680 : W/1100)));
   // 저장된 작업 줄 복구(에너지는 이미 사용됨)
   if (world.region && world.region.queue){ for (const i of world.region.queue){ const t = world.tiles[i]; if (t && t.o) queue.push({i, cost:OBJS[t.o].cost}); } }
   document.getElementById('homeBtn').classList.toggle('hidden', world.home);
@@ -697,10 +802,9 @@ function onTap(sx, sy){
   queue.push({i:hit.i, cost:d.cost}); sfx('pop'); save();
 }
 function doAct(a){
-  if (a === 'bag') openBag();
-  else if (a === 'cook') openCook();
+  if (a === 'cabin' || a === 'tent') openBuilding(a);
+  else if (PROD[a]) prodTap(a);
   else if (a === 'order') openOrders();
-  else if (a === 'nap') nap();
   else if (a === 'pet'){ const t = world.tiles.findIndex(t=>t.o==='husky'); burst(t%world.N, (t/world.N)|0, '#ff7aa8', 10); floatText(t%world.N,(t/world.N)|0,'♥','#ff5a8a'); sfx('pop'); }
 }
 
@@ -775,11 +879,42 @@ function regionComplete(){
   document.getElementById('reroll').onclick = () => { const k = world.key; const c = S.regions[k].clears;
     S.regions[k] = {seed:(Math.random()*1e9)|0, cleared:[], runes:0, clears:c, queue:[]}; closeModal(); enter(k); };
 }
+const napLeft = () => S.napTs + napHoursOf(S.bld.tent)*3600e3 - Date.now();
 function nap(){
-  const left = S.napTs + CONFIG.napHours*3600e3 - Date.now();
-  if (left > 0){ const m = Math.ceil(left/60000); toast(`아직 졸리지 않아요 · ${Math.floor(m/60)}시간 ${m%60}분 뒤 낮잠 가능`); return; }
-  S.napTs = Date.now(); addEnergy(CONFIG.napEnergy); sfx('level');
-  const t = world.tiles.findIndex(t=>t.o==='tent'); floatText(t%world.N, (t/world.N)|0, `낮잠 zZ +${CONFIG.napEnergy} 에너지`, '#bfe9ff');
+  const left = napLeft();
+  if (left > 0){ const m = Math.ceil(left/60000); toast(`아직 졸리지 않아요 · ${Math.floor(m/60)}시간 ${m%60}분 뒤 낮잠 가능`); return false; }
+  const e = napEnergy(S.bld.tent);
+  S.napTs = Date.now(); addEnergy(e); sfx('level');
+  if (world.home){ const t = world.tiles.findIndex(t=>t.o==='tent'); floatText(t%world.N, (t/world.N)|0, `낮잠 zZ +${e} 에너지`, '#bfe9ff'); }
+  return true;
+}
+
+/* ══════════ 생산(요리·제재·대장간) ══════════ */
+const prodMs = (k, r) => r.min * 60000 * Math.max(0.05, CONFIG.prodSpeed) * (1 - 0.1*((S.bld[k]||1)-1));
+const jobsDone = k => (S.prod[k]||[]).filter(j => j.end <= Date.now());
+function startJob(k, id){
+  const r = PROD[k].find(r => r.id === id), jobs = S.prod[k];
+  if (!r || !has(r.need) || jobs.length >= slotsOf(S.bld[k])) return false;
+  for (const [i,n] of Object.entries(r.need)) S.inv[i] -= n;
+  const lastEnd = jobs.length ? Math.max(...jobs.map(j=>j.end)) : 0;
+  const start = Math.max(Date.now(), lastEnd);          // 한 줄로 차례차례 만들어짐
+  jobs.push({id, end:start + prodMs(k, r)});
+  sfx('pop'); save(); return true;
+}
+function collect(k){
+  const done = jobsDone(k); if (!done.length) return 0;
+  S.prod[k] = S.prod[k].filter(j => !done.includes(j));
+  let xp = 0;
+  for (const j of done){ addItem(j.id, 1); xp += PROD[k].find(r=>r.id===j.id).xp; }
+  if (world.home){ const [x,y] = HOME_POS[k]; for (const j of done) flyToBag(x, y, ITEMS[j.id].img, 1);
+    floatText(x, y, done.map(j=>'+1 '+ITEMS[j.id].name).join('  '), '#fff'); }
+  sfx('coin'); gainXP(xp); updateHUD(); save();
+  return done.length;
+}
+function prodTap(k){
+  if (!S.bld[k]) { openBuilding(k); return; }
+  if (collect(k)) return;
+  openProd(k);
 }
 
 /* ══════════ 그리기 ══════════ */
@@ -821,11 +956,18 @@ function draw(dt){
     if (d.rune || d.chest){ ctx.save(); ctx.globalAlpha = .35 + .25*Math.sin(T*3); ctx.fillStyle = '#ffe36a';
       ctx.beginPath(); ctx.ellipse(p.x, p.y, TW*.42, TH*.4, 0, 0, 7); ctx.fill(); ctx.restore(); }
     if (d.fixed && it.o === 'husky'){ r = {...r, y:r.y + Math.sin(T*2)*1.5}; }
-    const hov = hoverI === it.i && !d.fixed;
-    if (hov){ ctx.save(); ctx.filter = 'brightness(1.18)'; }
+    const hov = hoverI === it.i && !d.fixed, ghost = d.bld && !S.bld[d.bld];
+    if (hov || ghost){ ctx.save(); if (hov) ctx.filter = 'brightness(1.18)'; if (ghost){ ctx.filter = 'grayscale(1) brightness(1.1)'; ctx.globalAlpha = .55; } }
     ctx.drawImage(im, r.x + ox + r.w*(1-sc)/2, r.y + r.h*(1-sc), r.w*sc, r.h*sc);
-    if (hov) ctx.restore();
-    if (d.label && world.home) drawLabel(p.x, r.y - 6, d.label);
+    if (hov || ghost) ctx.restore();
+    if (d.label && world.home){
+      const lv = S.bld[d.bld];
+      drawLabel(p.x, r.y - 6, ghost ? `${d.label} · 짓기` : `${d.label} Lv${lv}`);
+      if (PROD[d.bld] && lv){ const done = jobsDone(d.bld);
+        if (done.length) drawReady(p.x, r.y - 44, ITEMS[done[0].id].img, done.length, T);
+        else if (S.prod[d.bld].length) drawBusy(p.x, r.y - 44, T); }
+      if (d.bld === 'tent' && napLeft() <= 0) drawReady(p.x, r.y - 44, 'i_energy', 0, T);
+    }
     if (qIdx.has(it.i)) drawCostBubble(p.x, r.y + r.h*.35, d.cost, qIdx.get(it.i)+1, true);
     else if (hov) drawCostBubble(p.x, r.y + r.h*.35, d.cost, 0, S.energy >= d.cost && standSpots(it.i).size > 0);
   }
@@ -861,6 +1003,23 @@ function drawCostBubble(x, y, cost, num, ok){
   ctx.fillText(cost, 10, -h/2+1);
   if (num){ ctx.fillStyle = '#ffd23a'; roundRect(w/2-20, -h-14, 28, 24, 8); ctx.fill(); ctx.strokeStyle='#c98800'; ctx.lineWidth=2; ctx.stroke();
     ctx.fillStyle = '#7a3f00'; ctx.font = '800 17px sans-serif'; ctx.fillText(num, w/2-6, -h-2); }
+  ctx.restore();
+}
+function drawReady(x, y, img, n, T){
+  const b = Math.sin(T*4)*4;
+  ctx.save(); ctx.translate(x, y + b);
+  ctx.fillStyle = '#fff'; ctx.strokeStyle = '#3fae2a'; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.arc(0, -30, 30, 0, 7); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-8,-3); ctx.lineTo(0,10); ctx.lineTo(8,-3); ctx.fill();
+  ctx.drawImage(IMG[img], -22, -52, 44, 44);
+  if (n > 1){ ctx.fillStyle = '#e5452d'; ctx.beginPath(); ctx.arc(24, -54, 13, 0, 7); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = '800 16px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(n, 24, -53); }
+  ctx.restore();
+}
+function drawBusy(x, y, T){
+  ctx.save(); ctx.translate(x, y); ctx.fillStyle = 'rgba(255,255,255,.9)';
+  ctx.beginPath(); ctx.arc(0, -22, 20, 0, 7); ctx.fill();
+  ctx.strokeStyle = '#1c98f0'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, -22, 12, T*4, T*4 + 4.2); ctx.stroke();
   ctx.restore();
 }
 function drawLabel(x, y, text){
@@ -942,6 +1101,8 @@ function updateHUD(){
 }
 function updateTimer(){
   tickEnergy();
+  for (const k of Object.keys(PROD)) for (const j of (S.prod[k]||[]))
+    if (j.end <= Date.now() && !j.told){ j.told = 1; toast(`${ITEMS[j.id].name} 완성! ${PROD_NAME[k]}에서 받아 가세요`); save(); }
   const el = document.getElementById('enTimer');
   el.textContent = S.energy >= maxEnergy() ? '에너지 가득' : `+1까지 ${fmtTime(S.energyTs + regenMs() - Date.now())}`;
   updateHUD();
@@ -949,7 +1110,7 @@ function updateTimer(){
 function updateQuest(){
   const q = document.getElementById('quest');
   if (!world || world.home){
-    q.innerHTML = `<h4>탐험 캠프</h4><div class="row">건물을 눌러 요리·주문·낮잠!</div><div class="row hint">지도에서 탐험할 지역을 골라요</div>`; return;
+    q.innerHTML = `<h4>탐험 캠프</h4><div class="row">건물을 눌러 요리·제작·업그레이드!</div><div class="row hint">지도에서 탐험할 지역을 골라요</div>`; return;
   }
   const R = REGIONS[world.key], st = world.region;
   const total = world.tiles.length, open = world.tiles.filter(t=>t.rev).length;
@@ -962,8 +1123,9 @@ function toast(msg){ const t = document.getElementById('toast'); t.textContent =
 
 /* ══════════ 팝업 ══════════ */
 const root = document.getElementById('modalRoot');
+let modalRefresh = false;   // 타이머로 다시 그릴 때는 튀어나오는 애니메이션 생략
 function showModal(title, body, opts={}){
-  root.innerHTML = `<div class="modal-bg"><div class="panel">${opts.tabs||''}<div class="frame"><button class="close" data-close>×</button>
+  root.innerHTML = `<div class="modal-bg"><div class="panel" ${modalRefresh ? 'style="animation:none"' : ''}>${opts.tabs||''}<div class="frame"><button class="close" data-close>×</button>
     ${title ? `<h3>${title}</h3>` : ''}<div class="sheet" id="sheet">${body}</div></div></div></div>`;
   root.querySelector('.modal-bg').addEventListener('pointerdown', e => { if (e.target.classList.contains('modal-bg')) closeModal(); });
   root.querySelectorAll('[data-close]').forEach(b => b.onclick = closeModal);
@@ -973,7 +1135,7 @@ function closeModal(){ root.innerHTML = ''; }
 /* 창고 */
 let bagTab = 'res';
 function openBag(){
-  const tabs = [['res','i_wood','자원'],['food','i_berry','음식'],['treasure','rune','보물']];
+  const tabs = [['res','i_wood','자원'],['food','i_berry','음식'],['craft','i_plank','제작품'],['treasure','rune','보물']];
   const tabHtml = `<div class="tabs">${tabs.map(([k,i,n]) => `<button class="tab ${k===bagTab?'on':''}" data-tab="${k}" title="${n}"><img src="${src(i)}"></button>`).join('')}</div>`;
   const list = Object.entries(ITEMS).filter(([k,d]) => d.tab === bagTab && (S.inv[k]||0) > 0);
   const body = list.length ? `<div class="grid">${list.map(([k,d]) => `<div class="cell"><img src="${src(d.img)}"><b>${S.inv[k]}</b><small>${d.name}</small>
@@ -985,19 +1147,79 @@ function openBag(){
     if (!S.inv[k]) return; S.inv[k]--; addEnergy(ITEMS[k].eat); sfx('pop'); toast(`${ITEMS[k].name} 냠냠! +${ITEMS[k].eat} 에너지`); openBag(); });
 }
 
-/* 요리 */
+/* 요리·제작 */
 function needHtml(need){ return `<div class="need">${Object.entries(need).map(([k,n]) =>
   `<span class="${(S.inv[k]||0) < n ? 'lack':''}"><img src="${src(ITEMS[k].img)}">${S.inv[k]||0}/${n}</span>`).join('')}</div>`; }
-function openCook(){
-  const body = `<div class="cards">${RECIPES.map(r => { const it = ITEMS[r.id];
-    return `<div class="card"><h5><img src="${src(it.img)}">${it.name} <small class="hint">(가진 것 ${S.inv[r.id]||0})</small></h5>
-      ${needHtml(r.need)}<div class="reward">먹으면 <img src="${src('i_energy')}"> +${it.eat}</div>
-      <button class="gbtn" data-cook="${r.id}" ${has(r.need)?'':'disabled'}>요리하기</button></div>`; }).join('')}</div>
-    <p class="hint" style="margin-top:12px">요리한 음식은 창고 → 음식 칸에서 먹을 수 있어요.</p>`;
-  showModal('캠프 부엌', body);
-  root.querySelectorAll('[data-cook]').forEach(b => b.onclick = () => { const r = RECIPES.find(r=>r.id===b.dataset.cook);
-    if (!has(r.need)) return; for (const [k,n] of Object.entries(r.need)) S.inv[k] -= n; addItem(r.id, 1); sfx('coin');
-    toast(`${ITEMS[r.id].name} 완성!`); updateHUD(); openCook(); });
+const PROD_NAME = {kitchen:'캠프 부엌', sawmill:'제재소', forge:'대장간'};
+let prodTimer = 0;
+function openProd(k){
+  const built = Object.keys(PROD).filter(b => S.bld[b]);
+  const tabHtml = `<div class="tabs">${Object.keys(PROD).map(b => `<button class="tab ${b===k?'on':''}" data-ptab="${b}" title="${PROD_NAME[b]}">
+    <img src="${src(b)}" style="${S.bld[b]?'':'filter:grayscale(1) opacity(.5)'}"></button>`).join('')}</div>`;
+  if (!S.bld[k]){ openBuilding(k); return; }
+  const lv = S.bld[k], jobs = S.prod[k].slice().sort((a,b)=>a.end-b.end), cap = slotsOf(lv), now = Date.now();
+  const slots = [];
+  for (let i=0;i<cap;i++){ const j = jobs[i];
+    if (!j){ slots.push(`<div class="slot empty-slot">빈 칸</div>`); continue; }
+    const r = PROD[k].find(r=>r.id===j.id), total = prodMs(k, r), left = j.end - now;
+    const running = left > 0 && (i === 0 || jobs[i-1].end <= now);
+    slots.push(`<div class="slot ${left<=0?'ready':''}"><img src="${src(ITEMS[j.id].img)}"><small>${left<=0 ? '완성!' : running ? fmtTime(left) : '대기 중'}</small>
+      ${running ? `<i class="sbar"><b style="width:${Math.max(0,100-left/total*100)}%"></b></i>` : ''}</div>`); }
+  const body = `<div class="prodhead"><div class="slots">${slots.join('')}</div>
+      <div class="prodbtns"><button class="gbtn gold" id="collectAll" ${jobsDone(k).length?'':'disabled'}>완성품 받기</button>
+      <button class="gbtn blue" id="upBtn">★ Lv${lv} 업그레이드</button></div></div>
+    <div class="cards">${PROD[k].map(r => { const it = ITEMS[r.id];
+      return `<div class="card"><h5><img src="${src(it.img)}">${it.name} <small class="hint">(가진 것 ${S.inv[r.id]||0})</small></h5>
+        ${needHtml(r.need)}<div class="reward">${it.eat ? `먹으면 <img src="${src('i_energy')}"> +${it.eat}` : `건물 업그레이드 재료`} · ⏱ ${fmtTime(prodMs(k, r))}</div>
+        <button class="gbtn" data-make="${r.id}" ${has(r.need) && jobs.length < cap ? '' : 'disabled'}>${jobs.length >= cap ? '칸이 가득 찼어요' : '만들기'}</button></div>`; }).join('')}</div>
+    <p class="hint" style="margin-top:12px">한 번에 하나씩 차례로 만들어져요. 다 되면 캠프 건물 위에 표시가 떠요. 음식은 창고 → 음식 칸에서 먹어요.</p>`;
+  showModal(PROD_NAME[k] + ` <small style="font-size:15px">Lv${lv}</small>`, body, {tabs:tabHtml});
+  root.querySelectorAll('[data-ptab]').forEach(b => b.onclick = () => openProd(b.dataset.ptab));
+  root.querySelectorAll('[data-make]').forEach(b => b.onclick = () => { if (startJob(k, b.dataset.make)) openProd(k); });
+  document.getElementById('collectAll').onclick = () => { collect(k); openProd(k); };
+  document.getElementById('upBtn').onclick = () => openBuilding(k);
+  clearInterval(prodTimer);
+  prodTimer = setInterval(() => { if (!document.querySelector('.slots')){ clearInterval(prodTimer); return; }
+    const sh = document.getElementById('sheet'), y = sh ? sh.scrollTop : 0; modalRefresh = true; openProd(k); modalRefresh = false;
+    const sh2 = document.getElementById('sheet'); if (sh2) sh2.scrollTop = y; }, 1000);
+}
+
+/* 건물 정보·건설·업그레이드 */
+function costHtml(c){ return `<div class="need">${Object.entries(c).map(([k,n]) => {
+  const have = k === 'coins' ? S.coins : (S.inv[k]||0), img = k === 'coins' ? 'i_coin' : ITEMS[k].img;
+  return `<span class="${have < n ? 'lack':''}"><img src="${src(img)}">${have}/${n}</span>`; }).join('')}</div>`; }
+const canPay = c => Object.entries(c).every(([k,n]) => (k === 'coins' ? S.coins : (S.inv[k]||0)) >= n);
+function pay(c){ for (const [k,n] of Object.entries(c)){ if (k === 'coins') S.coins -= n; else S.inv[k] -= n; } }
+function openBuilding(k){
+  const B = BUILDINGS[k], O = OBJS[k], lv = S.bld[k] || 0, max = CONFIG.buildingMaxLevel;
+  let body = `<div class="bldtop"><img src="${src(O.img)}" class="bldimg"><div>
+    <div class="stars">${Array.from({length:max}, (_,i) => `<span class="${i < lv ? 'on':''}">★</span>`).join('')}</div>
+    <p class="fxnow">${lv ? '지금: <b>' + B.fx(lv) + '</b>' : '아직 짓지 않은 건물이에요.'}</p></div></div>`;
+  if (!lv){
+    const ok = S.level >= B.unlock;
+    body += `<h4 class="subh">건설하기</h4>${ok ? '' : `<p class="hint">탐험가 레벨 ${B.unlock}이 되면 지을 수 있어요.</p>`}${costHtml(B.build)}
+      <div class="row-btns"><button class="gbtn" id="doBuild" ${ok && canPay(B.build) ? '' : 'disabled'}>짓기</button></div>`;
+  } else if (lv < max){
+    const c = B.cost(lv), need = upgradeNeedLevel(lv), ok = S.level >= need;
+    body += `<h4 class="subh">Lv${lv+1} 업그레이드</h4><p class="fxnext">다음: <b>${B.fx(lv+1)}</b></p>
+      ${ok ? '' : `<p class="hint">탐험가 레벨 ${need}이 되면 업그레이드할 수 있어요.</p>`}${costHtml(c)}
+      <div class="row-btns"><button class="gbtn blue" id="doUp" ${ok && canPay(c) ? '' : 'disabled'}>업그레이드</button></div>
+      <p class="hint">판자는 제재소, 철 주괴는 대장간에서 만들어요.</p>`;
+  } else body += `<p class="fxnext"><b>최고 레벨이에요!</b></p>`;
+  if (k === 'cabin') body += `<div class="row-btns"><button class="gbtn gold" id="goBag">창고 열기</button></div>`;
+  if (k === 'tent'){ const left = napLeft();
+    body += `<div class="row-btns"><button class="gbtn gold" id="doNap" ${left > 0 ? 'disabled':''}>${left > 0 ? '낮잠까지 ' + fmtTime(left) : '낮잠 자기 +' + napEnergy(lv) + '⚡'}</button></div>`; }
+  if (PROD[k] && lv) body += `<div class="row-btns"><button class="gbtn gold" id="goProd">${PROD_NAME[k]} 열기</button></div>`;
+  if (k === 'board') body += `<div class="row-btns"><button class="gbtn gold" id="goOrd">주문판 열기</button></div>`;
+  showModal(O.name, body);
+  const on = (id, f) => { const e = document.getElementById(id); if (e) e.onclick = f; };
+  on('doBuild', () => { if (!canPay(B.build)) return; pay(B.build); S.bld[k] = 1; sfx('level'); gainXP(20);
+    toast(`${O.name} 완성!`); if (world.home) { const [x,y] = HOME_POS[k]; burst(x, y, '#ffd23a', 24); } save(); openBuilding(k); });
+  on('doUp', () => { const c = B.cost(lv); if (!canPay(c)) return; pay(c); S.bld[k] = lv+1; sfx('level'); gainXP(15*lv);
+    if (k === 'cabin') S.energy = Math.min(maxEnergy(), S.energy + 10);
+    toast(`${O.name} Lv${lv+1}!`); if (world.home){ const [x,y] = HOME_POS[k]; burst(x, y, '#ffd23a', 24); } updateHUD(); save(); openBuilding(k); });
+  on('goBag', openBag); on('goProd', () => openProd(k)); on('goOrd', openOrders);
+  on('doNap', () => { if (nap()) openBuilding('tent'); });
 }
 
 /* 주문판 */
@@ -1006,17 +1228,20 @@ function makeOrder(){
   const r = Math.random, need = {}, kinds = 1 + (r() < .55 ? 1 : 0) + (S.level >= 4 && r() < .3 ? 1 : 0);
   for (let i=0;i<kinds;i++){ const k = pool[Math.floor(r()*pool.length)]; need[k] = (need[k]||0) + Math.max(2, Math.round((3 + S.level*1.5) * (8/ITEMS[k].value) * (.7 + r()*.6))); }
   let val = 0; for (const [k,n] of Object.entries(need)) val += n*ITEMS[k].value;
-  return {id:S.nextOrderId++, need, coins:Math.round(val*1.4/5)*5, xp:Math.round(val/3), who:['썰매견 눈송이','대장장이 곰돌','요리사 토끼','지도 제작자 부엉'][Math.floor(r()*4)]};
+  return {id:S.nextOrderId++, need, coins:Math.round(val*1.4*(1 + .15*((S.bld.board||1)-1))/5)*5, xp:Math.round(val/3), who:['썰매견 눈송이','대장장이 곰돌','요리사 토끼','지도 제작자 부엉'][Math.floor(r()*4)]};
 }
 function openOrders(){
-  while (S.orders.length < 3) S.orders.push(makeOrder());
+  const bl = S.bld.board || 1;
+  while (S.orders.length < 3 + Math.floor((bl-1)/2)) S.orders.push(makeOrder());
   save();
   const body = `<div class="cards">${S.orders.map(o => `<div class="card"><h5><img src="${src('board')}">${o.who}의 부탁</h5>
       ${needHtml(o.need)}<div class="reward"><span><img src="${src('i_coin')}"> ${o.coins}</span><span>★ ${o.xp} 경험치</span></div>
       <div style="display:flex;gap:6px"><button class="gbtn" style="flex:1" data-ord="${o.id}" ${has(o.need)?'':'disabled'}>보내기</button>
       <button class="gbtn red" data-skip="${o.id}" title="다른 부탁으로 바꾸기">↻</button></div></div>`).join('')}</div>
-    <p class="hint" style="margin-top:12px">탐험에서 모은 자원으로 부탁을 들어주면 코인과 경험치를 받아요. ↻ 버튼은 부탁을 바꿔요.</p>`;
+    <p class="hint" style="margin-top:12px">탐험에서 모은 자원으로 부탁을 들어주면 코인과 경험치를 받아요. ↻ 버튼은 부탁을 바꿔요.</p>
+    <div class="row-btns"><button class="gbtn blue" id="upBoard">★ 주문판 Lv${bl} 업그레이드</button></div>`;
   showModal('주문판', body);
+  document.getElementById('upBoard').onclick = () => openBuilding('board');
   root.querySelectorAll('[data-ord]').forEach(b => b.onclick = () => { const o = S.orders.find(o=>o.id==b.dataset.ord); if (!o || !has(o.need)) return;
     for (const [k,n] of Object.entries(o.need)) S.inv[k] -= n;
     S.coins += o.coins; S.orders = S.orders.filter(x=>x!==o); sfx('coin'); toast(`부탁 완료! +${o.coins} 코인`); gainXP(o.xp); openOrders(); });
@@ -1048,29 +1273,39 @@ function openShop(lack){
 }
 
 /* 월드맵 */
-function openMap(){
-  const pos = innerWidth <= 700
-    ? {home:[28,86], canyon:[70,68], nest:[30,50], windmill:[70,32], snow:[32,18]}
-    : {home:[13,70], canyon:[33,36], nest:[53,66], windmill:[66,30], snow:[86,58]};
-  const locs = [['home','m_home','탐험 캠프',1], ...Object.entries(REGIONS).map(([k,r]) => [k, r.img, r.name, r.lv])];
-  const order = ['home','canyon','nest','windmill','snow'];
-  const pts = order.map(k => pos[k]);
-  const pathD = 'M' + pts.map(p => `${p[0]} ${p[1]}`).join(' L');
-  root.innerHTML = `<div class="worldmap"><div class="scroll">
+const MAP_CH = {
+  1:{title:'1장. 구름 너머의 땅', order:['home','canyon','nest','windmill','snow'],
+     pos:{home:[13,70], canyon:[33,36], nest:[53,66], windmill:[66,30], snow:[86,58]},
+     mob:{home:[28,86], canyon:[70,68], nest:[30,50], windmill:[70,32], snow:[32,18]},
+     deco:[['spruce',84,52,6],['spruce',89,58,5],['oak',6,14,7],['icerock',86,12,6],['boulder',62,78,7],['cloud',40,4,12]]},
+  2:{title:'2장. 바다 건너 섬들', order:['home','beach','swamp','desert','volcano'],
+     pos:{home:[11,74], beach:[30,40], swamp:[50,70], desert:[68,32], volcano:[88,62]},
+     mob:{home:[28,87], beach:[70,70], swamp:[30,52], desert:[70,34], volcano:[32,17]},
+     deco:[['palm',4,20,6],['shells',40,84,6],['cactus',80,10,5],['mushrooms',58,44,6],['obsidian',92,30,6],['cloud',44,6,11]]},
+};
+function openMap(ch){
+  ch = ch || S.mapCh || 1; S.mapCh = ch;
+  const M = MAP_CH[ch], pos = innerWidth <= 700 ? M.mob : M.pos;
+  const ch2Open = S.level >= CONFIG.chapter2Level;
+  const locs = [['home','m_home','탐험 캠프',1], ...Object.entries(REGIONS).filter(([k,r]) => r.ch === ch).map(([k,r]) => [k, r.img, r.name, r.lv])];
+  const pathD = 'M' + M.order.map(k => `${pos[k][0]} ${pos[k][1]}`).join(' L');
+  root.innerHTML = `<div class="worldmap"><div class="scroll ${ch===2?'ch2':''}">
     <button class="close" data-close style="right:-30px;top:-14px">×</button>
-    <h2>1장. 구름 너머의 땅</h2>
+    <h2>${M.title}</h2>
+    <div class="chnav l"><button class="chbtn" data-ch="1" ${ch===1?'disabled':''} aria-label="1장">◀</button></div>
+    <div class="chnav r"><button class="chbtn" data-ch="2" ${ch===2?'disabled':''} aria-label="2장">▶</button></div>
     <svg class="paths" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="${pathD}" stroke="#9c7443" stroke-width="3" vector-effect="non-scaling-stroke" stroke-dasharray="10 8" fill="none" opacity=".7"/></svg>
-    <img class="deco" src="${src('spruce')}" style="left:84%;top:52%;width:6%"><img class="deco" src="${src('spruce')}" style="left:89%;top:58%;width:5%">
-    <img class="deco" src="${src('oak')}" style="left:6%;top:14%;width:7%"><img class="deco" src="${src('icerock')}" style="left:86%;top:12%;width:6%">
-    <img class="deco" src="${src('boulder')}" style="left:62%;top:78%;width:7%"><img class="deco" src="${src('cloud')}" style="left:40%;top:4%;width:12%">
+    ${M.deco.map(([im,x,y,w]) => `<img class="deco" src="${src(im)}" style="left:${x}%;top:${y}%;width:${w}%">`).join('')}
     ${locs.map(([k,img,name,lv]) => { const st = S.regions[k], locked = S.level < lv, here = S.where === k;
-      const sub = k==='home' ? '요리 · 주문 · 낮잠' : locked ? `레벨 ${lv}에 열려요` : st ? `룬 ${Math.min(st.runes,CONFIG.runesPerRegion)}/${CONFIG.runesPerRegion}${st.clears?` · 완료 ${st.clears}회`:''}` : '새로운 탐험!';
+      const sub = k==='home' ? '요리 · 제작 · 주문' : locked ? `레벨 ${lv}에 열려요` : st ? `룬 ${Math.min(st.runes,CONFIG.runesPerRegion)}/${CONFIG.runesPerRegion}${st.clears?` · 완료 ${st.clears}회`:''}` : '새로운 탐험!';
       return `<button class="loc ${locked?'locked':''} ${here?'here':''}" data-go="${k}" style="left:${pos[k][0]}%;top:${pos[k][1]}%">
         <div class="medal" style="background-image:url(${src(img)})">${locked?`<div class="lock"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="12" rx="3" fill="#3a3a3a"/><path d="M8 10V7a4 4 0 018 0v3" stroke="#3a3a3a" stroke-width="2.6" fill="none"/><circle cx="12" cy="16" r="2" fill="#ffd23a"/></svg></div>`:''}</div>
         <b>${name}</b><small>${sub}</small>
         ${here?`<svg class="flag" viewBox="0 0 30 40"><line x1="4" y1="4" x2="4" y2="38" stroke="#7a4a20" stroke-width="3"/><path d="M5 5 L28 10 L5 18z" fill="#e0402a"/><circle cx="4" cy="4" r="3" fill="#ffb000"/></svg>`:''}</button>`; }).join('')}
+    ${ch===2 && !ch2Open ? `<div class="chlock"><b>레벨 ${CONFIG.chapter2Level}부터 배를 타고 건너갈 수 있어요</b></div>` : ''}
   </div></div>`;
   root.querySelectorAll('[data-close]').forEach(b => b.onclick = closeModal);
+  root.querySelectorAll('[data-ch]').forEach(b => b.onclick = () => openMap(+b.dataset.ch));
   root.querySelector('.worldmap').addEventListener('pointerdown', e => { if (e.target.classList.contains('worldmap')) closeModal(); });
   root.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { const k = b.dataset.go;
     if (k !== 'home' && S.level < REGIONS[k].lv){ toast(`레벨 ${REGIONS[k].lv}이 되면 갈 수 있어요`); return; }
@@ -1084,13 +1319,14 @@ function openSettings(){
     <div class="setrow"><span>에너지 1 충전 시간(분)<br><span class="hint">수업 시간에 맞게 조절하세요</span></span><input type="number" id="cfgRegen" min="0.1" step="0.5" value="${CONFIG.regenMinutes}"></div>
     <div class="setrow"><span>1레벨 최대 에너지</span><input type="number" id="cfgBase" min="10" step="10" value="${CONFIG.energyBase}"></div>
     <div class="setrow"><span>낮잠 에너지 / 대기 시간(시간)</span><span><input type="number" id="cfgNap" min="0" value="${CONFIG.napEnergy}"> <input type="number" id="cfgNapH" min="0" step="0.5" value="${CONFIG.napHours}"></span></div>
+    <div class="setrow"><span>요리·제작 시간 배율<br><span class="hint">0.5 = 두 배 빠름 · 1 = 기본</span></span><input type="number" id="cfgProd" min="0.05" step="0.1" value="${CONFIG.prodSpeed}"></div>
     <div class="row-btns"><button class="gbtn" id="saveCfg">설정 저장</button><button class="gbtn red" id="resetAll">처음부터 다시</button></div>
     <p class="hint" style="margin-top:14px">진행 상황은 이 기기 브라우저에만 저장돼요. 이름·사진 같은 개인정보는 저장하지 않아요.<br>그림: Canva AI 이미지 생성으로 제작.</p>`;
   showModal('설정', body);
   document.getElementById('sndBtn').onclick = () => { S.sound = !S.sound; save(); openSettings(); };
   document.getElementById('saveCfg').onclick = () => {
     const num = (id, min) => Math.max(min, parseFloat(document.getElementById(id).value) || min);
-    S.cfg = {regenMinutes:num('cfgRegen',.1), energyBase:num('cfgBase',10), napEnergy:num('cfgNap',0), napHours:num('cfgNapH',0)};
+    S.cfg = {regenMinutes:num('cfgRegen',.1), energyBase:num('cfgBase',10), napEnergy:num('cfgNap',0), napHours:num('cfgNapH',0), prodSpeed:num('cfgProd',.05)};
     Object.assign(CONFIG, S.cfg); save(); updateTimer(); toast('설정을 저장했어요'); closeModal(); };
   const rb = document.getElementById('resetAll');   // confirm() 대신 두 번 누르기로 확인
   rb.onclick = () => { if (!rb.dataset.sure){ rb.dataset.sure = 1; rb.textContent = '정말 지워요? 한 번 더 누르기'; return; }
@@ -1100,9 +1336,9 @@ function openSettings(){
 /* ══════════ 버튼 연결·시작 ══════════ */
 document.getElementById('bagBtn').onclick = openBag;
 document.getElementById('orderBtn').onclick = openOrders;
-document.getElementById('cookBtn').onclick = openCook;
+document.getElementById('cookBtn').onclick = () => openProd('kitchen');
 document.getElementById('homeBtn').onclick = () => enter('home');
-document.getElementById('mapBtn').onclick = openMap;
+document.getElementById('mapBtn').onclick = () => openMap();
 document.getElementById('enPlus').onclick = () => openShop(false);
 document.querySelectorAll('[data-shop]').forEach(b => b.onclick = () => openShop(false));
 document.getElementById('gearBtn').onclick = openSettings;

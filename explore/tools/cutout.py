@@ -1,4 +1,5 @@
-# 흰 배경 스프라이트 → 투명 PNG (가장자리에서 흰색 영역 flood fill)
+# 흰 배경 스프라이트 → 투명 WebP
+# 사용: python tools/cutout.py raw img (가장자리에서 흰색 영역 flood fill)
 import sys, os, numpy as np
 from PIL import Image, ImageFilter
 from collections import deque
@@ -30,7 +31,7 @@ def cutout(src, dst, thr=34, scale=2):
     out = im.convert('RGBA'); out.putalpha(alpha)
     bbox = alpha.point(lambda v: 255 if v > 20 else 0).getbbox()
     if bbox: out = out.crop(bbox)
-    out.save(dst, optimize=True)
+    out.save(dst, 'WEBP', quality=86, method=6)
     print(os.path.basename(dst), out.size)
 
 def greenkey(src, dst):
@@ -43,7 +44,7 @@ def greenkey(src, dst):
     rgb = np.clip(rgb, 0, 255)
     out = Image.fromarray(np.dstack([rgb, alpha]).astype(np.uint8), 'RGBA')
     out = out.crop(out.getchannel('A').point(lambda v: 255 if v > 20 else 0).getbbox())
-    out.save(dst, optimize=True); print(os.path.basename(dst), out.size)
+    out.save(dst, 'WEBP', quality=86, method=6); print(os.path.basename(dst), out.size)
 
 if __name__ == '__main__':
     raw, outdir = sys.argv[1], sys.argv[2]
@@ -51,13 +52,13 @@ if __name__ == '__main__':
     for f in sorted(os.listdir(raw)):
         n = os.path.splitext(f)[0]
         if n == 'cloud':
-            greenkey(os.path.join(raw, f), os.path.join(outdir, n+'.png')); continue
+            greenkey(os.path.join(raw, f), os.path.join(outdir, n+'.webp')); continue
         if n.startswith('t_'):   # 바닥 텍스처: 거울 반복으로 이음새 없는 타일 제작
             im = Image.open(os.path.join(raw, f)).convert('RGB')
             w, h = im.size; t = Image.new('RGB', (w*2, h*2))
             t.paste(im, (0,0)); t.paste(im.transpose(Image.FLIP_LEFT_RIGHT), (w,0))
             t.paste(im.transpose(Image.FLIP_TOP_BOTTOM), (0,h)); t.paste(im.transpose(Image.ROTATE_180), (w,h))
-            t.save(os.path.join(outdir, n+'.jpg'), quality=88); print(n, t.size); continue
+            t.save(os.path.join(outdir, n+'.webp'), 'WEBP', quality=86, method=6); print(n, t.size); continue
         if n in keep:
-            Image.open(os.path.join(raw, f)).convert('RGB').resize((256,256), Image.LANCZOS).save(os.path.join(outdir, n+'.png'), optimize=True); continue
-        cutout(os.path.join(raw, f), os.path.join(outdir, n+'.png'))
+            Image.open(os.path.join(raw, f)).convert('RGB').resize((256,256), Image.LANCZOS).save(os.path.join(outdir, n+'.webp'), 'WEBP', quality=86, method=6); continue
+        cutout(os.path.join(raw, f), os.path.join(outdir, n+'.webp'))
