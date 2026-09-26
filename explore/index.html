@@ -1092,8 +1092,9 @@ function openSettings(){
     const num = (id, min) => Math.max(min, parseFloat(document.getElementById(id).value) || min);
     S.cfg = {regenMinutes:num('cfgRegen',.1), energyBase:num('cfgBase',10), napEnergy:num('cfgNap',0), napHours:num('cfgNapH',0)};
     Object.assign(CONFIG, S.cfg); save(); updateTimer(); toast('설정을 저장했어요'); closeModal(); };
-  document.getElementById('resetAll').onclick = () => { if (!confirm('모든 진행 상황을 지우고 처음부터 시작할까요?')) return;
-    localStorage.removeItem(SAVE_KEY); load(); closeModal(); enter('home'); };
+  const rb = document.getElementById('resetAll');   // confirm() 대신 두 번 누르기로 확인
+  rb.onclick = () => { if (!rb.dataset.sure){ rb.dataset.sure = 1; rb.textContent = '정말 지워요? 한 번 더 누르기'; return; }
+    try { localStorage.removeItem(SAVE_KEY); } catch(e){} S = freshState(); closeModal(); enter('home'); };
 }
 
 /* ══════════ 버튼 연결·시작 ══════════ */
@@ -1116,8 +1117,8 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) upda
   document.getElementById('loading').remove();
   setInterval(updateTimer, 1000); updateTimer();
   requestAnimationFrame(frame);
-  if (!localStorage.getItem(SAVE_KEY + '-intro')){
-    localStorage.setItem(SAVE_KEY + '-intro', '1');
+  let seenIntro = false; try { seenIntro = !!localStorage.getItem(SAVE_KEY + '-intro'); localStorage.setItem(SAVE_KEY + '-intro', '1'); } catch(e){}
+  if (!seenIntro){
     showModal('다람 탐험대에 온 것을 환영해요!', `<div class="celebrate"><img src="${src('explorer')}" style="height:150px">
       <p>구름에 덮인 땅을 탐험해요. 나무·바위를 누르면 <b>에너지</b>를 써서 치우고 자원을 얻어요.</p>
       <p>치운 자리 주변의 <b>구름이 걷히며</b> 새 길이 열려요. 숨은 <b>룬 석판 3개</b>를 찾아보세요!</p>
