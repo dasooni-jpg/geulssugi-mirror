@@ -234,14 +234,14 @@ canvas#game.dragging{cursor:grabbing}
 </style>
 </head>
 <body>
-<div id="loading"><div><img src="img/avatar.webp" alt=""><p>탐험 준비 중…</p><div class="lbar"><i id="lbar"></i></div></div></div>
+<div id="loading"><div><img data-img="avatar" alt=""><p>탐험 준비 중…</p><div class="lbar"><i id="lbar"></i></div></div></div>
 
 <canvas id="game"></canvas>
 
 <!-- 상단 HUD -->
 <div class="hud">
   <div class="profile">
-    <div class="avatar" style="background-image:url(img/avatar.webp)"></div>
+    <div class="avatar" data-bg="avatar"></div>
     <div class="lvwrap">
       <div class="star"><svg viewBox="0 0 48 48"><path d="M24 3l6.2 13 14.3 1.8-10.5 9.8 2.7 14.1L24 34.8 11.3 41.7 14 27.6 3.5 17.8 17.8 16z" fill="#ffd23a" stroke="#e59500" stroke-width="2.5" stroke-linejoin="round"/></svg><span id="lv">1</span></div>
       <div class="xpbar"><i id="xpFill"></i><b id="xpText">0/50</b></div>
@@ -249,15 +249,15 @@ canvas#game.dragging{cursor:grabbing}
   </div>
   <div class="energy">
     <div class="bar">
-      <img class="ico" src="img/i_energy.webp" alt="에너지">
+      <img class="ico" data-img="i_energy" alt="에너지">
       <div class="track" id="energyTrack"><i id="enFill"></i><b id="enText">100</b></div>
       <button class="plus" id="enPlus" aria-label="에너지 충전">+</button>
     </div>
     <div class="timer" id="enTimer">가득 참</div>
   </div>
   <div class="money">
-    <div class="bar"><img class="ico" src="img/i_coin.webp" alt="코인"><div class="track"><b id="coinText">0</b></div><button class="plus" data-shop>+</button></div>
-    <div class="bar"><img class="ico" src="img/i_gem.webp" alt="보석"><div class="track"><b id="gemText">0</b></div><button class="plus" data-shop>+</button></div>
+    <div class="bar"><img class="ico" data-img="i_coin" alt="코인"><div class="track"><b id="coinText">0</b></div><button class="plus" data-shop>+</button></div>
+    <div class="bar"><img class="ico" data-img="i_gem" alt="보석"><div class="track"><b id="gemText">0</b></div><button class="plus" data-shop>+</button></div>
   </div>
 </div>
 
@@ -265,13 +265,13 @@ canvas#game.dragging{cursor:grabbing}
 <button class="gear" id="gearBtn" aria-label="설정"><svg viewBox="0 0 24 24"><path d="M19.4 13a7.7 7.7 0 000-2l2.1-1.6-2-3.5-2.5 1a7.6 7.6 0 00-1.7-1L14.9 3h-4l-.4 2.9a7.6 7.6 0 00-1.7 1l-2.5-1-2 3.5L6.4 11a7.7 7.7 0 000 2l-2.1 1.6 2 3.5 2.5-1c.5.4 1.1.7 1.7 1l.4 2.9h4l.4-2.9c.6-.3 1.2-.6 1.7-1l2.5 1 2-3.5zM12.9 15.5a3.5 3.5 0 110-7 3.5 3.5 0 010 7z"/></svg></button>
 
 <div class="dock left">
-  <button class="btn-round" id="bagBtn"><img src="img/chest.webp" alt=""><span>창고</span></button>
-  <button class="btn-round" id="orderBtn"><img src="img/board.webp" alt=""><span>주문판</span><em class="badge hidden" id="orderBadge"></em></button>
-  <button class="btn-round" id="cookBtn"><img src="img/kitchen.webp" alt=""><span>요리</span></button>
+  <button class="btn-round" id="bagBtn"><img data-img="chest" alt=""><span>창고</span></button>
+  <button class="btn-round" id="orderBtn"><img data-img="board" alt=""><span>주문판</span><em class="badge hidden" id="orderBadge"></em></button>
+  <button class="btn-round" id="cookBtn"><img data-img="kitchen" alt=""><span>요리</span></button>
 </div>
 <div class="dock right">
-  <button class="btn-round" id="homeBtn"><img src="img/tent.webp" alt=""><span>캠프</span></button>
-  <button class="btn-round" id="mapBtn"><img src="img/m_canyon.webp" alt="" style="border-radius:50%"><span>지도</span></button>
+  <button class="btn-round" id="homeBtn"><img data-img="tent" alt=""><span>캠프</span></button>
+  <button class="btn-round" id="mapBtn"><img data-img="m_canyon" alt="" style="border-radius:50%"><span>지도</span></button>
 </div>
 
 <div id="toast"></div>
@@ -442,10 +442,13 @@ function loadImages(){
       const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
       g.fillStyle = '#b9a58a'; g.beginPath(); g.arc(32,32,28,0,7); g.fill(); IMG[n] = c; fin(); };
     const fin = () => { done++; document.getElementById('lbar').style.width = (done/IMG_LIST.length*100)+'%'; res(); };
-    im.onload = fin; im.src = 'img/' + n + '.webp'; IMG[n] = im;
+    im.onload = fin; im.src = src(n); IMG[n] = im;
   })));
 }
-const src = n => 'img/' + n + '.webp';
+// 그림 주소: 한 파일 빌드(IMG_DATA가 있을 때)는 파일 안의 그림, 아니면 img/ 폴더
+const src = n => (window.IMG_DATA && IMG_DATA[n]) || 'img/' + n + '.webp';
+document.querySelectorAll('[data-img]').forEach(e => e.src = src(e.dataset.img));
+document.querySelectorAll('[data-bg]').forEach(e => e.style.backgroundImage = `url(${src(e.dataset.bg)})`);
 
 /* ══════════ 저장 데이터 ══════════ */
 let S;
