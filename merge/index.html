@@ -45,6 +45,19 @@ body{background:var(--page);font-family:'Jua',system-ui,sans-serif;color:var(--t
 #btnHelp{width:34px;height:34px;flex:none;border-radius:50%;border:none;background:#ffcf3f;color:#7a4b00;font-family:inherit;
   font-size:20px;box-shadow:inset 0 -3px 0 #d79a00;cursor:pointer}
 
+/* ── 캔바 그림 ── */
+img.pic{width:88%;height:88%;object-fit:contain;display:block;pointer-events:none;-webkit-user-drag:none}
+.it .e{width:100%;height:100%;display:grid;place-items:center}
+.oi img.pic{width:30px;height:30px}
+.cc .face img.pic{width:54px;height:54px;border-radius:50%;background:#fff;box-shadow:0 2px 0 #d8bf98}
+.pill .ic img.pic{width:34px;height:34px}
+#avPic img.pic{width:46px;height:46px}
+.row .e img.pic{width:40px;height:40px}
+.tile img.pic{width:78%;height:78%}
+#ghost img.pic{width:100%;height:100%}
+.gift img.pic{display:inline-block;width:44px;height:44px;vertical-align:middle}
+#custWrap.hasbg{background:url(assets/bg.jpg) center/cover}
+#custWrap.hasbg #decorRow{opacity:.9}
 /* ── 손님 줄 ── */
 #custWrap{position:relative;padding:10px 6px 6px}
 #decorRow{position:absolute;inset:0;display:flex;justify-content:space-around;align-items:flex-start;
@@ -158,10 +171,10 @@ body{background:var(--page);font-family:'Jua',system-ui,sans-serif;color:var(--t
 <body>
 <div id="app">
   <div id="top">
-    <div id="avatar" title="내 레벨">🐿️<span class="lvb" id="lvB">1</span><span class="xpbar"><i id="xpB"></i></span></div>
-    <div class="pill"><span class="ic">⚡</span><span class="v" id="enV">0</span><span class="plus" data-open="store">+</span><span class="sub" id="enT"></span></div>
-    <div class="pill"><span class="ic">🪙</span><span class="v" id="coV">0</span></div>
-    <div class="pill"><span class="ic">💎</span><span class="v" id="geV">0</span><span class="plus" data-open="store">+</span></div>
+    <div id="avatar" title="내 레벨"><span id="avPic">🐿️</span><span class="lvb" id="lvB">1</span><span class="xpbar"><i id="xpB"></i></span></div>
+    <div class="pill"><span class="ic" data-art="energy-2">⚡</span><span class="v" id="enV">0</span><span class="plus" data-open="store">+</span><span class="sub" id="enT"></span></div>
+    <div class="pill"><span class="ic" data-art="coin-1">🪙</span><span class="v" id="coV">0</span></div>
+    <div class="pill"><span class="ic" data-art="gem-1">💎</span><span class="v" id="geV">0</span><span class="plus" data-open="store">+</span></div>
     <button id="btnHelp" title="도움말">?</button>
   </div>
   <div id="custWrap"><div id="decorRow"></div><div id="cust"></div></div>
@@ -175,6 +188,7 @@ body{background:var(--page);font-family:'Jua',system-ui,sans-serif;color:var(--t
   <div id="toast"></div>
 </div>
 
+<script src="assets/manifest.js"></script>
 <script>
 // ───────────── 기본 설정값 (교사가 조정 가능) ─────────────
 const CFG = {
@@ -220,19 +234,24 @@ const DECOR = [
   {id:'sofa',e:'🛋️',n:'푹신한 소파',cost:2200},{id:'tree',e:'🎄',n:'반짝이 나무',cost:3000}
 ];
 const STORE = [
-  {e:'⚡',n:'에너지 +50',sub:'💎 15',pay:['gems',15],give:s=>{s.energy+=50}},
-  {e:'🔋',n:'에너지 +120',sub:'💎 30',pay:['gems',30],give:s=>{s.energy+=120}},
-  {e:'💎',n:'보석 5개',sub:'🪙 800',pay:['coins',800],give:s=>{s.gems+=5}},
-  {e:'🥄',n:'믹서 Lv.1',sub:'🪙 400',pay:['coins',400],item:['mixer',1]},
-  {e:'🧂',n:'오븐 Lv.1',sub:'🪙 400',pay:['coins',400],item:['oven',1]},
-  {e:'🪴',n:'화분(꽃 수레) Lv.1',sub:'🪙 300',pay:['coins',300],item:['cart',1]},
-  {e:'🧺',n:'고양이 바구니 Lv.1',sub:'🪙 250',pay:['coins',250],item:['cat',1]}
+  {e:'⚡',pic:['energy',2],n:'에너지 +50',sub:'💎 15',pay:['gems',15],give:s=>{s.energy+=50}},
+  {e:'🔋',pic:['energy',4],n:'에너지 +120',sub:'💎 30',pay:['gems',30],give:s=>{s.energy+=120}},
+  {e:'💎',pic:['gem',2],n:'보석 5개',sub:'🪙 800',pay:['coins',800],give:s=>{s.gems+=5}},
+  {e:'🥄',pic:['mixer',1],n:'믹서 Lv.1',sub:'🪙 400',pay:['coins',400],item:['mixer',1]},
+  {e:'🧂',pic:['oven',1],n:'오븐 Lv.1',sub:'🪙 400',pay:['coins',400],item:['oven',1]},
+  {e:'🪴',pic:['cart',1],n:'화분(꽃 수레) Lv.1',sub:'🪙 300',pay:['coins',300],item:['cart',1]},
+  {e:'🧺',pic:['cat',1],n:'고양이 바구니 Lv.1',sub:'🪙 250',pay:['coins',250],item:['cat',1]}
 ];
 
 // ───────────── 계열 도우미 ─────────────
 const K = c => CHAINS[c];
 const maxL = c => K(c).items.length;
 const emo = it => K(it.c).items[it.l-1][0];
+// 캔바 그림이 있으면 그림, 없으면 이모지 (assets/manifest.js 가 window.MERGE_ART 를 채움)
+const ART = window.MERGE_ART || {};
+const hasArt = (c,l) => (ART[c]||0) >= l;
+const pic = it => hasArt(it.c,it.l) ? `<img class="pic" src="assets/${it.c}-${it.l}.png" alt="" draggable="false">` : emo(it);
+const facePic = cu => (cu.fi!=null && ART.face > cu.fi) ? `<img class="pic" src="assets/face-${cu.fi+1}.png" alt="" draggable="false">` : cu.face;
 const nm = it => K(it.c).items[it.l-1][1];
 const isGen = it => it && (K(it.c).kind==='gen' || K(it.c).kind==='auto');
 const isRes = it => it && ['energy','coin','gem'].includes(K(it.c).kind);
@@ -379,7 +398,7 @@ function renderBoard(){
     } else if (isRes(it) && !it.s) extra += `<span class="val">+${K(it.c).vals[it.l-1]}</span>`;
     else if (!it.s && want.has(it.c+':'+it.l)) extra += `<span class="chk">✔</span>`;
     if (drag && drag.started && drag.from===i) cls += ' dim';
-    d.innerHTML = `<div class="${cls}"><span class="e">${emo(it)}</span>${extra}</div>`;
+    d.innerHTML = `<div class="${cls}"><span class="e">${pic(it)}</span>${extra}</div>`;
   }
 }
 
@@ -395,8 +414,8 @@ function renderCust(){
   $('cust').innerHTML = S.cust.map((cu, i) => {
     if (!cu) return `<div class="cc wait">🚶 손님이<br>오는 중…</div>`;
     const st = orderStatus(cu, counts);
-    return `<div class="cc"><div class="face">${cu.face}</div><div class="nm">${cu.name}</div>
-      <div class="ord">${cu.order.map((o,j)=>`<div class="oi ${st.oks[j]?'ok':''}" data-c="${o.c}" data-l="${o.l}">${emo(o)}</div>`).join('')}</div>
+    return `<div class="cc"><div class="face">${facePic(cu)}</div><div class="nm">${cu.name}</div>
+      <div class="ord">${cu.order.map((o,j)=>`<div class="oi ${st.oks[j]?'ok':''}" data-c="${o.c}" data-l="${o.l}">${pic(o)}</div>`).join('')}</div>
       <div class="rw">🪙 +${cu.reward} · ⭐${cu.xp}</div>
       <button class="${st.all?'go':''}" data-done="${i}">${st.all?'전달하기':'준비 중'}</button></div>`;
   }).join('');
@@ -559,7 +578,7 @@ function ownedChains(){
   return [...set];
 }
 function newCustomer(){
-  const chains = ownedChains(), [face,name] = FACES[Math.floor(Math.random()*FACES.length)];
+  const chains = ownedChains(), fi = Math.floor(Math.random()*FACES.length), [face,name] = FACES[fi];
   const n = 1 + (Math.random()<.55 ? 1 : 0) + (S.lvl>=3 && Math.random()<.3 ? 1 : 0);
   const order = [];
   for (let k=0; k<n; k++){
@@ -570,7 +589,7 @@ function newCustomer(){
   }
   order.sort((a,b)=>a.c.localeCompare(b.c)||a.l-b.l);
   const base = order.reduce((s,o)=>s + Math.round(12*Math.pow(1.8, o.l-1)), 0);
-  return {face, name, order, reward: Math.round(base*(1+.1*(n-1))), xp: order.reduce((s,o)=>s+o.l, 0)};
+  return {face, fi, name, order, reward: Math.round(base*(1+.1*(n-1))), xp: order.reduce((s,o)=>s+o.l, 0)};
 }
 function deliver(i){
   const cu = S.cust[i]; if (!cu) return;
@@ -647,7 +666,7 @@ window.addEventListener('pointermove', e => {
     drag.started = true;
     const g = document.createElement('div'); g.id = 'ghost';
     g.style.width = g.style.height = CELL+'px'; g.style.fontSize = Math.round(CELL*.7)+'px';
-    g.textContent = emo(S.board[drag.from]); document.body.appendChild(g);
+    g.innerHTML = pic(S.board[drag.from]); document.body.appendChild(g);
     sel = drag.from; renderBoard(); renderInfo();
   }
   const g = $('ghost'); g.style.left = e.clientX+'px'; g.style.top = e.clientY+'px';
@@ -689,20 +708,20 @@ function chainModal(it){
   const G = K(it.c), seen = S.disc[it.c] || 0;
   let tiles = G.items.map((x, j) => {
     const l = j+1, known = l <= seen || l === it.l;
-    return `<div class="tile ${known?'':'unk'} ${l===it.l?'cur':''}">${known ? x[0] : '?'}</div>`;
+    return `<div class="tile ${known?'':'unk'} ${l===it.l?'cur':''}">${known ? pic({c:it.c,l}) : '?'}</div>`;
   }).join('');
   let body = `<div class="lvt">Lv. ${it.l}</div><div class="grid4">${tiles}</div>`;
   if (G.kind==='gen' || G.kind==='auto'){
     const tb = genTable(it.c, it.l).slice().sort((a,b)=>b.p-a.p);
     body += `<div class="sec">생성</div>`;
     body += tb.length ? `<div class="grid4" style="background:none;padding:0">${tb.map(t=>
-      `<div class="tile gp">${emo(t)}<span class="pc">${(t.p*100).toFixed(1)}%</span></div>`).join('')}</div>`
+      `<div class="tile gp">${pic(t)}<span class="pc">${(t.p*100).toFixed(1)}%</span></div>`).join('')}</div>`
       : `<div class="ctr">Lv.${G.minL}부터 선물을 만들어요.</div>`;
   } else {
     const src = Object.entries(CHAINS).filter(([k,g]) => (g.produces && g.produces[it.c]) || (g.table && g.table.some(t=>t.c===it.c)));
     if (src.length){
       body += `<div class="sec">얻는 곳</div>` + src.map(([k,g]) =>
-        `<div class="row"><span class="e">${g.items[(g.minL||1)-1][0]}</span><div class="tx">${g.name}<small>${g.kind==='auto'?'자동 생성':'터치해서 생성'}</small></div></div>`).join('');
+        `<div class="row"><span class="e">${pic({c:k,l:g.minL||1})}</span><div class="tx">${g.name}<small>${g.kind==='auto'?'자동 생성':'터치해서 생성'}</small></div></div>`).join('');
     }
     if (isRes(it)) body += `<div class="ctr">값: ${G.vals.map((v,j)=>j+1<=Math.max(seen,it.l)?v:'?').join(' → ')}</div>`;
   }
@@ -712,7 +731,7 @@ function openModal(which){
   if (which==='store'){
     showModal('상점', STORE.map((s,i)=>{
       const ok = S[s.pay[0]] >= s.pay[1];
-      return `<div class="row"><span class="e">${s.e}</span><div class="tx">${s.n}<small>${s.item?'빈칸에 놓여요':'바로 받아요'}</small></div>
+      return `<div class="row"><span class="e">${s.pic && hasArt(...s.pic) ? pic({c:s.pic[0],l:s.pic[1]}) : s.e}</span><div class="tx">${s.n}<small>${s.item?'빈칸에 놓여요':'바로 받아요'}</small></div>
         <button data-buy="${i}" ${ok?'':'disabled'}>${s.sub}</button></div>`;
     }).join(''));
   }
@@ -741,7 +760,7 @@ function openModal(which){
   }
 }
 function showLevelUp(){
-  const g = (S._lastGift||[]).map(([c,l]) => K(c).items[l-1][0]).join(' ');
+  const g = (S._lastGift||[]).map(([c,l]) => `<span class="gift">${pic({c,l})}</span>`).join(' ');
   setTimeout(() => showModal('레벨 업!', `<div class="big">🎉</div><div class="ctr">Lv.${S.lvl} 이 되었어요!<br>
     💎 +${3+S.lvl} · ⚡ +30<br>선물: ${g} (보드 빈칸에 놓여요)</div><button class="wideb x2">좋아요!</button>`), 400);
 }
@@ -766,6 +785,9 @@ $('md').addEventListener('click', e => {
 
 // ───────────── 시작 ─────────────
 S = load();
+document.querySelectorAll('[data-art]').forEach(el => { const [c,l] = el.dataset.art.split('-'); if (hasArt(c,+l)) el.innerHTML = pic({c,l:+l}); });
+if (ART.avatar) $('avPic').innerHTML = '<img class="pic" src="assets/avatar.png" alt="" draggable="false">';
+if (ART.bg) document.getElementById('custWrap').classList.add('hasbg');
 try{ muted = !!localStorage.getItem(SAVE_KEY+'-mute'); }catch(e){}
 buildBoard();
 renderAll();
