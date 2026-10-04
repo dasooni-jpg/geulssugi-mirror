@@ -1,2 +1,2 @@
 // 캔바 그림 목록 (tools/slice_sheets.py 가 자동 생성)
-window.MERGE_ART = {"fruit": 8, "drink": 6, "bread": 9, "dessert": 8, "flower": 9, "mixer": 6, "oven": 6, "cart": 6, "energy": 5, "coin": 5, "cat": 3, "avatar": 1, "gem": 4, "face": 12, "bg": 1};
+window.MERGE_ART = {"fruit": 8, "drink": 6, "gem": 4, "bread": 9, "avatar": 1, "dessert": 8, "flower": 9, "cat": 3, "mixer": 6, "oven": 6, "cart": 6, "energy": 5, "coin": 5, "face": 12, "butterfly": 8, "accessory": 8, "craft": 6, "btn-store": 1, "btn-house": 1, "decor-balloon": 1, "decor-plant": 1, "decor-lamp": 1, "decor-clock": 1, "decor-art": 1, "decor-music": 1, "decor-sofa": 1, "decor-tree": 1, "bg": 1};

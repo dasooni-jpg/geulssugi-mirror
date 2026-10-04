@@ -10,6 +10,11 @@
 !/server.ps1
 !/apikey.txt.example
 !/cloudflare-worker.js
+!/CLAUDE.md
+
+# ↓ 모든 앱의 Cloudflare 배포 파일 (build-cloudflare.mjs 로 제작)
+!/build-cloudflare.mjs
+!/cloudflare/
 !/app/
 
 # ↓ 쉬는시간 게임: 타자 연습 (낱말 비)

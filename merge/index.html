@@ -56,8 +56,33 @@ img.pic{width:88%;height:88%;object-fit:contain;display:block;pointer-events:non
 .tile img.pic{width:78%;height:78%}
 #ghost img.pic{width:100%;height:100%}
 .gift img.pic{display:inline-block;width:44px;height:44px;vertical-align:middle}
-#custWrap.hasbg{background:url(assets/bg.jpg) center/cover}
+#custWrap.hasbg{background-position:center;background-size:cover}
 #custWrap.hasbg #decorRow{opacity:.9}
+#decorRow .dc{display:block;width:44px;height:44px}
+#decorRow .dc img.pic{width:44px;height:44px;filter:drop-shadow(0 3px 2px #0004)}
+.sqb .bi{display:block;width:44px;height:44px;line-height:44px}
+.sqb .bi img.pic{width:44px;height:44px}
+.pt{position:fixed;z-index:65;width:8px;height:8px;border-radius:50%;pointer-events:none;margin:-4px 0 0 -4px;
+  animation:pt .6s ease-out forwards;box-shadow:0 0 6px #fff}
+@keyframes pt{to{transform:translate(var(--dx),var(--dy)) scale(.2);opacity:0}}
+.ring{position:fixed;z-index:64;width:20px;height:20px;margin:-10px 0 0 -10px;border-radius:50%;border:3px solid #fff;
+  pointer-events:none;animation:ring .45s ease-out forwards}
+@keyframes ring{to{transform:scale(4);opacity:0}}
+.flyto{position:fixed;z-index:70;width:34px;height:34px;margin:-17px 0 0 -17px;pointer-events:none;display:grid;place-items:center;
+  font-size:24px;transition:transform .6s cubic-bezier(.5,-0.3,.7,1),opacity .6s}
+.flyto img.pic{width:34px;height:34px}
+.pill.bump{animation:bump .25s}
+@keyframes bump{50%{transform:scale(1.12)}}
+.cf{position:fixed;z-index:80;top:-12px;width:9px;height:14px;border-radius:2px;pointer-events:none;
+  animation:cf 1.8s ease-in forwards}
+@keyframes cf{to{transform:translateY(105vh) rotate(var(--r));opacity:.8}}
+.banner{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);z-index:62;background:linear-gradient(#ffe36e,#ffb627);
+  color:#6b3d00;font-size:18px;padding:8px 18px 8px 8px;border-radius:30px;display:flex;align-items:center;gap:8px;
+  box-shadow:0 4px 0 #c97f00,0 8px 20px #0005;animation:ban 1.8s ease-out forwards;white-space:nowrap;pointer-events:none}
+.banner .bp{width:44px;height:44px;background:#fff;border-radius:50%;display:grid;place-items:center;font-size:28px}
+.banner .bp img.pic{width:40px;height:40px}
+@keyframes ban{0%{transform:translate(-50%,-50%) scale(.3);opacity:0}15%{transform:translate(-50%,-50%) scale(1.1);opacity:1}
+  25%{transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{transform:translate(-50%,-80%);opacity:0}}
 /* ── 손님 줄 ── */
 #custWrap{position:relative;padding:10px 6px 6px}
 #decorRow{position:absolute;inset:0;display:flex;justify-content:space-around;align-items:flex-start;
@@ -180,9 +205,9 @@ img.pic{width:88%;height:88%;object-fit:contain;display:block;pointer-events:non
   <div id="custWrap"><div id="decorRow"></div><div id="cust"></div></div>
   <div id="boardWrap"><div id="board"></div></div>
   <div id="bottom">
-    <button class="sqb" data-open="store">🏪<small>상점</small></button>
+    <button class="sqb" data-open="store"><span class="bi" data-key="btn-store">🏪</span><small>상점</small></button>
     <div id="info"></div>
-    <button class="sqb" data-open="decor">🏠<small>꾸미기</small></button>
+    <button class="sqb" data-open="decor"><span class="bi" data-key="btn-house">🏠</span><small>꾸미기</small></button>
   </div>
   <div class="ov" id="ov"><div class="md" id="md"></div></div>
   <div id="toast"></div>
@@ -217,14 +242,18 @@ const CHAINS = {
            items:[['🥄','숟가락'],['🍴','포크와 나이프'],['🫖','주전자'],['☕','커피 머신'],['🍶','블렌더'],['🏺','마법 항아리']]},
   oven:   {name:'오븐', kind:'gen', produces:{bread:.6, dessert:.4},
            items:[['🧂','소금통'],['🍳','프라이팬'],['🥘','냄비'],['🍲','찜기'],['🫕','퐁듀 냄비'],['🏭','빵 공장']]},
-  cart:   {name:'꽃 수레', kind:'auto', produces:{flower:.85, coin:.15},
+  butterfly:{name:'나비', kind:'item', items:[['🐛','애벌레'],['🫛','번데기'],['🦋','노랑나비'],['🦋','파랑나비'],['🦋','꽃무늬 나비'],['🦋','반짝 나비'],['🌈','무지개 나비'],['🏆','황금 나비 유리병']]},
+  accessory:{name:'액세서리', kind:'item', items:[['⚪','진주 한 알'],['📿','진주 줄'],['📿','진주 팔찌'],['💍','보석 반지'],['📿','하트 목걸이'],['🎀','리본 머리핀'],['👑','작은 왕관'],['🎁','보석함']]},
+  craft:  {name:'공예 상자', kind:'gen', produces:{accessory:1},
+           items:[['🧵','실타래'],['📍','바늘꽂이'],['🧺','반짇고리'],['🪡','재봉틀'],['🧶','공예 작업대'],['🏬','액세서리 가게']]},
+  cart:   {name:'꽃 수레', kind:'auto', produces:{flower:.7, butterfly:.15, coin:.15},
            items:[['🪴','화분'],['🌵','선인장 화분'],['🌳','작은 나무'],['🛒','꽃 수레'],['🎪','꽃 가판대'],['🏡','꽃집']]},
   cat:    {name:'애교쟁이 고양이', kind:'gen', minL:3, charges:5,
            table:[{c:'energy',l:1,p:.18},{c:'energy',l:2,p:.02},{c:'gem',l:1,p:.10},{c:'gem',l:2,p:.03},
                   {c:'coin',l:1,p:.45},{c:'coin',l:2,p:.12},{c:'coin',l:3,p:.10}],
            items:[['🧺','빈 바구니'],['🐈‍⬛','졸린 고양이'],['🐱','애교쟁이 고양이']]}
 };
-const ORDERABLE = ['fruit','drink','bread','dessert','flower'];
+const ORDERABLE = ['fruit','drink','bread','dessert','flower','butterfly','accessory'];
 const FACES = [['👩‍🍳','요리사'],['👴','할아버지'],['👵','할머니'],['🧑‍🎨','화가'],['👧','꼬마 손님'],['🧔','아저씨'],
   ['👩‍🏫','선생님'],['🧑‍🚀','우주인'],['🐻','곰돌이'],['🐰','토끼'],['🦊','여우'],['🐼','판다']];
 const DECOR = [
@@ -240,6 +269,7 @@ const STORE = [
   {e:'🥄',pic:['mixer',1],n:'믹서 Lv.1',sub:'🪙 400',pay:['coins',400],item:['mixer',1]},
   {e:'🧂',pic:['oven',1],n:'오븐 Lv.1',sub:'🪙 400',pay:['coins',400],item:['oven',1]},
   {e:'🪴',pic:['cart',1],n:'화분(꽃 수레) Lv.1',sub:'🪙 300',pay:['coins',300],item:['cart',1]},
+  {e:'🧵',pic:['craft',1],n:'공예 상자 Lv.1',sub:'🪙 600',pay:['coins',600],item:['craft',1]},
   {e:'🧺',pic:['cat',1],n:'고양이 바구니 Lv.1',sub:'🪙 250',pay:['coins',250],item:['cat',1]}
 ];
 
@@ -249,9 +279,12 @@ const maxL = c => K(c).items.length;
 const emo = it => K(it.c).items[it.l-1][0];
 // 캔바 그림이 있으면 그림, 없으면 이모지 (assets/manifest.js 가 window.MERGE_ART 를 채움)
 const ART = window.MERGE_ART || {};
+// Cloudflare 한 파일 배포본에서는 그림이 MERGE_INLINE 에 data URI 로 들어 있음
+const A = path => (window.MERGE_INLINE && window.MERGE_INLINE[path]) || path;
 const hasArt = (c,l) => (ART[c]||0) >= l;
-const pic = it => hasArt(it.c,it.l) ? `<img class="pic" src="assets/${it.c}-${it.l}.png" alt="" draggable="false">` : emo(it);
-const facePic = cu => (cu.fi!=null && ART.face > cu.fi) ? `<img class="pic" src="assets/face-${cu.fi+1}.png" alt="" draggable="false">` : cu.face;
+const pic = it => hasArt(it.c,it.l) ? `<img class="pic" src="${A(`assets/${it.c}-${it.l}.webp`)}" alt="" draggable="false">` : emo(it);
+const artPic = (key, fb) => ART[key] ? `<img class="pic" src="${A(`assets/${key}.webp`)}" alt="" draggable="false">` : fb;
+const facePic = cu => (cu.fi!=null && ART.face > cu.fi) ? `<img class="pic" src="${A(`assets/face-${cu.fi+1}.webp`)}" alt="" draggable="false">` : cu.face;
 const nm = it => K(it.c).items[it.l-1][1];
 const isGen = it => it && (K(it.c).kind==='gen' || K(it.c).kind==='auto');
 const isRes = it => it && ['energy','coin','gem'].includes(K(it.c).kind);
@@ -406,7 +439,7 @@ function renderTop(){
   $('enV').textContent = S.energy; $('coV').textContent = S.coins; $('geV').textContent = S.gems;
   $('lvB').textContent = S.lvl; $('xpB').style.width = Math.min(100, S.xp/needXp(S.lvl)*100) + '%';
   $('enT').textContent = S.energy < CFG.MAX_ENERGY ? '+1까지 ' + fmt(S.enTs + CFG.REGEN_SEC*1000 - Date.now()) : '';
-  $('decorRow').textContent = S.decor.map(id => DECOR.find(d=>d.id===id).e).join(' ');
+  $('decorRow').innerHTML = S.decor.map(id => { const d = DECOR.find(x=>x.id===id); return `<span class="dc">${artPic('decor-'+id, d.e)}</span>`; }).join('');
 }
 
 function renderCust(){
@@ -453,8 +486,45 @@ function renderAll(){ renderTop(); renderCust(); renderBoard(); renderInfo(); }
 // ───────────── 연출 ─────────────
 let toastT;
 function toast(msg){ const t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(()=>t.classList.remove('on'), 1700); }
+function banner(txt, html){ const b = document.createElement('div'); b.className = 'banner'; b.innerHTML = `<span class="bp">${html}</span>${txt}`; $('app').appendChild(b); setTimeout(()=>b.remove(), 1800); }
 function flyText(x, y, txt){ const f = document.createElement('div'); f.className = 'fly'; f.textContent = txt;
   f.style.left = x+'px'; f.style.top = y+'px'; document.body.appendChild(f); setTimeout(()=>f.remove(), 1100); }
+// ── 효과 연출 ──
+function burst(x, y, colors, n=12){
+  for (let k=0; k<n; k++){
+    const p = document.createElement('i'); p.className = 'pt';
+    const a = Math.PI*2*k/n + Math.random()*.4, r = 28 + Math.random()*26;
+    p.style.left = x+'px'; p.style.top = y+'px';
+    p.style.background = colors[k % colors.length];
+    p.style.setProperty('--dx', Math.cos(a)*r+'px'); p.style.setProperty('--dy', Math.sin(a)*r+'px');
+    document.body.appendChild(p); setTimeout(()=>p.remove(), 650);
+  }
+  const ring = document.createElement('i'); ring.className = 'ring'; ring.style.left = x+'px'; ring.style.top = y+'px';
+  document.body.appendChild(ring); setTimeout(()=>ring.remove(), 500);
+}
+const PILL = {energy:'enV', coin:'coV', gem:'geV'};
+function flyTo(kind, x, y, html, count=1){
+  const t = $(PILL[kind]).parentElement.getBoundingClientRect();
+  const tx = t.left + 16, ty = t.top + t.height/2;
+  for (let k=0; k<Math.min(count, 6); k++){
+    const f = document.createElement('div'); f.className = 'flyto'; f.innerHTML = html;
+    const ox = (Math.random()-.5)*30, oy = (Math.random()-.5)*30;
+    f.style.left = (x+ox)+'px'; f.style.top = (y+oy)+'px';
+    document.body.appendChild(f);
+    setTimeout(() => { f.style.transform = `translate(${tx-x-ox}px,${ty-y-oy}px) scale(.6)`; f.style.opacity = '.3'; }, 30 + k*70);
+    setTimeout(() => { f.remove(); const pl = $(PILL[kind]).parentElement; pl.classList.remove('bump'); void pl.offsetWidth; pl.classList.add('bump'); }, 650 + k*70);
+  }
+}
+const resPic = kind => pic({c: kind, l: kind==='energy' ? 2 : 1});
+function confetti(){
+  const cs = ['#ff6fb5','#ffd23f','#5fd36b','#5ab8ff','#b77bff'];
+  for (let k=0; k<46; k++){
+    const p = document.createElement('i'); p.className = 'cf';
+    p.style.left = Math.random()*100+'vw'; p.style.background = cs[k%cs.length];
+    p.style.animationDelay = Math.random()*.5+'s'; p.style.setProperty('--r', (Math.random()*720-360)+'deg');
+    document.body.appendChild(p); setTimeout(()=>p.remove(), 2200);
+  }
+}
 function cellCenter(i){ const r = cells[i].getBoundingClientRect(); return [r.left+r.width/2, r.top+r.height/2]; }
 function animPop(i){ const e = cells[i].firstElementChild; if (e){ e.classList.remove('pop'); void e.offsetWidth; e.classList.add('pop'); } }
 function animShake(i){ const e = cells[i].firstElementChild; if (e){ e.classList.remove('shake'); void e.offsetWidth; e.classList.add('shake'); } }
@@ -494,7 +564,8 @@ function drop(a, b){
     const isNew = !S.disc[it.c] || S.disc[it.c] < it.l;
     discover(it); unsealAround(b); sfx.merge();
     renderAll(); animPop(b);
-    if (isNew){ const [x,y] = cellCenter(b); flyText(x, y-20, '✨ 새로운 발견!'); }
+    { const [x,y] = cellCenter(b); burst(x, y, it.l>=5 ? ['#ffd23f','#ff9f1c','#fff3b0'] : ['#ffffff','#ffe066','#ff8fd8','#9be7ff']); }
+    if (isNew){ const [x,y] = cellCenter(b); flyText(x, y-20, '✨ 새로운 발견!'); if (it.l>=3) banner(`새로운 발견! ${nm(it)}`, pic(it)); }
     if (S.tut===0 && it.c==='cat'){ S.tut = 1; toast('고양이를 터치하면 선물을 줘요! 🐱'); }
     save(); return;
   }
@@ -517,6 +588,7 @@ function tap(i){
 function collect(i){
   const it = S.board[i], G = K(it.c), v = G.vals[it.l-1];
   const [x,y] = cellCenter(i);
+  flyTo(G.kind, x, y, resPic(G.kind), it.l+1);
   if (G.kind==='energy'){ S.energy += v; flyText(x,y,'⚡+'+v); }
   if (G.kind==='coin'){ S.coins += v; flyText(x,y,'🪙+'+v); }
   if (G.kind==='gem'){ S.gems += v; flyText(x,y,'💎+'+v); }
@@ -537,6 +609,7 @@ function produce(i){
   S.energy -= cost; it.ch--;
   if (it.ch <= 0) it.cd = Date.now() + genCd(it);
   sfx.spawn(); renderAll(); animFrom(i, to); save();
+  setTimeout(() => { const [x,y] = cellCenter(to); burst(x, y, ['#ffffff','#c9f0ff'], 6); }, 280);
 }
 
 function autoSpawn(i){
@@ -563,7 +636,7 @@ function skip(){
 function sell(){
   const it = S.board[sel]; if (!it || it.s) return;
   const p = sellPrice(it), [x,y] = cellCenter(sel);
-  S.coins += p; S.board[sel] = null; flyText(x,y,'🪙+'+p); sel = -1; sfx.coin(); renderAll(); save();
+  S.coins += p; S.board[sel] = null; flyText(x,y,'🪙+'+p); flyTo('coin', x, y, resPic('coin'), 2); sel = -1; sfx.coin(); renderAll(); save();
 }
 
 // ───────────── 손님 ─────────────
@@ -602,6 +675,8 @@ function deliver(i){
   if (sel>=0 && !S.board[sel]) sel = -1;
   const card = $('cust').children[i].getBoundingClientRect();
   flyText(card.left+card.width/2, card.top+40, `🪙+${cu.reward} ⭐+${cu.xp}`);
+  flyTo('coin', card.left+card.width/2, card.top+70, resPic('coin'), 5);
+  burst(card.left+card.width/2, card.top+60, ['#ffd23f','#ffffff','#ff8fd8'], 16);
   S.coins += cu.reward; S.xp += cu.xp; S.cust[i] = null; S.arrive[i] = Date.now() + 2500;
   sfx.done(); checkLevel(); renderAll(); save();
 }
@@ -612,7 +687,7 @@ function checkLevel(){
 }
 function levelReward(l){
   S.gems += 3 + l; S.energy += 30;
-  const g = {2:[['oven',1]], 3:[['cart',1]], 4:[['cat',1],['cat',1]]}[l]
+  const g = {2:[['oven',1]], 3:[['cart',1]], 4:[['cat',1],['cat',1]], 5:[['craft',1]]}[l]
          || (l%2 ? [[Math.random()<.5?'mixer':'oven',1]] : [['cat',2]]);
   g.forEach(x => S.gifts.push(x));
   S._lastGift = g;
@@ -739,7 +814,7 @@ function openModal(which){
     showModal('카페 꾸미기', `<div class="ctr" style="margin-bottom:8px">동전으로 카페를 꾸며요. 꾸밀 때마다 ⭐10을 받아요.</div>` +
       DECOR.map(d => {
         const own = S.decor.includes(d.id);
-        return `<div class="row"><span class="e">${d.e}</span><div class="tx">${d.n}<small>${own?'설치 완료':'🪙 '+d.cost}</small></div>
+        return `<div class="row"><span class="e">${artPic('decor-'+d.id, d.e)}</span><div class="tx">${d.n}<small>${own?'설치 완료':'🪙 '+d.cost}</small></div>
           <button data-dec="${d.id}" ${own||S.coins<d.cost?'disabled':''}>${own?'완료':'꾸미기'}</button></div>`;
       }).join(''));
   }
@@ -748,6 +823,8 @@ function openModal(which){
       <p>🔀 <b>합성</b> — 같은 아이템 두 개를 끌어서 겹치면 한 단계 높은 아이템이 돼요.</p>
       <p>👆 <b>생성기</b> — 분홍 테두리 아이템(믹서·오븐)을 터치하면 ⚡${CFG.SPAWN_COST}을 쓰고 아이템이 나와요. 횟수를 다 쓰면 잠시 쉬어요.</p>
       <p>🪴 <b>꽃 수레</b> — 시간이 되면 주변 빈칸에 저절로 꽃이 생겨요.</p>
+      <p>🦋 <b>나비</b> — 꽃 수레에서 가끔 애벌레가 나와요. 합치면 나비가 돼요.</p>
+      <p>🧵 <b>공예 상자</b> — Lv.5가 되면 받아요. 진주를 합쳐 액세서리를 만들어요.</p>
       <p>🐱 <b>고양이</b> — 바구니를 합쳐 Lv.3 고양이를 만들면 에너지·동전·보석 선물을 줘요.</p>
       <p>📦 <b>포장 상자</b> — 바로 옆 칸에서 합성하면 열려요.</p>
       <p>🧾 <b>손님 주문</b> — 주문한 아이템이 보드에 모두 있으면 [전달하기]를 눌러요. 동전과 ⭐경험치를 받아요.</p>
@@ -760,6 +837,7 @@ function openModal(which){
   }
 }
 function showLevelUp(){
+  setTimeout(confetti, 300);
   const g = (S._lastGift||[]).map(([c,l]) => `<span class="gift">${pic({c,l})}</span>`).join(' ');
   setTimeout(() => showModal('레벨 업!', `<div class="big">🎉</div><div class="ctr">Lv.${S.lvl} 이 되었어요!<br>
     💎 +${3+S.lvl} · ⚡ +30<br>선물: ${g} (보드 빈칸에 놓여요)</div><button class="wideb x2">좋아요!</button>`), 400);
@@ -786,8 +864,9 @@ $('md').addEventListener('click', e => {
 // ───────────── 시작 ─────────────
 S = load();
 document.querySelectorAll('[data-art]').forEach(el => { const [c,l] = el.dataset.art.split('-'); if (hasArt(c,+l)) el.innerHTML = pic({c,l:+l}); });
-if (ART.avatar) $('avPic').innerHTML = '<img class="pic" src="assets/avatar.png" alt="" draggable="false">';
-if (ART.bg) document.getElementById('custWrap').classList.add('hasbg');
+document.querySelectorAll('[data-key]').forEach(el => { el.innerHTML = artPic(el.dataset.key, el.textContent); });
+if (ART.avatar) $('avPic').innerHTML = `<img class="pic" src="${A('assets/avatar.webp')}" alt="" draggable="false">`;
+if (ART.bg){ const cw = document.getElementById('custWrap'); cw.classList.add('hasbg'); cw.style.backgroundImage = `url(${A('assets/bg.webp')})`; }
 try{ muted = !!localStorage.getItem(SAVE_KEY+'-mute'); }catch(e){}
 buildBoard();
 renderAll();

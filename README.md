@@ -62,6 +62,23 @@
 | `kart/` | 우리 반 카트 그랑프리 (3D 레이싱) | 정적 페이지 + `kart-online-worker.js` 붙여넣기 |
 | `safety-edu/` | 안전교육 문구 복사기 | **git 연동 자동배포** (아래 참고) |
 
+## ☁️ 클라우드플레어에 올리기 (모든 앱 공통)
+`cloudflare/` 폴더에 앱마다 `<폴더>-cloudflare.zip` 이 있습니다. 압축을 풀고 안의 `1-읽어보세요.txt` 순서대로 하면 됩니다.
+
+| 파일 | 앱 |
+|------|----|
+| `cloudflare/merge-cloudflare.zip` | 다람 머지 카페 |
+| `cloudflare/typing-rain-cloudflare.zip` | 타자 연습 |
+| `cloudflare/omok-cloudflare.zip` | 오목 대회 |
+| `cloudflare/chess-cloudflare.zip` | 체스 교실 (화면) |
+| `cloudflare/kart-cloudflare.zip` | 카트 그랑프리 (화면) |
+| `cloudflare/janggi-cloudflare.zip` | 장기 한판 |
+
+- **방법 A (권장)**: Pages → Upload assets 에 `방법A-페이지스에-올리기` 폴더를 끌어다 놓기
+- **방법 B**: Worker 편집기에 `방법B-워커에-붙여넣기/*.js` 내용을 붙여넣기
+- 앱을 고친 뒤에는 `node build-cloudflare.mjs` 로 다시 만듭니다.
+- 글쓰기 거울(`cloudflare-worker.js`), 아이디어 보드, 안전교육 복사기는 기존 Worker 파일을 그대로 씁니다.
+
 ### `kart/` — 우리 반 카트 그랑프리
 외부 라이브러리를 하나도 쓰지 않는 **파일 한 개짜리 3D 카트 레이싱 게임**입니다(순수 WebGL).
 학교 인터넷이 CDN을 막아도, 인터넷이 끊겨도 `kart/index.html`만 있으면 그대로 돌아갑니다.

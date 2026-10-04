@@ -1,8 +1,8 @@
 """캔바로 만든 아이콘 시트를 아이콘 한 장씩 잘라 assets/ 에 저장함.
 
 사용법: python3 tools/slice_sheets.py <시트폴더>
-시트 파일 이름(확장자 png/jpg 무관): fruit, drink, bread, dessert, flower,
-mixer, oven, cart, res, catgem, faces, bg
+시트 파일 이름(확장자 png/jpg 무관): q01 ~ q30 (2×2 시트), bg (배경)
+각 시트에 들어갈 아이콘은 아래 SHEETS 표에 있음
 흰 배경을 투명하게 바꾸고, 격자 칸마다 물체를 찾아 정사각형 PNG로 저장함.
 """
 import sys, os, glob, json
@@ -12,23 +12,34 @@ from scipy import ndimage
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.environ.get('ART_OUT') or os.path.join(HERE, '..', 'assets')
-SIZE = 128
+SIZE = 144
 
 def seq(chain, n, start=1):
     return [f'{chain}-{i}' for i in range(start, start + n)]
 
+def q(*names):
+    return (2, 2, list(names))
+
+# 캔바 시트 한 장 = 아이콘 4개 (2×2). 미리보기(200px)로도 아이콘당 약 90px 확보
 SHEETS = {
-    'fruit':   (4, 2, seq('fruit', 8)),
-    'drink':   (3, 2, seq('drink', 6)),
-    'bread':   (3, 3, seq('bread', 9)),
-    'dessert': (4, 2, seq('dessert', 8)),
-    'flower':  (3, 3, seq('flower', 9)),
-    'mixer':   (3, 2, seq('mixer', 6)),
-    'oven':    (3, 2, seq('oven', 6)),
-    'cart':    (3, 2, seq('cart', 6)),
-    'res':     (5, 2, seq('energy', 5) + seq('coin', 5)),
-    'catgem':  (4, 2, seq('cat', 3) + ['avatar'] + seq('gem', 4)),
-    'faces':   (4, 3, seq('face', 12)),
+    'q01': q(*seq('fruit', 4)),            'q02': q(*seq('fruit', 4, 5)),
+    'q03': q(*seq('drink', 4)),            'q04': q('drink-5', 'drink-6', 'gem-1', 'gem-2'),
+    'q05': q(*seq('bread', 4)),            'q06': q(*seq('bread', 4, 5)),
+    'q07': q('bread-9', 'gem-3', 'gem-4', 'avatar'),
+    'q08': q(*seq('dessert', 4)),          'q09': q(*seq('dessert', 4, 5)),
+    'q10': q(*seq('flower', 4)),           'q11': q(*seq('flower', 4, 5)),
+    'q12': q('flower-9', 'cat-1', 'cat-2', 'cat-3'),
+    'q13': q(*seq('mixer', 4)),            'q14': q('mixer-5', 'mixer-6', 'oven-1', 'oven-2'),
+    'q15': q(*seq('oven', 4, 3)),          'q16': q(*seq('cart', 4)),
+    'q17': q('cart-5', 'cart-6', 'energy-1', 'energy-2'),
+    'q18': q('energy-3', 'energy-4', 'energy-5', 'coin-1'),
+    'q19': q(*seq('coin', 4, 2)),
+    'q20': q(*seq('face', 4)),             'q21': q(*seq('face', 4, 5)),   'q22': q(*seq('face', 4, 9)),
+    'q23': q(*seq('butterfly', 4)),        'q24': q(*seq('butterfly', 4, 5)),
+    'q25': q(*seq('accessory', 4)),        'q26': q(*seq('accessory', 4, 5)),
+    'q27': q(*seq('craft', 4)),            'q28': q('craft-5', 'craft-6', 'btn-store', 'btn-house'),
+    'q29': q('decor-balloon', 'decor-plant', 'decor-lamp', 'decor-clock'),
+    'q30': q('decor-art', 'decor-music', 'decor-sofa', 'decor-tree'),
 }
 
 def cut_background(rgb):
@@ -90,7 +101,7 @@ def slice_sheet(path, cols, rows, names):
         side = int(max(h, w) * 1.06)
         canvas = Image.new('RGBA', (side, side), (0, 0, 0, 0))
         canvas.paste(Image.fromarray(crop, 'RGBA'), ((side - w) // 2, (side - h) // 2))
-        canvas.resize((SIZE, SIZE), Image.LANCZOS).save(os.path.join(OUT, f'{name}.png'), optimize=True)
+        canvas.resize((SIZE, SIZE), Image.LANCZOS).save(os.path.join(OUT, f'{name}.webp'), quality=88, method=6)
         made.append(name)
     return made
 
@@ -104,22 +115,22 @@ def main():
             continue
         print(f'{key}: {found[key]}')
         for name in slice_sheet(found[key], cols, rows, names):
-            if name == 'avatar':
-                art['avatar'] = 1
-                continue
-            chain, lvl = name.rsplit('-', 1)
-            art[chain] = max(art.get(chain, 0), int(lvl))
+            chain, _, lvl = name.rpartition('-')
+            if lvl.isdigit():
+                art[chain] = max(art.get(chain, 0), int(lvl))
+            else:
+                art[name] = 1   # avatar, decor-*, btn-* 같은 단독 그림
     if 'bg' in found:
         im = Image.open(found['bg']).convert('RGB')
         im.thumbnail((960, 960))
-        im.save(os.path.join(OUT, 'bg.jpg'), quality=85)
+        im.save(os.path.join(OUT, 'bg.webp'), quality=85)
         art['bg'] = 1
     # 등급은 1부터 빠짐없이 있어야 하므로 연속 구간만 인정
     for chain in list(art):
-        if chain in ('bg', 'avatar'):
+        if art[chain] == 1 and not os.path.exists(os.path.join(OUT, f'{chain}-1.webp')):
             continue
         n = 0
-        while os.path.exists(os.path.join(OUT, f'{chain}-{n + 1}.png')):
+        while os.path.exists(os.path.join(OUT, f'{chain}-{n + 1}.webp')):
             n += 1
         art[chain] = n
     with open(os.path.join(OUT, 'manifest.js'), 'w', encoding='utf-8') as f:
