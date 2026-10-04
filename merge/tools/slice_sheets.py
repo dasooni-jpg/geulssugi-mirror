@@ -40,6 +40,8 @@ SHEETS = {
     'q27': q(*seq('craft', 4)),            'q28': q('craft-5', 'craft-6', 'btn-store', 'btn-house'),
     'q29': q('decor-balloon', 'decor-plant', 'decor-lamp', 'decor-clock'),
     'q30': q('decor-art', 'decor-music', 'decor-sofa', 'decor-tree'),
+    'q31': q('face-13', 'face-14', 'icon-quest', 'icon-calendar'),
+    'q32': q('bg-window', 'bg-shelf', 'icon-gift', 'icon-vip'),
 }
 
 def cut_background(rgb):

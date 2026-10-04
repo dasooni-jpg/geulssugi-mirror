@@ -8,6 +8,7 @@ python3 tools/slice_sheets.py tools/sheets
 node ../build-cloudflare.mjs merge     # Cloudflare 배포 파일 다시 만들기
 ```
 
+- 카페 배경은 벽지·깃발·나무 선반을 코드(CSS·SVG)로 그려 화면 크기와 상관없이 선명함. 창문·선반만 그림 사용
 - 시트 한 장 = 아이콘 4개(2×2). 어떤 아이콘이 들어가는지는 `slice_sheets.py` 의 `SHEETS` 표에 있음
 - 결과: `assets/*.webp` 와 `assets/manifest.js`. 그림이 없는 아이템은 자동으로 이모지로 표시됨
 - 작업 환경 네트워크가 캔바 원본 다운로드를 막아, 시트는 미리보기(200px)를 씀. 아이콘 하나당 약 90px임
@@ -27,6 +28,6 @@ node ../build-cloudflare.mjs merge     # Cloudflare 배포 파일 다시 만들�
 | q08 | MAHXFjzhHbE | q18 | MAHXF-jpows | q28 | MAHXF57O0nE |
 | q09 | MAHXFiNnvNY | q19 | MAHXF2GBB18 | q29 | MAHXF_g_Cpo |
 | q10 | MAHXFl9LibQ | q20 | MAHXF3PyDHk | q30 | MAHXF1lh29Y |
-| bg | MAHXFqFuXEY | | | | |
+| q31 | MAHXF-8O4BY | q32 | MAHXFwBsaZ4 | | |
 
 주소 형식: `https://www.canva.com/M/<캔바 ID>`
