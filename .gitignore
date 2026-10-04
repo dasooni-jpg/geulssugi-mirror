@@ -10,6 +10,11 @@
 !/server.ps1
 !/apikey.txt.example
 !/cloudflare-worker.js
+!/CLAUDE.md
+
+# ↓ 모든 앱의 Cloudflare 배포 파일 (build-cloudflare.mjs 로 제작)
+!/build-cloudflare.mjs
+!/cloudflare/
 !/app/
 
 # ↓ 쉬는시간 게임: 타자 연습 (낱말 비)
@@ -21,6 +26,9 @@
 
 # ↓ 다람쌤 오목 대회 플랫폼
 !/omok/
+
+# ↓ 다람 머지 카페 (합성 퍼즐 게임, 정적 페이지)
+!/merge/
 
 # ↓ 다람쌤 장기 한판 (AI 난이도 4단계)
 !/janggi/

@@ -1,0 +1,1011 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>다람 머지 카페</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+<style>
+:root{
+  --page:#2b2350;
+  --board:#7d76c4; --cell:#9e98dc; --cell-line:#8a83cf;
+  --cream:#fff6e3; --cream2:#f6e7c8; --wood:#b46f38; --wood-dark:#7e4720;
+  --text:#4a3121; --muted:#9a7d63;
+  --green:#5fcf57; --green-dark:#36a02f; --pink:#e04fd0; --gold:#ffc928;
+  --sel:#ffd400;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --page:#14102a; }
+}
+:root[data-theme="dark"]{ --page:#14102a; }
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden}
+body{background:var(--page);font-family:'Jua',system-ui,sans-serif;color:var(--text);
+  user-select:none;-webkit-user-select:none;display:flex;justify-content:center}
+#app{width:100%;max-width:480px;height:100%;display:flex;flex-direction:column;
+  background:linear-gradient(#8a5fd0,#6c4bb8 40%,#5a3fa3);position:relative;overflow:hidden}
+
+/* ── 상단 바 ── */
+#top{display:flex;align-items:center;gap:6px;padding:8px 8px 14px}
+#avatar{position:relative;width:52px;height:52px;flex:none;border-radius:14px;background:#ffe9f3;
+  border:3px solid #ffb6dc;display:grid;place-items:center;font-size:32px;cursor:pointer}
+#avatar .lvb{position:absolute;left:-6px;bottom:-6px;background:#2f9e6e;color:#fff;font-size:14px;
+  min-width:24px;height:24px;border-radius:12px;display:grid;place-items:center;border:2px solid #fff}
+#avatar .xpbar{position:absolute;left:4px;right:4px;bottom:3px;height:5px;border-radius:3px;background:#0002;overflow:hidden}
+#avatar .xpbar i{display:block;height:100%;background:#2fcf7e}
+.pill{flex:1;min-width:0;height:36px;background:#fff8ec;border-radius:18px;display:flex;align-items:center;
+  position:relative;padding-left:32px;padding-right:8px;font-size:19px;color:#5b3a22;
+  box-shadow:inset 0 -3px 0 #e6d2b0}
+.pill .ic{position:absolute;left:-4px;top:50%;transform:translateY(-50%);font-size:28px;filter:drop-shadow(0 2px 1px #0003)}
+.pill .v{flex:1;text-align:center;white-space:nowrap}
+.pill .plus{width:20px;height:20px;border-radius:50%;background:var(--green);color:#fff;font-size:16px;line-height:20px;
+  text-align:center;border:2px solid #fff;cursor:pointer;flex:none}
+.pill .sub{position:absolute;left:30px;right:6px;bottom:-15px;line-height:13px;text-align:center;font-size:11px;color:#fff;text-shadow:0 1px 2px #0008}
+
+/* ── 캔바 그림 ── */
+img.pic{width:88%;height:88%;object-fit:contain;display:block;pointer-events:none;-webkit-user-drag:none}
+.it .e{width:100%;height:100%;display:grid;place-items:center}
+.oi img.pic{width:30px;height:30px}
+.cc .face img.pic{width:54px;height:54px;border-radius:50%;background:#fff;box-shadow:0 2px 0 #d8bf98}
+.pill .ic img.pic{width:34px;height:34px}
+#avPic img.pic{width:46px;height:46px}
+.row .e img.pic{width:40px;height:40px}
+.tile img.pic{width:78%;height:78%}
+#ghost img.pic{width:100%;height:100%}
+.gift img.pic{display:inline-block;width:44px;height:44px;vertical-align:middle}
+#decorRow .dc{display:block;width:34px;height:34px;flex:none}
+#decorRow .dc img.pic{width:34px;height:34px;filter:drop-shadow(0 3px 2px #0004)}
+.sqb .bi{display:block;width:44px;height:44px;line-height:44px}
+.sqb .bi img.pic{width:44px;height:44px}
+.pt{position:fixed;z-index:65;width:8px;height:8px;border-radius:50%;pointer-events:none;margin:-4px 0 0 -4px;
+  animation:pt .6s ease-out forwards;box-shadow:0 0 6px #fff}
+@keyframes pt{to{transform:translate(var(--dx),var(--dy)) scale(.2);opacity:0}}
+.ring{position:fixed;z-index:64;width:20px;height:20px;margin:-10px 0 0 -10px;border-radius:50%;border:3px solid #fff;
+  pointer-events:none;animation:ring .45s ease-out forwards}
+@keyframes ring{to{transform:scale(4);opacity:0}}
+.flyto{position:fixed;z-index:70;width:34px;height:34px;margin:-17px 0 0 -17px;pointer-events:none;display:grid;place-items:center;
+  font-size:24px;transition:transform .6s cubic-bezier(.5,-0.3,.7,1),opacity .6s}
+.flyto img.pic{width:34px;height:34px}
+.pill.bump{animation:bump .25s}
+@keyframes bump{50%{transform:scale(1.12)}}
+.cf{position:fixed;z-index:80;top:-12px;width:9px;height:14px;border-radius:2px;pointer-events:none;
+  animation:cf 1.8s ease-in forwards}
+@keyframes cf{to{transform:translateY(105vh) rotate(var(--r));opacity:.8}}
+.banner{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);z-index:62;background:linear-gradient(#ffe36e,#ffb627);
+  color:#6b3d00;font-size:18px;padding:8px 18px 8px 8px;border-radius:30px;display:flex;align-items:center;gap:8px;
+  box-shadow:0 4px 0 #c97f00,0 8px 20px #0005;animation:ban 1.8s ease-out forwards;white-space:nowrap;pointer-events:none}
+.banner .bp{width:44px;height:44px;background:#fff;border-radius:50%;display:grid;place-items:center;font-size:28px}
+.banner .bp img.pic{width:40px;height:40px}
+@keyframes ban{0%{transform:translate(-50%,-50%) scale(.3);opacity:0}15%{transform:translate(-50%,-50%) scale(1.1);opacity:1}
+  25%{transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{transform:translate(-50%,-80%);opacity:0}}
+/* ── 상단 작은 버튼 · 특별 주문 · 퀘스트 ── */
+.tb{position:relative;width:36px;height:36px;flex:none;border:none;border-radius:12px;background:#fff8ec;cursor:pointer;
+  box-shadow:inset 0 -3px 0 #e6d2b0;font-size:20px;padding:2px;display:grid;place-items:center}
+.tb img.pic{width:32px;height:32px}
+.tb.dot::after{content:'!';position:absolute;right:-4px;top:-4px;width:16px;height:16px;border-radius:50%;background:#ff4d4d;
+  color:#fff;font-size:11px;line-height:16px;border:2px solid #fff;animation:bob 1s infinite}
+.cc.vip{background:linear-gradient(#fff6c9,#ffd96a);box-shadow:0 3px 0 #d39b16,0 0 0 2px #ffcf3a inset}
+.vipb{position:absolute;left:50%;top:-9px;transform:translateX(-50%);display:flex;align-items:center;gap:2px;background:#ff8a3d;
+  color:#fff;font-size:10px;border-radius:10px;padding:1px 6px 1px 2px;white-space:nowrap;z-index:2}
+.vipb img.pic{width:18px;height:18px}
+.qbar{position:relative;height:14px;border-radius:7px;background:#efe0c2;margin-top:4px;overflow:hidden}
+.qbar i{display:block;height:100%;background:linear-gradient(90deg,#7fe07a,#3fbf55)}
+.qbar span{position:absolute;inset:0;text-align:center;font-size:10px;line-height:14px;color:#5b3a22}
+.row.bonus{background:#fff4d6}
+.attg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.att{background:#fff;border-radius:12px;padding:6px 2px;text-align:center;box-shadow:inset 0 -3px 0 #ead9bd;position:relative}
+.att b{display:block;font-size:13px;color:#8a5a14}
+.att .ai{display:block;width:34px;height:34px;margin:2px auto}
+.att .ai img.pic{width:34px;height:34px}
+.att small{font-size:10px;color:#8f7358}
+.att.got{opacity:.5}
+.att.got::after{content:'✔';position:absolute;inset:0;display:grid;place-items:center;font-size:30px;color:#36a02f}
+.att.now{outline:3px solid var(--sel);animation:bob 1s infinite}
+.att.big{grid-column:span 2;background:#fff4d6}
+.wideb:disabled{background:#cbbfae;cursor:default}
+/* ── 손님 줄 ── */
+#custWrap{position:relative;padding:0 6px 10px;
+  background:linear-gradient(transparent calc(100% - 22px), #c98a52 calc(100% - 22px), #a8693a calc(100% - 6px), #7e4a26 100%),
+    repeating-linear-gradient(90deg,#f7d6ec 0 18px,#f2c8e4 18px 36px)}
+#cafe{position:relative;height:50px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 2px 2px}
+#bunting{position:absolute;left:0;right:0;top:0;width:100%;height:24px}
+#cafe .prop{position:relative;width:48px;height:46px;flex:none}
+#cafe .prop img.pic{width:100%;height:100%;filter:drop-shadow(0 2px 2px #0003)}
+#decorRow{flex:1;display:flex;justify-content:center;align-items:flex-end;gap:4px;pointer-events:none;font-size:26px;min-width:0;overflow:hidden}
+#cust{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.cc{background:linear-gradient(#fffaf0,#f7e8cd);border-radius:14px;padding:6px 4px;text-align:center;
+  box-shadow:0 3px 0 #c9a77a;min-height:142px;display:flex;flex-direction:column;align-items:center;gap:3px;position:relative}
+.cc .face{font-size:36px;line-height:1;margin-top:2px}
+.cc .nm{font-size:12px;color:var(--muted)}
+.cc .ord{display:flex;gap:3px;justify-content:center;flex-wrap:wrap}
+.oi{position:relative;width:34px;height:34px;border-radius:9px;background:#efe0c2;display:grid;place-items:center;font-size:23px;cursor:pointer}
+.oi.ok{background:#d8f5c9}
+.oi.ok::after{content:'✔';position:absolute;right:-4px;bottom:-5px;font-size:14px;color:#fff;background:var(--green-dark);
+  width:16px;height:16px;border-radius:50%;line-height:16px}
+.cc .rw{font-size:14px;color:#8a5a14}
+.cc button{margin-top:auto;border:none;border-radius:10px;padding:5px 0;width:92%;font-family:inherit;font-size:15px;
+  background:#cfc3b0;color:#fff;box-shadow:inset 0 -3px 0 #0002}
+.cc button.go{background:var(--green);cursor:pointer;animation:bob 1s infinite}
+.cc.wait{justify-content:center;color:var(--muted);font-size:13px}
+@keyframes bob{50%{transform:translateY(-2px)}}
+
+/* ── 보드 ── */
+#boardWrap{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;padding:0 6px}
+#board{display:grid;background:var(--board);border-radius:14px;padding:4px;gap:0;
+  box-shadow:0 0 0 3px #5e56a8,0 6px 14px #0004;touch-action:none}
+.cell{position:relative;background:var(--cell);outline:1px solid var(--cell-line);display:grid;place-items:center}
+.cell.tgt{background:#c3bff0}
+.it{position:relative;width:100%;height:100%;display:grid;place-items:center;line-height:1;cursor:pointer}
+.it .e{filter:drop-shadow(0 3px 2px #0003)}
+.it.gen{background:radial-gradient(circle,#fff6 0,#fff0 70%)}
+.it.gen::before{content:'';position:absolute;inset:3px;border-radius:10px;box-shadow:0 0 0 2px #f8c1ff inset,0 0 10px #f2a6ff inset}
+.it .lv{position:absolute;left:3px;top:2px;font-size:10px;color:#fff;background:#0003;border-radius:6px;padding:0 4px}
+.it .val{position:absolute;right:2px;bottom:1px;font-size:11px;color:#fff;background:#6a3cc6;border-radius:6px;padding:0 4px}
+.it .chk{position:absolute;right:1px;bottom:1px;width:18px;height:18px;border-radius:50%;background:var(--green-dark);
+  color:#fff;font-size:12px;display:grid;place-items:center;border:2px solid #fff}
+.it .cd{position:absolute;left:0;right:0;bottom:1px;text-align:center;font-size:10px;color:#fff;
+  background:#3c2f80cc;border-radius:6px;margin:0 3px}
+.it .ch{position:absolute;right:3px;top:2px;font-size:10px;color:#fff;background:#d04bc5;border-radius:6px;padding:0 4px}
+.it.sealed .e{filter:grayscale(1) brightness(.75);opacity:.55}
+.it.sealed::after{content:'📦';position:absolute;right:2px;bottom:0;font-size:16px}
+.it.dim{opacity:.25}
+.it.tired .e{filter:grayscale(.6) brightness(.9)}
+.cell.sel::after{content:'';position:absolute;inset:1px;border:3px solid var(--sel);border-radius:8px;
+  pointer-events:none;animation:selp .9s infinite}
+@keyframes selp{50%{inset:3px}}
+.pop{animation:pop .35s ease-out}
+@keyframes pop{0%{transform:scale(.3)}60%{transform:scale(1.25)}100%{transform:scale(1)}}
+.shake{animation:shake .3s}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+#ghost{position:fixed;pointer-events:none;z-index:50;display:grid;place-items:center;transform:translate(-50%,-60%) scale(1.15);
+  filter:drop-shadow(0 6px 6px #0005)}
+
+/* ── 하단 ── */
+#bottom{display:flex;gap:6px;padding:6px 6px 10px;align-items:stretch}
+.sqb{width:62px;flex:none;border:none;border-radius:14px;background:#ffe6c4;font-size:32px;box-shadow:inset 0 -4px 0 #d9a96b;
+  cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#7a4b21}
+.sqb small{font-size:11px}
+#info{flex:1;min-width:0;background:var(--cream);border-radius:14px;padding:6px 8px;display:flex;gap:6px;align-items:center;
+  box-shadow:inset 0 -4px 0 #e2cca5;min-height:74px}
+#info .tx{flex:1;min-width:0}
+#info .t{font-size:16px;color:#6b4024}
+#info .t small{color:var(--muted);font-size:12px}
+#info .d{font-size:12px;color:#8f7358;line-height:1.35}
+.ib{border:none;border-radius:10px;font-family:inherit;font-size:13px;padding:6px 7px;color:#fff;cursor:pointer;
+  box-shadow:inset 0 -3px 0 #0002;white-space:nowrap}
+.ib.g{background:var(--green)} .ib.p{background:#b15ce6} .ib.o{background:#e8a33a}
+#info .bs{display:flex;flex-direction:column;gap:4px}
+
+/* ── 모달 ── */
+.ov{position:absolute;inset:0;background:#0007;display:none;align-items:center;justify-content:center;z-index:40;padding:16px}
+.ov.on{display:flex}
+.md{width:100%;max-width:420px;background:var(--cream);border-radius:22px;border:5px solid var(--wood);position:relative;
+  padding:42px 14px 16px;max-height:88%;overflow:auto;box-shadow:0 8px 0 var(--wood-dark)}
+.md .hd{position:sticky;top:-42px;margin:-42px auto 10px;width:max-content;max-width:90%;background:var(--wood);color:#fff;
+  font-size:24px;padding:6px 26px;border-radius:0 0 18px 18px;text-shadow:0 2px 0 var(--wood-dark);z-index:2}
+.md .x{position:absolute;right:8px;top:6px;width:32px;height:32px;border-radius:50%;border:none;background:#d9b48a;color:#fff;
+  font-size:20px;cursor:pointer;font-family:inherit;z-index:3}
+.sec{display:flex;align-items:center;gap:10px;color:#b89470;font-size:18px;margin:14px 0 8px}
+.sec::before,.sec::after{content:'';flex:1;height:2px;background:#e6d3b3}
+.lvt{text-align:center;color:#a88b6c;font-size:22px;margin-bottom:6px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;background:var(--cream2);border-radius:16px;padding:10px}
+.tile{aspect-ratio:1;border-radius:14px;background:linear-gradient(#a8dcff,#6db8f0);display:grid;place-items:center;font-size:34px;
+  box-shadow:inset 0 -4px 0 #0002;position:relative}
+.tile.unk{background:#f7dcb4;color:#c99f6c;font-size:30px}
+.tile.cur{outline:4px solid var(--sel)}
+.tile .pc{position:absolute;bottom:2px;right:4px;font-size:13px;color:#fff;text-shadow:0 1px 2px #000}
+.tile.gp{background:linear-gradient(#bdf5b3,#83dc78)}
+.row{display:flex;align-items:center;gap:10px;background:#fff;border-radius:14px;padding:8px 10px;margin-bottom:8px;
+  box-shadow:inset 0 -3px 0 #ead9bd}
+.row .e{font-size:32px}
+.row .tx{flex:1;font-size:15px}
+.row .tx small{display:block;color:var(--muted);font-size:12px}
+.row button{border:none;border-radius:10px;padding:7px 10px;font-family:inherit;font-size:14px;color:#fff;background:var(--green);
+  cursor:pointer;box-shadow:inset 0 -3px 0 #0002;white-space:nowrap}
+.row button:disabled{background:#cbbfae;cursor:default}
+.help p{margin:6px 0;font-size:14px;line-height:1.5;color:#6b4c33}
+.big{font-size:60px;text-align:center}
+.ctr{text-align:center;font-size:16px;line-height:1.6}
+.wideb{display:block;margin:12px auto 0;border:none;border-radius:14px;padding:10px 26px;font-family:inherit;font-size:18px;
+  color:#fff;background:var(--green);box-shadow:inset 0 -4px 0 #0002;cursor:pointer}
+.wideb.red{background:#e0675a;font-size:14px;padding:8px 16px}
+
+#toast{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);background:#3a2a6ee8;color:#fff;padding:10px 16px;
+  border-radius:14px;font-size:15px;z-index:60;pointer-events:none;opacity:0;transition:opacity .25s;text-align:center;max-width:85%}
+#toast.on{opacity:1}
+.fly{position:fixed;z-index:70;pointer-events:none;font-size:20px;color:#fff;text-shadow:0 2px 3px #000a;
+  animation:fly 1.1s ease-out forwards;white-space:nowrap}
+@keyframes fly{0%{transform:translate(-50%,0);opacity:1}100%{transform:translate(-50%,-60px);opacity:0}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="top">
+    <div id="avatar" title="내 레벨"><span id="avPic">🐿️</span><span class="lvb" id="lvB">1</span><span class="xpbar"><i id="xpB"></i></span></div>
+    <div class="pill"><span class="ic" data-art="energy-2">⚡</span><span class="v" id="enV">0</span><span class="plus" data-open="store">+</span><span class="sub" id="enT"></span></div>
+    <div class="pill"><span class="ic" data-art="coin-1">🪙</span><span class="v" id="coV">0</span></div>
+    <div class="pill"><span class="ic" data-art="gem-1">💎</span><span class="v" id="geV">0</span><span class="plus" data-open="store">+</span></div>
+    <button class="tb" id="btnQuest" title="오늘의 퀘스트"><span data-key="icon-quest">📋</span></button>
+    <button class="tb" id="btnAtt" title="출석 보상"><span data-key="icon-calendar">📅</span></button>
+  </div>
+  <div id="custWrap"><div id="cafe"><svg id="bunting" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"></svg>
+    <span class="prop pw" data-key="bg-window"></span><div id="decorRow"></div><span class="prop ps" data-key="bg-shelf"></span></div><div id="cust"></div></div>
+  <div id="boardWrap"><div id="board"></div></div>
+  <div id="bottom">
+    <button class="sqb" data-open="store"><span class="bi" data-key="btn-store">🏪</span><small>상점</small></button>
+    <div id="info"></div>
+    <button class="sqb" data-open="decor"><span class="bi" data-key="btn-house">🏠</span><small>꾸미기</small></button>
+  </div>
+  <div class="ov" id="ov"><div class="md" id="md"></div></div>
+  <div id="toast"></div>
+</div>
+
+<script src="assets/manifest.js"></script>
+<script>
+// ───────────── 기본 설정값 (교사가 조정 가능) ─────────────
+const CFG = {
+  REGEN_SEC: 60,        // 에너지 1 회복 시간(초)
+  MAX_ENERGY: 100,      // 자연 회복 최대치
+  START: {energy: 100, coins: 200, gems: 30},
+  SPAWN_COST: 1,        // 생성기 1회 사용 에너지
+  GEN_COOLDOWN_SEC: 120,// 생성기 재충전 시간
+  CAT_COOLDOWN_SEC: 600,// 고양이 선물 재충전 시간
+  SKIP_SEC_PER_GEM: 30, // 보석 1개로 건너뛰는 시간
+  SPECIAL: {minLvl: 3, chance: .2, coinMult: 2, gems: 3}, // 특별 주문: 시작 레벨·확률·동전 배율·보석
+  DAILY_QUESTS: 3,      // 하루 퀘스트 수
+  DAILY_BONUS: {gems: 5, energy: 20},  // 퀘스트 모두 완료 보너스
+  QUESTS: [             // 일일 퀘스트 후보 (n: 목표 후보, rw: 보상)
+    {t:'merge',   txt:'아이템 {n}번 합성하기',      n:[10,15,20], rw:{coins:60}},
+    {t:'deliver', txt:'손님 주문 {n}번 전달하기',   n:[3,4,5],    rw:{coins:100}},
+    {t:'spawn',   txt:'생성기 {n}번 사용하기',      n:[15,20,30], rw:{energy:15}},
+    {t:'collect', txt:'동전·번개·보석 {n}번 모으기', n:[3,5],     rw:{coins:50}},
+    {t:'makeLv',  txt:'Lv.{n} 아이템 만들기',       n:[4,5],      rw:{gems:2}},
+    {t:'special', txt:'특별 주문 {n}번 전달하기',   n:[1],        rw:{gems:3}}
+  ],
+  ATTENDANCE: [         // 출석 7일 보상 (7일마다 다시 1일차)
+    {coins:100}, {energy:30}, {gems:3}, {coins:200}, {energy:50}, {gems:5}, {gems:10, coins:300}
+  ]
+};
+const COLS = 7, ROWS = 9, N = COLS * ROWS;
+const SAVE_KEY = 'daram-merge-cafe-v1';
+
+// ───────────── 아이템 계열 ─────────────
+const CHAINS = {
+  fruit:  {name:'과일', kind:'item', items:[['🍒','체리'],['🍓','딸기'],['🍊','귤'],['🍎','사과'],['🍐','배'],['🍑','복숭아'],['🍍','파인애플'],['🍉','수박']]},
+  drink:  {name:'음료', kind:'item', items:[['🥛','우유'],['🧃','주스팩'],['🥤','스무디'],['🧋','버블티'],['🍹','과일 펀치'],['🍧','팥빙수']]},
+  bread:  {name:'빵', kind:'item', items:[['🌾','밀'],['🍞','식빵'],['🥐','크루아상'],['🥖','바게트'],['🥨','프레첼'],['🧇','와플'],['🥞','팬케이크'],['🍰','조각 케이크'],['🎂','생일 케이크']]},
+  dessert:{name:'디저트', kind:'item', items:[['🍬','사탕'],['🍭','막대사탕'],['🍫','초콜릿'],['🍪','쿠키'],['🍩','도넛'],['🧁','컵케이크'],['🍦','소프트아이스크림'],['🍨','아이스크림 컵']]},
+  flower: {name:'꽃', kind:'item', items:[['🌱','새싹'],['🌿','풀잎'],['🍀','네잎클로버'],['🌼','데이지'],['🌷','튤립'],['🌸','벚꽃'],['🌹','장미'],['🌺','히비스커스'],['💐','꽃다발']]},
+  energy: {name:'번개', kind:'energy', vals:[1,3,8,20,50], items:[['⚡','번개 조각'],['⚡','번개 다발'],['🔋','배터리'],['🔋','큰 배터리'],['🌩️','번개 구름']]},
+  coin:   {name:'동전', kind:'coin', vals:[5,15,40,100,250], items:[['🪙','동전'],['🪙','동전 더미'],['💰','동전 주머니'],['💰','큰 주머니'],['🏦','금고']]},
+  gem:    {name:'보석', kind:'gem', vals:[1,3,8,20], items:[['💎','보석 조각'],['💎','보석'],['🔮','보석 구슬'],['🏆','보석 트로피']]},
+  mixer:  {name:'믹서', kind:'gen', produces:{fruit:.55, drink:.45},
+           items:[['🥄','숟가락'],['🍴','포크와 나이프'],['🫖','주전자'],['☕','커피 머신'],['🍶','블렌더'],['🏺','마법 항아리']]},
+  oven:   {name:'오븐', kind:'gen', produces:{bread:.6, dessert:.4},
+           items:[['🧂','소금통'],['🍳','프라이팬'],['🥘','냄비'],['🍲','찜기'],['🫕','퐁듀 냄비'],['🏭','빵 공장']]},
+  butterfly:{name:'나비', kind:'item', items:[['🐛','애벌레'],['🫛','번데기'],['🦋','노랑나비'],['🦋','파랑나비'],['🦋','꽃무늬 나비'],['🦋','반짝 나비'],['🌈','무지개 나비'],['🏆','황금 나비 유리병']]},
+  accessory:{name:'액세서리', kind:'item', items:[['⚪','진주 한 알'],['📿','진주 줄'],['📿','진주 팔찌'],['💍','보석 반지'],['📿','하트 목걸이'],['🎀','리본 머리핀'],['👑','작은 왕관'],['🎁','보석함']]},
+  craft:  {name:'공예 상자', kind:'gen', produces:{accessory:1},
+           items:[['🧵','실타래'],['📍','바늘꽂이'],['🧺','반짇고리'],['🪡','재봉틀'],['🧶','공예 작업대'],['🏬','액세서리 가게']]},
+  cart:   {name:'꽃 수레', kind:'auto', produces:{flower:.7, butterfly:.15, coin:.15},
+           items:[['🪴','화분'],['🌵','선인장 화분'],['🌳','작은 나무'],['🛒','꽃 수레'],['🎪','꽃 가판대'],['🏡','꽃집']]},
+  cat:    {name:'애교쟁이 고양이', kind:'gen', minL:3, charges:5,
+           table:[{c:'energy',l:1,p:.18},{c:'energy',l:2,p:.02},{c:'gem',l:1,p:.10},{c:'gem',l:2,p:.03},
+                  {c:'coin',l:1,p:.45},{c:'coin',l:2,p:.12},{c:'coin',l:3,p:.10}],
+           items:[['🧺','빈 바구니'],['🐈‍⬛','졸린 고양이'],['🐱','애교쟁이 고양이']]}
+};
+const ORDERABLE = ['fruit','drink','bread','dessert','flower','butterfly','accessory'];
+const FACES = [['👩‍🍳','요리사'],['👴','할아버지'],['👵','할머니'],['🧑‍🎨','화가'],['👧','꼬마 손님'],['🧔','아저씨'],
+  ['👩‍🏫','선생님'],['🧑‍🚀','우주인'],['🐻','곰돌이'],['🐰','토끼'],['🦊','여우'],['🐼','판다'],
+  ['🧑‍🔬','나비 박사','butterfly'],['💃','멋쟁이 디자이너','accessory']];
+const DECOR = [
+  {id:'balloon',e:'🎈',n:'풍선 장식',cost:150},{id:'plant',e:'🪴',n:'창가 화분',cost:300},
+  {id:'lamp',e:'💡',n:'따뜻한 조명',cost:550},{id:'clock',e:'🕰️',n:'벽시계',cost:800},
+  {id:'art',e:'🖼️',n:'그림 액자',cost:1100},{id:'music',e:'🎹',n:'피아노',cost:1600},
+  {id:'sofa',e:'🛋️',n:'푹신한 소파',cost:2200},{id:'tree',e:'🎄',n:'반짝이 나무',cost:3000}
+];
+const STORE = [
+  {e:'⚡',pic:['energy',2],n:'에너지 +50',sub:'💎 15',pay:['gems',15],give:s=>{s.energy+=50}},
+  {e:'🔋',pic:['energy',4],n:'에너지 +120',sub:'💎 30',pay:['gems',30],give:s=>{s.energy+=120}},
+  {e:'💎',pic:['gem',2],n:'보석 5개',sub:'🪙 800',pay:['coins',800],give:s=>{s.gems+=5}},
+  {e:'🥄',pic:['mixer',1],n:'믹서 Lv.1',sub:'🪙 400',pay:['coins',400],item:['mixer',1]},
+  {e:'🧂',pic:['oven',1],n:'오븐 Lv.1',sub:'🪙 400',pay:['coins',400],item:['oven',1]},
+  {e:'🪴',pic:['cart',1],n:'화분(꽃 수레) Lv.1',sub:'🪙 300',pay:['coins',300],item:['cart',1]},
+  {e:'🧵',pic:['craft',1],n:'공예 상자 Lv.1',sub:'🪙 600',pay:['coins',600],item:['craft',1]},
+  {e:'🧺',pic:['cat',1],n:'고양이 바구니 Lv.1',sub:'🪙 250',pay:['coins',250],item:['cat',1]}
+];
+
+// ───────────── 계열 도우미 ─────────────
+const K = c => CHAINS[c];
+const maxL = c => K(c).items.length;
+const emo = it => K(it.c).items[it.l-1][0];
+// 캔바 그림이 있으면 그림, 없으면 이모지 (assets/manifest.js 가 window.MERGE_ART 를 채움)
+const ART = window.MERGE_ART || {};
+// Cloudflare 한 파일 배포본에서는 그림이 MERGE_INLINE 에 data URI 로 들어 있음
+const A = path => (window.MERGE_INLINE && window.MERGE_INLINE[path]) || path;
+const hasArt = (c,l) => (ART[c]||0) >= l;
+const pic = it => hasArt(it.c,it.l) ? `<img class="pic" src="${A(`assets/${it.c}-${it.l}.webp`)}" alt="" draggable="false">` : emo(it);
+const artPic = (key, fb) => ART[key] ? `<img class="pic" src="${A(`assets/${key}.webp`)}" alt="" draggable="false">` : fb;
+const facePic = cu => (cu.fi!=null && ART.face > cu.fi) ? `<img class="pic" src="${A(`assets/face-${cu.fi+1}.webp`)}" alt="" draggable="false">` : cu.face;
+const nm = it => K(it.c).items[it.l-1][1];
+const isGen = it => it && (K(it.c).kind==='gen' || K(it.c).kind==='auto');
+const isRes = it => it && ['energy','coin','gem'].includes(K(it.c).kind);
+const genMax = it => K(it.c).charges || (4 + 2*it.l);
+const genCd = it => (it.c==='cat' ? CFG.CAT_COOLDOWN_SEC : Math.max(60, CFG.GEN_COOLDOWN_SEC - (it.l-1)*10)) * 1000;
+const autoInt = it => Math.max(45, 150 - 15*it.l) * 1000;
+const autoCount = it => 1 + Math.floor((it.l-1)/2);
+const sellPrice = it => isGen(it) ? 10*it.l : Math.round(2*Math.pow(1.7, it.l-1));
+const needXp = l => 15 + 10*(l-1);
+
+function genTable(c, l){
+  const G = K(c);
+  if (l < (G.minL||1)) return [];
+  if (G.table) return G.table;
+  const p2 = Math.min(.05*l, .3), p3 = l>=4 ? .04*(l-3) : 0, p1 = 1-p2-p3, out=[];
+  for (const [pc,w] of Object.entries(G.produces)){
+    out.push({c:pc,l:1,p:w*p1});
+    if (p2>0 && maxL(pc)>=2) out.push({c:pc,l:2,p:w*p2});
+    if (p3>0 && maxL(pc)>=3) out.push({c:pc,l:3,p:w*p3});
+  }
+  return out;
+}
+function pick(table){
+  let r = Math.random(), acc = 0;
+  for (const t of table){ acc += t.p; if (r < acc) return t; }
+  return table[table.length-1];
+}
+function newItem(c, l, sealed){
+  const it = {c, l};
+  if (K(c).kind==='gen') it.ch = genMax(it);
+  if (K(c).kind==='auto') it.next = Date.now() + autoInt(it);
+  if (sealed) it.s = 1;
+  return it;
+}
+
+// ───────────── 상태 ─────────────
+let S, sel = -1, drag = null;
+const $ = id => document.getElementById(id);
+
+function freshState(){
+  const s = {board:Array(N).fill(null), energy:CFG.START.energy, coins:CFG.START.coins, gems:CFG.START.gems,
+    xp:0, lvl:1, enTs:Date.now(), cust:[null,null,null], arrive:[0,800,1600], disc:{}, decor:[], gifts:[], tut:0};
+  const put = (r,c,it) => { s.board[r*COLS+c] = it; };
+  put(0,0,newItem('cart',1)); put(1,0,newItem('mixer',1)); put(2,0,newItem('cat',2));
+  put(2,2,newItem('cat',2)); put(0,3,newItem('fruit',1)); put(1,4,newItem('fruit',1));
+  put(0,5,newItem('drink',1)); put(3,3,newItem('energy',1)); put(3,5,newItem('energy',1)); put(1,6,newItem('coin',1));
+  const pool = [['fruit',1],['fruit',2],['drink',1],['drink',2],['bread',1],['bread',2],['dessert',1],['flower',1],
+    ['flower',2],['energy',1],['coin',1],['gem',1],['fruit',3],['bread',1],['dessert',2]];
+  for (let r=5; r<ROWS; r++) for (let c=0; c<COLS; c++){
+    if (r===5 && c%2===0) continue;
+    const [pc,pl] = pool[Math.floor(Math.random()*pool.length)];
+    put(r,c,newItem(pc,pl,true));
+  }
+  s.board.forEach(it => { if (it && !it.s) discover(it, s); });
+  return s;
+}
+function discover(it, s=S){ if (!s.disc[it.c] || s.disc[it.c] < it.l) s.disc[it.c] = it.l; }
+// ───────────── 일일 퀘스트 · 출석 ─────────────
+const today = () => { const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+function ensureDaily(){
+  if (S.daily && S.daily.day === today()) return;
+  const pool = CFG.QUESTS.slice().sort(() => Math.random() - .5).slice(0, CFG.DAILY_QUESTS);
+  S.daily = {day: today(), bonus: false, quests: pool.map(q => {
+    const n = q.n[Math.floor(Math.random()*q.n.length)];
+    return {t: q.t, n, p: 0, txt: q.txt.replace('{n}', n), rw: q.rw, claimed: false};
+  })};
+  if (!S.att) S.att = {count: 0, last: ''};
+}
+function track(type, val=1){
+  if (!S.daily) return;
+  let ch = false;
+  S.daily.quests.forEach(q => {
+    if (q.t !== type || q.p >= q.n) return;
+    if (type === 'makeLv'){ if (val >= q.n){ q.p = q.n; ch = true; } }
+    else { q.p = Math.min(q.n, q.p + val); ch = true; }
+    if (ch && q.p >= q.n) setTimeout(() => toast(`📋 퀘스트 완료! ${q.txt}`), 300);
+  });
+  if (ch) renderBadges();
+}
+const rwText = rw => [rw.coins?`🪙${rw.coins}`:'', rw.energy?`⚡${rw.energy}`:'', rw.gems?`💎${rw.gems}`:''].filter(Boolean).join(' ');
+function giveRw(rw, x, y){
+  if (rw.coins){ S.coins += rw.coins; flyTo('coin', x, y, resPic('coin'), 3); }
+  if (rw.energy){ S.energy += rw.energy; flyTo('energy', x, y, resPic('energy'), 3); }
+  if (rw.gems){ S.gems += rw.gems; flyTo('gem', x, y, resPic('gem'), 3); }
+  sfx.done(); renderAll(); save();
+}
+const questReady = () => S.daily && (S.daily.quests.some(q => q.p >= q.n && !q.claimed) || (!S.daily.bonus && S.daily.quests.every(q => q.claimed)));
+const attReady = () => S.att && S.att.last !== today();
+function renderBadges(){
+  $('btnQuest').classList.toggle('dot', !!questReady());
+  $('btnAtt').classList.toggle('dot', !!attReady());
+}
+function questModal(){
+  const d = S.daily, allDone = d.quests.every(q => q.claimed);
+  showModal('오늘의 퀘스트', `<div class="ctr" style="margin-bottom:8px">매일 새 퀘스트가 3개씩 나와요.</div>` +
+    d.quests.map((q,i) => `<div class="row"><div class="tx">${q.txt}<small>보상 ${rwText(q.rw)}</small>
+      <div class="qbar"><i style="width:${q.p/q.n*100}%"></i><span>${q.p}/${q.n}</span></div></div>
+      <button data-q="${i}" ${q.p>=q.n && !q.claimed ? '' : 'disabled'}>${q.claimed ? '완료' : '받기'}</button></div>`).join('') +
+    `<div class="row bonus"><span class="e">${artPic('icon-gift','🎁')}</span><div class="tx">모두 완료 보너스<small>${rwText(CFG.DAILY_BONUS)}</small></div>
+      <button data-qb="1" ${allDone && !d.bonus ? '' : 'disabled'}>${d.bonus ? '완료' : '받기'}</button></div>`);
+}
+function attModal(){
+  const a = S.att, idx = a.count % 7, ready = attReady();
+  showModal('출석 보상', `<div class="ctr" style="margin-bottom:8px">하루에 한 번 받을 수 있어요. 지금까지 ${a.count}일 출석!</div>
+    <div class="attg">${CFG.ATTENDANCE.map((rw,i) => {
+      const today_ = ready && i === idx;
+      return `<div class="att ${i<idx?'got':''} ${today_?'now':''} ${i===6?'big':''}"><b>${i+1}일</b><span class="ai">${artPic(i===6?'icon-gift':'icon-calendar','📅')}</span><small>${rwText(rw)}</small></div>`;
+    }).join('')}</div>
+    <button class="wideb" data-att="1" ${ready?'':'disabled'}>${ready ? '오늘 출석 보상 받기' : '내일 또 만나요!'}</button>`);
+}
+
+function save(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(S)); }catch(e){} }
+function load(){
+  try{ const raw = localStorage.getItem(SAVE_KEY); if (raw){ const s = JSON.parse(raw); if (s && s.board && s.board.length===N) return s; } }catch(e){}
+  return freshState();
+}
+
+// ───────────── 소리 ─────────────
+let actx = null, muted = false;
+function tone(f, d=.09, type='sine', v=.08){
+  if (muted) return;
+  try{
+    actx = actx || new (window.AudioContext||window.webkitAudioContext)();
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = type; o.frequency.value = f; g.gain.value = v;
+    o.connect(g); g.connect(actx.destination);
+    g.gain.exponentialRampToValueAtTime(.0001, actx.currentTime + d);
+    o.start(); o.stop(actx.currentTime + d);
+  }catch(e){}
+}
+const sfx = {
+  merge(){ tone(523,.08); setTimeout(()=>tone(784,.12),70); },
+  spawn(){ tone(660,.06,'triangle'); },
+  coin(){ tone(988,.06,'square',.04); setTimeout(()=>tone(1319,.08,'square',.04),60); },
+  bad(){ tone(180,.12,'sawtooth',.05); },
+  done(){ [523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,.12),i*90)); }
+};
+
+// ───────────── 화면 준비 ─────────────
+const cells = [];
+function buildBoard(){
+  const b = $('board'); b.innerHTML = '';
+  for (let i=0; i<N; i++){
+    const d = document.createElement('div'); d.className = 'cell'; d.dataset.i = i;
+    b.appendChild(d); cells.push(d);
+  }
+  layout();
+}
+let CELL = 50;
+function layout(){
+  const app = $('app');
+  const used = $('top').offsetHeight + $('custWrap').offsetHeight + $('bottom').offsetHeight + 20;
+  CELL = Math.floor(Math.min((app.clientWidth - 22) / COLS, (app.clientHeight - used) / ROWS));
+  CELL = Math.max(34, Math.min(CELL, 66));
+  $('board').style.gridTemplateColumns = `repeat(${COLS}, ${CELL}px)`;
+  $('board').style.gridAutoRows = CELL + 'px';
+  $('board').style.fontSize = Math.round(CELL*.62) + 'px';
+}
+window.addEventListener('resize', () => { layout(); });
+
+const fmt = ms => { const t = Math.max(0, Math.ceil(ms/1000)); const h = Math.floor(t/3600), m = Math.floor(t%3600/60), s = t%60;
+  return (h? h+':'+String(m).padStart(2,'0') : m) + ':' + String(s).padStart(2,'0'); };
+
+// 주문에 맞는 보드 아이템 개수
+function boardCounts(){
+  const m = {};
+  S.board.forEach(it => { if (it && !it.s && !isGen(it)) { const k = it.c+':'+it.l; m[k] = (m[k]||0)+1; } });
+  return m;
+}
+function orderStatus(cu, counts){
+  const used = {};
+  const oks = cu.order.map(o => { const k = o.c+':'+o.l; used[k] = (used[k]||0)+1; return (counts[k]||0) >= used[k]; });
+  return {oks, all: oks.every(Boolean)};
+}
+function wantedKeys(){
+  const w = new Set();
+  S.cust.forEach(cu => cu && cu.order.forEach(o => w.add(o.c+':'+o.l)));
+  return w;
+}
+
+function renderBoard(){
+  const want = wantedKeys(), now = Date.now();
+  for (let i=0; i<N; i++){
+    const it = S.board[i], d = cells[i];
+    d.classList.toggle('sel', i===sel);
+    d.classList.toggle('tgt', !!(drag && drag.started && drag.over===i && i!==drag.from));
+    if (!it){ d.innerHTML = ''; continue; }
+    let cls = 'it', extra = '';
+    if (it.s) cls += ' sealed';
+    if (isGen(it)) {
+      cls += ' gen';
+      extra += `<span class="lv">${it.l}</span>`;
+      if (K(it.c).kind==='auto') extra += `<span class="cd">⏱${fmt(it.next-now)}</span>`;
+      else if (it.l >= (K(it.c).minL||1)) {
+        if (it.ch<=0) { cls += ' tired'; extra += `<span class="cd">💤${fmt(it.cd-now)}</span>`; }
+        else extra += `<span class="ch">${it.ch}</span>`;
+      }
+    } else if (isRes(it) && !it.s) extra += `<span class="val">+${K(it.c).vals[it.l-1]}</span>`;
+    else if (!it.s && want.has(it.c+':'+it.l)) extra += `<span class="chk">✔</span>`;
+    if (drag && drag.started && drag.from===i) cls += ' dim';
+    d.innerHTML = `<div class="${cls}"><span class="e">${pic(it)}</span>${extra}</div>`;
+  }
+}
+
+function renderTop(){
+  $('enV').textContent = S.energy; $('coV').textContent = S.coins; $('geV').textContent = S.gems;
+  $('lvB').textContent = S.lvl; $('xpB').style.width = Math.min(100, S.xp/needXp(S.lvl)*100) + '%';
+  $('enT').textContent = S.energy < CFG.MAX_ENERGY ? '+1까지 ' + fmt(S.enTs + CFG.REGEN_SEC*1000 - Date.now()) : '';
+  $('decorRow').innerHTML = S.decor.map(id => { const d = DECOR.find(x=>x.id===id); return `<span class="dc">${artPic('decor-'+id, d.e)}</span>`; }).join('');
+}
+
+function renderCust(){
+  const counts = boardCounts(), now = Date.now();
+  $('cust').innerHTML = S.cust.map((cu, i) => {
+    if (!cu) return `<div class="cc wait">🚶 손님이<br>오는 중…</div>`;
+    const st = orderStatus(cu, counts);
+    return `<div class="cc ${cu.sp?'vip':''}">${cu.sp?`<span class="vipb">${artPic('icon-vip','🎫')}<b>특별 주문</b></span>`:''}<div class="face">${facePic(cu)}</div><div class="nm">${cu.name}</div>
+      <div class="ord">${cu.order.map((o,j)=>`<div class="oi ${st.oks[j]?'ok':''}" data-c="${o.c}" data-l="${o.l}">${pic(o)}</div>`).join('')}</div>
+      <div class="rw">🪙 +${cu.reward}${cu.sp?` · 💎${cu.sp}`:''} · ⭐${cu.xp}</div>
+      <button class="${st.all?'go':''}" data-done="${i}">${st.all?'전달하기':'준비 중'}</button></div>`;
+  }).join('');
+}
+
+function renderInfo(){
+  const it = S.board[sel], now = Date.now(), el = $('info');
+  if (!it){
+    el.innerHTML = `<div class="tx"><div class="t">🐿️ 다람 머지 카페</div><div class="d">같은 아이템 두 개를 끌어다 겹치면 한 단계 높은 아이템이 돼요. 손님 주문을 채워 동전을 모아요!</div></div>`;
+    return;
+  }
+  let d = '', bs = `<button class="ib p" data-act="info">ℹ️ 정보</button>`;
+  const G = K(it.c);
+  if (it.s) d = '포장된 상자예요. 바로 옆 칸에서 합성하거나, 같은 아이템을 겹치면 열려요.';
+  else if (G.kind==='auto'){
+    d = `주변 빈칸에 자동으로 아이템이 ${autoCount(it)}개씩 생겨요. 다음 생성까지 ${fmt(it.next-now)}`;
+    bs += `<button class="ib g" data-act="skip">💎${skipCost(it.next-now)} 바로</button>`;
+  } else if (G.kind==='gen'){
+    if (it.l < (G.minL||1)) d = `같은 것끼리 합쳐서 Lv.${G.minL}이 되면 선물을 줘요.`;
+    else if (it.ch<=0){ d = `충전 중이에요. ${fmt(it.cd-now)} 뒤에 다시 쓸 수 있어요.`;
+      bs += `<button class="ib g" data-act="skip">💎${skipCost(it.cd-now)} 충전</button>`; }
+    else d = it.c==='cat' ? `고양이가 선물을 들고 있어요. 터치해 선물을 받으세요. (남은 ${it.ch}번)`
+                          : `터치하면 아이템이 나와요. ⚡${CFG.SPAWN_COST} 사용 · 남은 ${it.ch}/${genMax(it)}번`;
+  } else if (isRes(it)){
+    const unit = {energy:'⚡',coin:'🪙',gem:'💎'}[G.kind];
+    d = `터치하면 ${unit} ${G.vals[it.l-1]}을(를) 받아요. 합치면 더 커져요.`;
+  } else d = it.l>=maxL(it.c) ? '최고 등급이에요! 손님이 아주 좋아할 거예요.' : '합성하면 더 높은 등급의 아이템을 얻을 수 있어요.';
+  if (!it.s && !isRes(it)) bs += `<button class="ib o" data-act="sell">🪙${sellPrice(it)} 팔기</button>`;
+  el.innerHTML = `<div class="tx"><div class="t">${nm(it)} <small>(Lv. ${it.l})</small></div><div class="d">${d}</div></div><div class="bs">${bs}</div>`;
+}
+const skipCost = ms => Math.max(1, Math.ceil(ms/1000/CFG.SKIP_SEC_PER_GEM));
+
+function renderAll(){ renderTop(); renderCust(); renderBoard(); renderInfo(); }
+
+// ───────────── 연출 ─────────────
+let toastT;
+function toast(msg){ const t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(()=>t.classList.remove('on'), 1700); }
+function banner(txt, html){ const b = document.createElement('div'); b.className = 'banner'; b.innerHTML = `<span class="bp">${html}</span>${txt}`; $('app').appendChild(b); setTimeout(()=>b.remove(), 1800); }
+function flyText(x, y, txt){ const f = document.createElement('div'); f.className = 'fly'; f.textContent = txt;
+  f.style.left = x+'px'; f.style.top = y+'px'; document.body.appendChild(f); setTimeout(()=>f.remove(), 1100); }
+// ── 효과 연출 ──
+function burst(x, y, colors, n=12){
+  for (let k=0; k<n; k++){
+    const p = document.createElement('i'); p.className = 'pt';
+    const a = Math.PI*2*k/n + Math.random()*.4, r = 28 + Math.random()*26;
+    p.style.left = x+'px'; p.style.top = y+'px';
+    p.style.background = colors[k % colors.length];
+    p.style.setProperty('--dx', Math.cos(a)*r+'px'); p.style.setProperty('--dy', Math.sin(a)*r+'px');
+    document.body.appendChild(p); setTimeout(()=>p.remove(), 650);
+  }
+  const ring = document.createElement('i'); ring.className = 'ring'; ring.style.left = x+'px'; ring.style.top = y+'px';
+  document.body.appendChild(ring); setTimeout(()=>ring.remove(), 500);
+}
+const PILL = {energy:'enV', coin:'coV', gem:'geV'};
+function flyTo(kind, x, y, html, count=1){
+  const t = $(PILL[kind]).parentElement.getBoundingClientRect();
+  const tx = t.left + 16, ty = t.top + t.height/2;
+  for (let k=0; k<Math.min(count, 6); k++){
+    const f = document.createElement('div'); f.className = 'flyto'; f.innerHTML = html;
+    const ox = (Math.random()-.5)*30, oy = (Math.random()-.5)*30;
+    f.style.left = (x+ox)+'px'; f.style.top = (y+oy)+'px';
+    document.body.appendChild(f);
+    setTimeout(() => { f.style.transform = `translate(${tx-x-ox}px,${ty-y-oy}px) scale(.6)`; f.style.opacity = '.3'; }, 30 + k*70);
+    setTimeout(() => { f.remove(); const pl = $(PILL[kind]).parentElement; pl.classList.remove('bump'); void pl.offsetWidth; pl.classList.add('bump'); }, 650 + k*70);
+  }
+}
+const resPic = kind => pic({c: kind, l: kind==='energy' ? 2 : 1});
+function confetti(){
+  const cs = ['#ff6fb5','#ffd23f','#5fd36b','#5ab8ff','#b77bff'];
+  for (let k=0; k<46; k++){
+    const p = document.createElement('i'); p.className = 'cf';
+    p.style.left = Math.random()*100+'vw'; p.style.background = cs[k%cs.length];
+    p.style.animationDelay = Math.random()*.5+'s'; p.style.setProperty('--r', (Math.random()*720-360)+'deg');
+    document.body.appendChild(p); setTimeout(()=>p.remove(), 2200);
+  }
+}
+function cellCenter(i){ const r = cells[i].getBoundingClientRect(); return [r.left+r.width/2, r.top+r.height/2]; }
+function animPop(i){ const e = cells[i].firstElementChild; if (e){ e.classList.remove('pop'); void e.offsetWidth; e.classList.add('pop'); } }
+function animShake(i){ const e = cells[i].firstElementChild; if (e){ e.classList.remove('shake'); void e.offsetWidth; e.classList.add('shake'); } }
+function animFrom(from, to){
+  const e = cells[to].firstElementChild; if (!e) return;
+  const [x1,y1] = cellCenter(from), [x2,y2] = cellCenter(to);
+  e.style.transition = 'none'; e.style.transform = `translate(${x1-x2}px,${y1-y2}px) scale(.4)`;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{ e.style.transition = 'transform .28s ease-out'; e.style.transform = ''; }));
+}
+
+// ───────────── 게임 동작 ─────────────
+function nearestEmpty(i){
+  const r0 = Math.floor(i/COLS), c0 = i%COLS; let best = -1, bd = 1e9;
+  for (let j=0; j<N; j++) if (!S.board[j]){
+    const dr = Math.floor(j/COLS)-r0, dc = j%COLS-c0, dd = dr*dr+dc*dc;
+    if (dd < bd){ bd = dd; best = j; }
+  }
+  return best;
+}
+function unsealAround(i){
+  const r = Math.floor(i/COLS), c = i%COLS;
+  [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dr,dc]) => {
+    const rr = r+dr, cc = c+dc; if (rr<0||rr>=ROWS||cc<0||cc>=COLS) return;
+    const it = S.board[rr*COLS+cc];
+    if (it && it.s){ delete it.s; discover(it); setTimeout(()=>animPop(rr*COLS+cc), 0); }
+  });
+}
+function canMerge(a, b){ return a && b && a.c===b.c && a.l===b.l && a.l < maxL(a.c); }
+
+function drop(a, b){
+  if (b==null || b===a || b<0) return;
+  const A = S.board[a], B = S.board[b];
+  if (!B){ S.board[b] = A; S.board[a] = null; sel = b; }
+  else if (canMerge(A, B)){
+    const it = newItem(A.c, A.l+1);
+    S.board[b] = it; S.board[a] = null; sel = b;
+    const isNew = !S.disc[it.c] || S.disc[it.c] < it.l;
+    discover(it); unsealAround(b); sfx.merge(); track('merge'); track('makeLv', it.l);
+    renderAll(); animPop(b);
+    { const [x,y] = cellCenter(b); burst(x, y, it.l>=5 ? ['#ffd23f','#ff9f1c','#fff3b0'] : ['#ffffff','#ffe066','#ff8fd8','#9be7ff']); }
+    if (isNew){ const [x,y] = cellCenter(b); flyText(x, y-20, '✨ 새로운 발견!'); if (it.l>=3) banner(`새로운 발견! ${nm(it)}`, pic(it)); }
+    if (S.tut===0 && it.c==='cat'){ S.tut = 1; toast('고양이를 터치하면 선물을 줘요! 🐱'); }
+    save(); return;
+  }
+  else if (B.s){ sfx.bad(); renderAll(); animShake(b); return; }
+  else { S.board[b] = A; S.board[a] = B; sel = b; }
+  renderAll(); save();
+}
+
+function tap(i){
+  const it = S.board[i]; if (!it) return;
+  sel = i;
+  if (it.s){ renderAll(); animShake(i); return; }
+  const G = K(it.c);
+  if (isRes(it)){ collect(i); return; }
+  if (G.kind==='gen') produce(i);
+  else if (G.kind==='auto') toast(`다음 생성까지 ${fmt(it.next-Date.now())}`);
+  renderAll();
+}
+
+function collect(i){
+  const it = S.board[i], G = K(it.c), v = G.vals[it.l-1];
+  const [x,y] = cellCenter(i);
+  flyTo(G.kind, x, y, resPic(G.kind), it.l+1);
+  if (G.kind==='energy'){ S.energy += v; flyText(x,y,'⚡+'+v); }
+  if (G.kind==='coin'){ S.coins += v; flyText(x,y,'🪙+'+v); }
+  if (G.kind==='gem'){ S.gems += v; flyText(x,y,'💎+'+v); }
+  track('collect');
+  S.board[i] = null; sel = -1; sfx.coin(); renderAll(); save();
+}
+
+function produce(i){
+  const it = S.board[i], G = K(it.c);
+  if (it.l < (G.minL||1)){ toast(`같은 것끼리 합쳐서 Lv.${G.minL}로 만들어 주세요!`); return; }
+  if (it.ch <= 0){ toast(`충전 중이에요 (${fmt(it.cd-Date.now())})`); animShake(i); return; }
+  const cost = it.c==='cat' ? 0 : CFG.SPAWN_COST;
+  if (S.energy < cost){ sfx.bad(); toast('에너지가 부족해요! ⚡ 아이템을 모으거나 상점을 이용해요.'); return; }
+  const to = nearestEmpty(i);
+  if (to < 0){ sfx.bad(); toast('빈칸이 없어요! 아이템을 합치거나 팔아 보세요.'); return; }
+  const t = pick(genTable(it.c, it.l)); track('spawn');
+  const ni = newItem(t.c, t.l); S.board[to] = ni; discover(ni);
+  if (S.energy >= CFG.MAX_ENERGY && S.energy - cost < CFG.MAX_ENERGY) S.enTs = Date.now();
+  S.energy -= cost; it.ch--;
+  if (it.ch <= 0) it.cd = Date.now() + genCd(it);
+  sfx.spawn(); renderAll(); animFrom(i, to); save();
+  setTimeout(() => { const [x,y] = cellCenter(to); burst(x, y, ['#ffffff','#c9f0ff'], 6); }, 280);
+}
+
+function autoSpawn(i){
+  const it = S.board[i]; let made = 0;
+  for (let k=0; k<autoCount(it); k++){
+    const to = nearestEmpty(i); if (to < 0) break;
+    const t = pick(genTable(it.c, it.l)); const ni = newItem(t.c, t.l);
+    S.board[to] = ni; discover(ni); made++;
+    renderBoard(); animFrom(i, to);
+  }
+  return made;
+}
+
+function skip(){
+  const it = S.board[sel]; if (!it) return;
+  const now = Date.now(), ms = K(it.c).kind==='auto' ? it.next-now : it.cd-now;
+  const cost = skipCost(ms);
+  if (S.gems < cost){ toast('보석이 부족해요 💎'); sfx.bad(); return; }
+  S.gems -= cost;
+  if (K(it.c).kind==='auto') it.next = now;
+  else { it.ch = genMax(it); it.cd = 0; }
+  sfx.coin(); tick(); renderAll(); save();
+}
+function sell(){
+  const it = S.board[sel]; if (!it || it.s) return;
+  const p = sellPrice(it), [x,y] = cellCenter(sel);
+  S.coins += p; S.board[sel] = null; flyText(x,y,'🪙+'+p); flyTo('coin', x, y, resPic('coin'), 2); sel = -1; sfx.coin(); renderAll(); save();
+}
+
+// ───────────── 손님 ─────────────
+function ownedChains(){
+  const set = new Set();
+  S.board.forEach(it => {
+    if (!it || it.s || !isGen(it)) return;
+    const G = K(it.c);
+    if (G.produces) Object.keys(G.produces).forEach(c => ORDERABLE.includes(c) && set.add(c));
+  });
+  if (!set.size) set.add('fruit');
+  return [...set];
+}
+function newCustomer(){
+  const chains = ownedChains();
+  // 특별 손님(나비 박사·디자이너)은 그 계열을 만들 수 있을 때만 옴
+  const pool = FACES.map((f,i)=>i).filter(i => !FACES[i][2] || chains.includes(FACES[i][2]));
+  let fi = pool[Math.floor(Math.random()*pool.length)];
+  const sp = CFG.SPECIAL, special = S.lvl >= sp.minLvl && Math.random() < sp.chance;
+  if (special){ const prefs = pool.filter(i => FACES[i][2]); if (prefs.length && Math.random() < .6) fi = prefs[Math.floor(Math.random()*prefs.length)]; }
+  const [face, name, pref] = FACES[fi];
+  const n = special ? 1 + (Math.random()<.5 ? 1 : 0) : 1 + (Math.random()<.55 ? 1 : 0) + (S.lvl>=3 && Math.random()<.3 ? 1 : 0);
+  const order = [];
+  for (let k=0; k<n; k++){
+    const c = pref && Math.random() < .75 ? pref : chains[Math.floor(Math.random()*chains.length)];
+    const top = Math.min(maxL(c), 2 + Math.floor(S.lvl*.7) + (special ? 1 : 0));
+    const l = Math.min(top, 1 + Math.floor(Math.pow(Math.random(), 1.3) * top));
+    order.push({c, l: Math.max(1, l)});
+  }
+  order.sort((a,b)=>a.c.localeCompare(b.c)||a.l-b.l);
+  const base = order.reduce((s,o)=>s + Math.round(12*Math.pow(1.8, o.l-1)), 0);
+  let reward = Math.round(base*(1+.1*(n-1))), xp = order.reduce((s,o)=>s+o.l, 0);
+  if (special){ reward *= sp.coinMult; xp = Math.round(xp*1.5); }
+  return {face, fi, name, order, reward, xp, sp: special ? sp.gems : 0};
+}
+function deliver(i){
+  const cu = S.cust[i]; if (!cu) return;
+  if (!orderStatus(cu, boardCounts()).all){ toast('아직 주문한 아이템이 보드에 다 없어요!'); return; }
+  cu.order.forEach(o => {
+    let idx = -1;
+    for (let j=0; j<N; j++){ const it = S.board[j]; if (it && !it.s && it.c===o.c && it.l===o.l){ idx = j; if (j!==sel) break; } }
+    if (idx>=0) S.board[idx] = null;
+  });
+  if (sel>=0 && !S.board[sel]) sel = -1;
+  const card = $('cust').children[i].getBoundingClientRect();
+  flyText(card.left+card.width/2, card.top+40, `🪙+${cu.reward} ⭐+${cu.xp}`);
+  flyTo('coin', card.left+card.width/2, card.top+70, resPic('coin'), 5);
+  burst(card.left+card.width/2, card.top+60, ['#ffd23f','#ffffff','#ff8fd8'], 16);
+  if (cu.sp){ S.gems += cu.sp; flyTo('gem', card.left+card.width/2, card.top+70, resPic('gem'), 3); track('special'); }
+  track('deliver');
+  S.coins += cu.reward; S.xp += cu.xp; S.cust[i] = null; S.arrive[i] = Date.now() + 2500;
+  sfx.done(); checkLevel(); renderAll(); save();
+}
+function checkLevel(){
+  let up = false;
+  while (S.xp >= needXp(S.lvl)){ S.xp -= needXp(S.lvl); S.lvl++; up = true; levelReward(S.lvl); }
+  if (up) showLevelUp();
+}
+function levelReward(l){
+  S.gems += 3 + l; S.energy += 30;
+  const g = {2:[['oven',1]], 3:[['cart',1]], 4:[['cat',1],['cat',1]], 5:[['craft',1]]}[l]
+         || (l%2 ? [[Math.random()<.5?'mixer':'oven',1]] : [['cat',2]]);
+  g.forEach(x => S.gifts.push(x));
+  S._lastGift = g;
+}
+function placeGifts(){
+  let changed = false;
+  while (S.gifts.length){
+    const to = nearestEmpty(0); if (to<0) break;
+    const [c,l] = S.gifts.shift(); S.board[to] = newItem(c,l); discover(S.board[to]); changed = true;
+  }
+  return changed;
+}
+
+// ───────────── 주기 처리 ─────────────
+function tick(){
+  if (S.daily && S.daily.day !== today()){ ensureDaily(); renderBadges(); }
+  const now = Date.now(); let ch = false;
+  if (S.energy < CFG.MAX_ENERGY){
+    const g = Math.floor((now - S.enTs) / (CFG.REGEN_SEC*1000));
+    if (g > 0){ S.energy = Math.min(CFG.MAX_ENERGY, S.energy + g); S.enTs += g*CFG.REGEN_SEC*1000; ch = true; }
+  } else S.enTs = now;
+  S.board.forEach((it, i) => {
+    if (!it || it.s) return;
+    if (K(it.c).kind==='gen' && it.ch<=0 && it.cd && now >= it.cd){ it.ch = genMax(it); it.cd = 0; ch = true; }
+    if (K(it.c).kind==='auto' && now >= it.next){
+      if (autoSpawn(i) > 0){ it.next = now + autoInt(it); sfx.spawn(); ch = true; }
+    }
+  });
+  S.cust.forEach((cu, i) => { if (!cu && now >= S.arrive[i]){ S.cust[i] = newCustomer(); ch = true; } });
+  if (placeGifts()) ch = true;
+  if (ch) save();
+  if (!drag || !drag.started){ renderTop(); renderBoard(); renderInfo(); if (ch) renderCust(); }
+  else renderTop();
+}
+
+// ───────────── 드래그 & 터치 ─────────────
+function cellAt(x, y){
+  const el = document.elementFromPoint(x, y); const c = el && el.closest('.cell');
+  return c ? +c.dataset.i : null;
+}
+$('board').addEventListener('pointerdown', e => {
+  const c = e.target.closest('.cell'); if (!c) return;
+  const i = +c.dataset.i; if (!S.board[i]) { sel = -1; renderAll(); return; }
+  drag = {from:i, x0:e.clientX, y0:e.clientY, started:false, over:null};
+  e.preventDefault();
+});
+window.addEventListener('pointermove', e => {
+  if (!drag) return;
+  if (!drag.started){
+    if (Math.hypot(e.clientX-drag.x0, e.clientY-drag.y0) < 8) return;
+    if (S.board[drag.from].s){ drag = null; return; }
+    drag.started = true;
+    const g = document.createElement('div'); g.id = 'ghost';
+    g.style.width = g.style.height = CELL+'px'; g.style.fontSize = Math.round(CELL*.7)+'px';
+    g.innerHTML = pic(S.board[drag.from]); document.body.appendChild(g);
+    sel = drag.from; renderBoard(); renderInfo();
+  }
+  const g = $('ghost'); g.style.left = e.clientX+'px'; g.style.top = e.clientY+'px';
+  const o = cellAt(e.clientX, e.clientY);
+  if (o !== drag.over){ drag.over = o; renderBoard(); }
+});
+window.addEventListener('pointerup', e => {
+  if (!drag) return;
+  const d = drag; drag = null;
+  const g = $('ghost'); if (g) g.remove();
+  if (d.started) drop(d.from, cellAt(e.clientX, e.clientY));
+  else tap(d.from);
+});
+window.addEventListener('pointercancel', () => { drag = null; const g = $('ghost'); if (g) g.remove(); renderAll(); });
+
+document.addEventListener('click', e => {
+  const t = e.target;
+  const op = t.closest('[data-open]'); if (op){ openModal(op.dataset.open); return; }
+  const dn = t.closest('[data-done]'); if (dn){ deliver(+dn.dataset.done); return; }
+  const oi = t.closest('.oi'); if (oi){ chainModal({c:oi.dataset.c, l:+oi.dataset.l}); return; }
+  const ac = t.closest('[data-act]');
+  if (ac){ const a = ac.dataset.act;
+    if (a==='info' && S.board[sel]) chainModal(S.board[sel]);
+    if (a==='sell') sell();
+    if (a==='skip') skip();
+    return; }
+  if (t.id==='ov' || t.closest('.x')) closeModal();
+});
+$('btnQuest').onclick = () => { ensureDaily(); questModal(); };
+$('btnAtt').onclick = () => { ensureDaily(); attModal(); };
+$('avatar').onclick = () => openModal('help');
+
+// ───────────── 모달 ─────────────
+function closeModal(){ $('ov').classList.remove('on'); }
+function showModal(title, body){
+  $('md').innerHTML = `<div class="hd">${title}</div><button class="x">✕</button>${body}`;
+  $('ov').classList.add('on'); $('md').scrollTop = 0;
+}
+function chainModal(it){
+  const G = K(it.c), seen = S.disc[it.c] || 0;
+  let tiles = G.items.map((x, j) => {
+    const l = j+1, known = l <= seen || l === it.l;
+    return `<div class="tile ${known?'':'unk'} ${l===it.l?'cur':''}">${known ? pic({c:it.c,l}) : '?'}</div>`;
+  }).join('');
+  let body = `<div class="lvt">Lv. ${it.l}</div><div class="grid4">${tiles}</div>`;
+  if (G.kind==='gen' || G.kind==='auto'){
+    const tb = genTable(it.c, it.l).slice().sort((a,b)=>b.p-a.p);
+    body += `<div class="sec">생성</div>`;
+    body += tb.length ? `<div class="grid4" style="background:none;padding:0">${tb.map(t=>
+      `<div class="tile gp">${pic(t)}<span class="pc">${(t.p*100).toFixed(1)}%</span></div>`).join('')}</div>`
+      : `<div class="ctr">Lv.${G.minL}부터 선물을 만들어요.</div>`;
+  } else {
+    const src = Object.entries(CHAINS).filter(([k,g]) => (g.produces && g.produces[it.c]) || (g.table && g.table.some(t=>t.c===it.c)));
+    if (src.length){
+      body += `<div class="sec">얻는 곳</div>` + src.map(([k,g]) =>
+        `<div class="row"><span class="e">${pic({c:k,l:g.minL||1})}</span><div class="tx">${g.name}<small>${g.kind==='auto'?'자동 생성':'터치해서 생성'}</small></div></div>`).join('');
+    }
+    if (isRes(it)) body += `<div class="ctr">값: ${G.vals.map((v,j)=>j+1<=Math.max(seen,it.l)?v:'?').join(' → ')}</div>`;
+  }
+  showModal(G.name, body);
+}
+function openModal(which){
+  if (which==='store'){
+    showModal('상점', STORE.map((s,i)=>{
+      const ok = S[s.pay[0]] >= s.pay[1];
+      return `<div class="row"><span class="e">${s.pic && hasArt(...s.pic) ? pic({c:s.pic[0],l:s.pic[1]}) : s.e}</span><div class="tx">${s.n}<small>${s.item?'빈칸에 놓여요':'바로 받아요'}</small></div>
+        <button data-buy="${i}" ${ok?'':'disabled'}>${s.sub}</button></div>`;
+    }).join(''));
+  }
+  if (which==='decor'){
+    showModal('카페 꾸미기', `<div class="ctr" style="margin-bottom:8px">동전으로 카페를 꾸며요. 꾸밀 때마다 ⭐10을 받아요.</div>` +
+      DECOR.map(d => {
+        const own = S.decor.includes(d.id);
+        return `<div class="row"><span class="e">${artPic('decor-'+d.id, d.e)}</span><div class="tx">${d.n}<small>${own?'설치 완료':'🪙 '+d.cost}</small></div>
+          <button data-dec="${d.id}" ${own||S.coins<d.cost?'disabled':''}>${own?'완료':'꾸미기'}</button></div>`;
+      }).join(''));
+  }
+  if (which==='help'){
+    showModal('놀이 방법', `<div class="help">
+      <p>🔀 <b>합성</b> — 같은 아이템 두 개를 끌어서 겹치면 한 단계 높은 아이템이 돼요.</p>
+      <p>👆 <b>생성기</b> — 분홍 테두리 아이템(믹서·오븐)을 터치하면 ⚡${CFG.SPAWN_COST}을 쓰고 아이템이 나와요. 횟수를 다 쓰면 잠시 쉬어요.</p>
+      <p>🪴 <b>꽃 수레</b> — 시간이 되면 주변 빈칸에 저절로 꽃이 생겨요.</p>
+      <p>🦋 <b>나비</b> — 꽃 수레에서 가끔 애벌레가 나와요. 합치면 나비가 돼요.</p>
+      <p>🧵 <b>공예 상자</b> — Lv.5가 되면 받아요. 진주를 합쳐 액세서리를 만들어요.</p>
+      <p>🐱 <b>고양이</b> — 바구니를 합쳐 Lv.3 고양이를 만들면 에너지·동전·보석 선물을 줘요.</p>
+      <p>📦 <b>포장 상자</b> — 바로 옆 칸에서 합성하면 열려요.</p>
+      <p>🧾 <b>손님 주문</b> — 주문한 아이템이 보드에 모두 있으면 [전달하기]를 눌러요. 동전과 ⭐경험치를 받아요.</p>
+      <p>⭐ <b>레벨업</b> — 보석·에너지와 새 생성기를 선물로 받아요.</p>
+      <p>🎫 <b>특별 주문</b> — 금색 카드 손님은 동전 2배와 보석을 줘요.</p>
+      <p>📋 <b>오늘의 퀘스트</b> · 📅 <b>출석</b> — 위쪽 버튼에서 매일 보상을 받아요. 다람쥐를 누르면 이 도움말이 나와요.</p>
+      <p>⚡ 에너지는 ${CFG.REGEN_SEC}초마다 1씩 차요(최대 ${CFG.MAX_ENERGY}).</p>
+      <p style="color:#a88">기록은 이 기기에만 저장돼요. 이름 등 개인정보는 받지 않아요.</p></div>
+      <div class="ctr">현재 Lv.${S.lvl} · ⭐ ${S.xp}/${needXp(S.lvl)}</div>
+      <button class="wideb" id="muteB">${muted?'🔇 소리 켜기':'🔊 소리 끄기'}</button>
+      <button class="wideb red" id="resetB">처음부터 다시 하기</button>`);
+  }
+}
+function showLevelUp(){
+  setTimeout(confetti, 300);
+  const g = (S._lastGift||[]).map(([c,l]) => `<span class="gift">${pic({c,l})}</span>`).join(' ');
+  setTimeout(() => showModal('레벨 업!', `<div class="big">🎉</div><div class="ctr">Lv.${S.lvl} 이 되었어요!<br>
+    💎 +${3+S.lvl} · ⚡ +30<br>선물: ${g} (보드 빈칸에 놓여요)</div><button class="wideb x2">좋아요!</button>`), 400);
+}
+$('md').addEventListener('click', e => {
+  const b = e.target.closest('[data-buy]');
+  if (b){ const s = STORE[+b.dataset.buy];
+    if (S[s.pay[0]] < s.pay[1]) return;
+    if (s.item && nearestEmpty(0) < 0){ toast('빈칸이 없어요!'); return; }
+    S[s.pay[0]] -= s.pay[1];
+    if (s.give) s.give(S);
+    if (s.item){ const to = nearestEmpty(0); S.board[to] = newItem(...s.item); discover(S.board[to]); }
+    sfx.coin(); toast(s.n + ' 구매 완료!'); renderAll(); save(); openModal('store'); return; }
+  const qb = e.target.closest('[data-q]');
+  if (qb){ const q = S.daily.quests[+qb.dataset.q]; if (q.p < q.n || q.claimed) return;
+    q.claimed = true; const r = qb.getBoundingClientRect(); giveRw(q.rw, r.left+r.width/2, r.top); questModal(); renderBadges(); return; }
+  if (e.target.closest('[data-qb]')){ if (S.daily.bonus || !S.daily.quests.every(q=>q.claimed)) return;
+    S.daily.bonus = true; const r = e.target.getBoundingClientRect(); giveRw(CFG.DAILY_BONUS, r.left+r.width/2, r.top); confetti(); questModal(); renderBadges(); return; }
+  if (e.target.closest('[data-att]')){ if (!attReady()) return;
+    const rw = CFG.ATTENDANCE[S.att.count % 7]; S.att.count++; S.att.last = today();
+    const r = e.target.getBoundingClientRect(); giveRw(rw, r.left+r.width/2, r.top); burst(r.left+r.width/2, r.top, ['#ffd23f','#fff','#ff8fd8'], 16);
+    attModal(); renderBadges(); return; }
+  const d = e.target.closest('[data-dec]');
+  if (d){ const it = DECOR.find(x=>x.id===d.dataset.dec);
+    if (S.coins < it.cost || S.decor.includes(it.id)) return;
+    S.coins -= it.cost; S.decor.push(it.id); S.xp += 10; sfx.done(); checkLevel(); renderAll(); save();
+    if ($('ov').classList.contains('on')) openModal('decor'); return; }
+  if (e.target.id==='muteB'){ muted = !muted; try{ localStorage.setItem(SAVE_KEY+'-mute', muted?'1':''); }catch(_){}; openModal('help'); return; }
+  if (e.target.id==='resetB'){ if (confirm('정말 처음부터 다시 할까요? 지금까지의 기록이 사라져요.')){ S = freshState(); sel = -1; save(); closeModal(); renderAll(); } return; }
+  if (e.target.classList.contains('x2')) closeModal();
+});
+
+// ───────────── 시작 ─────────────
+S = load();
+ensureDaily();
+(function drawBunting(){
+  const cs = ['#ff6fa8','#ffd23f','#6cc6ff','#8ee07a','#c58bff'], n = 14, w = 400/n;
+  let h = '<path d="M0 4 Q200 22 400 4" stroke="#8a5a3c" stroke-width="1.5" fill="none"/>';
+  for (let i=0; i<n; i++){
+    const x = i*w + w/2, y = 4 + 18*(1 - Math.pow((x-200)/200, 2)) * .5 + 2;
+    h += `<path d="M${x-w*.38} ${y} L${x+w*.38} ${y} L${x} ${y+12} Z" fill="${cs[i%cs.length]}"/>`;
+  }
+  document.getElementById('bunting').innerHTML = h;
+})();
+document.querySelectorAll('[data-art]').forEach(el => { const [c,l] = el.dataset.art.split('-'); if (hasArt(c,+l)) el.innerHTML = pic({c,l:+l}); });
+document.querySelectorAll('[data-key]').forEach(el => { el.innerHTML = artPic(el.dataset.key, el.textContent); });
+if (ART.avatar) $('avPic').innerHTML = `<img class="pic" src="${A('assets/avatar.webp')}" alt="" draggable="false">`;
+try{ muted = !!localStorage.getItem(SAVE_KEY+'-mute'); }catch(e){}
+buildBoard();
+renderAll();
+layout();
+setInterval(tick, 1000);
+tick();
+if (!S.tut) setTimeout(()=>toast('고양이 바구니 두 개를 끌어서 겹쳐 보세요! 🧺'), 600);
+else if (attReady()) setTimeout(attModal, 700);
+renderBadges();
+</script>
+</body>
+</html>
