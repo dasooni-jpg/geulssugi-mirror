@@ -97,6 +97,34 @@ canvas{display:block}
   border:2px solid #fff;border-radius:50%}
 .tabbtn{position:relative}
 
+/* ===== 고급 그래픽(hq) : 유리 질감 HUD + 광택 버튼 ===== */
+.hq .res,.hq .chip{background:linear-gradient(180deg,rgba(28,62,96,.72),rgba(8,24,44,.78));
+  border-color:rgba(190,230,255,.28);box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 3px 8px rgba(0,0,0,.28);
+  backdrop-filter:blur(6px) saturate(1.3);-webkit-backdrop-filter:blur(6px) saturate(1.3)}
+.hq .questbar{background:linear-gradient(180deg,rgba(26,62,98,.86),rgba(10,28,48,.9));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.16),0 6px 16px rgba(0,0,0,.35);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.hq .tabbtn,.hq .fabbtn{background-image:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,.06) 48%,rgba(0,0,0,0) 52%,rgba(0,0,0,.12))}
+.hq .tabbtn{background-color:#2f78b8}.hq .tabbtn.on{background-color:#f2b23a}
+.hq .fabbtn{background-color:#2f78b8}
+.hq .logo{background:linear-gradient(180deg,#ffe28a,#ffc24a 45%,#f2932a 55%,#e5801f);
+  box-shadow:0 4px 0 #7a3c10,0 8px 18px rgba(0,0,0,.4),inset 0 2px 0 rgba(255,255,255,.55)}
+.hq .panel{background:linear-gradient(180deg,rgba(22,66,104,.97),rgba(9,30,52,.98));
+  box-shadow:0 -10px 34px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.18)}
+.hq .card{background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,.04));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+.hq .bubble{box-shadow:0 4px 12px rgba(0,0,0,.45),inset 0 2px 0 rgba(255,255,255,.35)}
+.lq .res,.lq .chip,.lq #modal{backdrop-filter:none;-webkit-backdrop-filter:none}
+
+/* ===== 절전 화면 ===== */
+#sleepOv{position:fixed;inset:0;background:#000;z-index:999;display:flex;align-items:center;justify-content:center;
+  color:#8fa6b8;text-align:center;user-select:none;-webkit-user-select:none;cursor:pointer}
+#sleepOv.hidden{display:none}
+#sleepOv .sbox{transition:transform 1.2s ease}
+#sleepOv .sclock{font-size:64px;font-weight:300;letter-spacing:2px;color:#c9d6e0;line-height:1}
+#sleepOv .sdate{font-size:15px;margin-top:8px;opacity:.75}
+#sleepOv .smsg{font-size:14px;margin-top:22px;opacity:.6}
+#sleepOv .shint{font-size:12px;margin-top:6px;opacity:.4}
+
 /* ===== 패널 ===== */
 .panel{position:absolute;left:0;right:0;bottom:0;max-height:76%;background:linear-gradient(180deg,#123a5c,#0c2740);
   border-top:4px solid #ffd257;border-radius:20px 20px 0 0;display:flex;flex-direction:column;z-index:30;
@@ -241,6 +269,9 @@ input.vol{width:100%;margin-top:6px;accent-color:#ffd257;height:22px;touch-actio
       <button class="fabbtn" id="btnSpeed"><span class="speedlbl">x1</span></button>
       <button class="fabbtn" id="btnCenter">🎯</button>
     </div>
+    <div id="sleepOv" class="hidden"><div class="sbox"><div class="sclock" id="sleepClock">--:--</div>
+      <div class="sdate" id="sleepDate"></div><div class="smsg" id="sleepMsg">🌙 뗏목이 쉬는 중</div>
+      <div class="shint">화면을 누르면 돌아옴 · 쉬는 동안의 생산은 돌아올 때 계산됨</div></div></div>
     <div class="bottombar">
       <button class="tabbtn" data-tab="build"><em>🔨</em><b>건설</b></button>
       <button class="tabbtn" data-tab="people"><em>🧑‍🤝‍🧑</em><b>주민</b></button>
@@ -809,6 +840,34 @@ function migrateQuests(s, o){
   s.questV=QUEST_V;
 }
 
+/* 보너스 퀘스트 : 예전 저장본이 이미 지나간 자리에 새로 끼워 넣은 퀘스트는 따로 받을 수 있음 */
+const NEW_QUEST_IDS = ["q8b","q9b","q15b","q18b"];
+function bonusQuests(){
+  const done=S.qDone||[];
+  return NEW_QUEST_IDS.map(id=>QUESTS.find(q=>q.id===id))
+    .filter(q=>q && QUESTS.indexOf(q)<S.quests && !done.includes(q.id));
+}
+function bonusReady(q){ try{ const [c,n]=q.goal(S); return c>=n; }catch(e){ return false; } }
+function claimBonus(id){
+  const q=bonusQuests().find(x=>x.id===id); if(!q) return;
+  if(!bonusReady(q)){ toast("아직 조건을 채우지 못함","bad"); sfx("error"); return; }
+  (S.qDone=S.qDone||[]).push(q.id);
+  for(const k in q.rw) gain(k,q.rw[k]);
+  toast(`🎁 보너스 퀘스트 완료: <b>${q.t}</b>`,"good"); sfx("quest");
+  save(); moreTab("ach");
+}
+function uiBonus(){
+  const list=bonusQuests(); if(!list.length) return "";
+  return `<div class="sectitle">🎁 보너스 퀘스트 ${list.length}개</div>
+    <div class="hintbox">업데이트로 새로 생긴 퀘스트 중 이미 지나간 자리에 들어간 것들임. 조건을 채우면 여기서 보상을 받음.</div>`
+    + list.map(q=>{ const [c,n]=q.goal(S), ok=c>=n, pct=Math.min(100,Math.floor(c/n*100));
+      return `<div class="card" style="${ok?"border-color:#58e06a;background:rgba(88,224,106,.1)":""}"><div class="ico">🎁</div>
+        <div class="info"><h3>${q.t}</h3><p>${q.d} · ${Math.min(c,n)}/${n} · 보상 ${Object.keys(q.rw).map(k=>RES[k].icon+q.rw[k]).join(" ")}</p>
+        <p style="opacity:.6">${q.tip}</p>
+        <div class="minibar"><i style="width:${pct}%;background:${ok?"#58e06a":"#ffd257"}"></i></div></div>
+        <button class="btn ${ok?"gold":"grey"}" onclick="claimBonus('${q.id}')">${ok?"받기":"진행 중"}</button></div>`; }).join("");
+}
+
 /* 보조: 특정 건물 개수 */
 function cntBld(s, id){ let n=0; s.tiles.forEach(t=>{ if(t.b===id) n++; }); return n; }
 
@@ -868,7 +927,7 @@ function newState(carry){
     people: [],
     tech: [], research: null,
     expos: [], expoDone: {},
-    quests: 0, questRw: [], questV: 2,
+    quests: 0, questRw: [], questV: 2, qDone: [],
     achs: [],
     perks: carry? carry.perks : {},
     pearl: 0,
@@ -1110,7 +1169,8 @@ function initCanvas(){
   }, { passive:false });
 }
 function resize(){
-  DPR = Math.min(2, window.devicePixelRatio||1);
+  const g=(typeof VIEW!=="undefined" && VIEW.gfx)||"high";
+  DPR = g==="low"? 1 : g==="mid"? Math.min(1.5, window.devicePixelRatio||1) : Math.min(2, window.devicePixelRatio||1);
   cv.width = Math.floor(window.innerWidth*DPR);
   cv.height = Math.floor(window.innerHeight*DPR);
   cv.style.width = window.innerWidth+"px";
@@ -1221,6 +1281,7 @@ function drawSea(dt){
   g.addColorStop(.55, st?"#163a63":PAL.seaMid);
   g.addColorStop(1, st?"#0f2c4d":PAL.seaDeep);
   ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  if(VIEW.gfx!=="low") drawSeaLight(W,H,st);
 
   // 물결 패턴 (화면 고정, 살짝 흐름)
   ctx.save(); ctx.globalAlpha=.13; ctx.strokeStyle="#ffffff"; ctx.lineWidth=2;
@@ -1236,12 +1297,70 @@ function drawSea(dt){
   ctx.restore();
 
   // 반짝임
-  ctx.save(); ctx.globalAlpha=.10; ctx.fillStyle="#fff";
-  for(let i=0;i<26;i++){
-    const x=((i*197)%W)+Math.sin(waveT*.6+i)*16, y=((i*127)%H)+Math.cos(waveT*.5+i)*10;
-    ctx.fillRect(x,y,9,2);
+  if(VIEW.gfx==="low"){
+    ctx.save(); ctx.globalAlpha=.10; ctx.fillStyle="#fff";
+    for(let i=0;i<26;i++){
+      const x=((i*197)%W)+Math.sin(waveT*.6+i)*16, y=((i*127)%H)+Math.cos(waveT*.5+i)*10;
+      ctx.fillRect(x,y,9,2);
+    }
+    ctx.restore();
+  } else drawSeaSparkle(W,H,st);
+}
+/* --- 고급 바다 : 뗏목 주변 얕은 물빛 + 햇살 띠 --- */
+function drawSeaLight(W,H,st){
+  const day = S.env.time>0.22 && S.env.time<0.8;
+  // 뗏목 주변의 밝은 청록 물빛 (얕은 바다 느낌)
+  const cw=raftCenter(), c=w2s(cw.x,cw.y), r=Math.max(160,(raftRadius()+140)*CAM.z);
+  const gl=ctx.createRadialGradient(c.x,c.y,r*0.15,c.x,c.y,r);
+  gl.addColorStop(0, st? "rgba(90,150,190,.22)" : day? "rgba(120,240,228,.42)" : "rgba(80,160,200,.2)");
+  gl.addColorStop(.55, st? "rgba(60,120,170,.1)" : "rgba(80,200,215,.14)");
+  gl.addColorStop(1, "rgba(60,160,210,0)");
+  ctx.save(); ctx.fillStyle=gl; ctx.translate(c.x,c.y); ctx.scale(1,0.62); ctx.translate(-c.x,-c.y);
+  ctx.beginPath(); ctx.arc(c.x,c.y,r,0,6.283); ctx.fill(); ctx.restore();
+  // 비스듬한 햇살 띠 (고급 · 맑은 낮)
+  if(VIEW.gfx==="high" && day && !st && S.env.weather!=="rain"){
+    ctx.save(); ctx.globalCompositeOperation="lighter";
+    for(let i=0;i<3;i++){
+      const x0=((waveT*6 + i*W*0.45) % (W*1.6)) - W*0.3;
+      const gr=ctx.createLinearGradient(x0,0,x0+90,0);
+      gr.addColorStop(0,"rgba(255,255,230,0)"); gr.addColorStop(.5,"rgba(255,250,215,.09)"); gr.addColorStop(1,"rgba(255,255,230,0)");
+      ctx.fillStyle=gr; ctx.beginPath();
+      ctx.moveTo(x0,0); ctx.lineTo(x0+90,0); ctx.lineTo(x0+90-H*0.35,H); ctx.lineTo(x0-H*0.35,H); ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+/* --- 고급 바다 : 깜빡이는 물비늘 + 짧은 물결 마루 --- */
+function drawSeaSparkle(W,H,st){
+  const n = VIEW.gfx==="high"? 46 : 30;
+  ctx.save(); ctx.fillStyle="#fff"; ctx.strokeStyle="#e8fbff"; ctx.lineWidth=1.6; ctx.lineCap="round";
+  for(let i=0;i<n;i++){
+    const x=((i*197.3)%W)+Math.sin(waveT*.5+i)*18, y=((i*127.7+waveT*6)%H);
+    const tw=Math.max(0,Math.sin(waveT*(1.2+(i%5)*0.25)+i*1.7));
+    if(i%3===0){                                     // 물결 마루(짧은 호)
+      ctx.globalAlpha=(st?.12:.2)*tw;
+      ctx.beginPath(); ctx.arc(x,y,9+(i%4)*3,Math.PI*1.15,Math.PI*1.85); ctx.stroke();
+    } else {                                         // 물비늘(반짝임)
+      ctx.globalAlpha=(st?.1:.32)*tw*tw;
+      ctx.fillRect(x-5,y,10,1.6); ctx.fillRect(x-1,y-2,2,5.6);
+    }
   }
   ctx.restore();
+}
+/* --- 화면 가장자리 비네트 (고급·보통) : 크기별로 한 번만 만들어 재사용 --- */
+let VIGNETTE=null;
+function drawVignette(){
+  if(VIEW.gfx==="low") return;
+  const W=cv.width/DPR, H=cv.height/DPR;
+  if(!VIGNETTE || VIGNETTE.w!==W || VIGNETTE.h!==H){
+    const c=document.createElement("canvas"); c.width=Math.ceil(W/2); c.height=Math.ceil(H/2);
+    const g=c.getContext("2d"), cx=c.width/2, cy=c.height*0.48;
+    const gr=g.createRadialGradient(cx,cy,Math.min(cx,cy)*0.55,cx,cy,Math.hypot(cx,cy)*1.05);
+    gr.addColorStop(0,"rgba(0,12,28,0)"); gr.addColorStop(1,"rgba(0,12,28,.42)");
+    g.fillStyle=gr; g.fillRect(0,0,c.width,c.height);
+    VIGNETTE={ c, w:W, h:H };
+  }
+  ctx.drawImage(VIGNETTE.c,0,0,W,H);
 }
 
 /* 낮/밤 색조 */
@@ -3049,10 +3168,20 @@ function removePerson(id){
 
 /* ---------- 화면 보기 설정 : 깔끔 보기 / 건물 이름표 (이 기기에만 저장) ---------- */
 const VIEW_KEY="wildocean_view_v1";
-const VIEW = (()=>{ const d={ clean:true, labels:false, maxPeople:30, autoNet:true };
+const VIEW = (()=>{ const d={ clean:true, labels:false, maxPeople:30, autoNet:true, gfx:"high", sleep:true, sleepMin:10 };
   try{ return Object.assign(d, JSON.parse(localStorage.getItem(VIEW_KEY)||"{}")); }catch(e){ return d; } })();
 function saveView(){ try{ localStorage.setItem(VIEW_KEY, JSON.stringify(VIEW)); }catch(e){} }
-function setView(k,v){ VIEW[k]=v; saveView(); syncViewBtn(); if(PANEL==="more" && MORE_TAB==="set") moreTab("set"); }
+function setView(k,v){ VIEW[k]=v; saveView(); syncViewBtn();
+  if(k==="gfx"){ applyGfx(); toast(`🎨 그래픽 품질: ${GFX_NAME[v]}`); }
+  if(PANEL==="more" && MORE_TAB==="set") moreTab("set"); }
+/* 그래픽 품질 : 고급(선명한 해상도 + 빛 효과) · 보통 · 절약(배터리 아낌 : 낮은 해상도, 30fps, 효과 끔) */
+const GFX_NAME = { high:"고급", mid:"보통", low:"절약" };
+function applyGfx(){
+  document.body.classList.toggle("hq", VIEW.gfx==="high");
+  document.body.classList.toggle("lq", VIEW.gfx==="low");
+  VIGNETTE=null;
+  if(typeof resize==="function" && cv) resize();
+}
 /* 오른쪽 보기 버튼 : 기본 → 깔끔 → 깔끔+이름표 순서로 바꿈 */
 function cycleView(){
   if(!VIEW.clean){ VIEW.clean=true; VIEW.labels=false; toast("🧹 깔끔 보기 — 주민 일부·하트·레벨 숫자·인구 말풍선을 숨김"); }
@@ -3060,6 +3189,52 @@ function cycleView(){
   else { VIEW.clean=false; VIEW.labels=false; toast("👁️ 기본 보기 — 모든 표시를 보여줌"); }
   saveView(); syncViewBtn(); sfx("click");
   if(PANEL==="more" && MORE_TAB==="set") moreTab("set");
+}
+/* ---------- 절전모드 : 일정 시간 조작이 없으면 저장 → 게임 루프 정지 → 검은 시계 화면 ----------
+   교실 TV·태블릿에 켜 둔 채로 두어도 화면 잔상과 배터리 소모를 줄임.
+   돌아오면 쉬는 동안의 생산을 오프라인 보상과 같은 방식으로 계산함. */
+let SLEEP=null, LAST_INPUT=Date.now(), SLEEP_TICK=null;
+function markInput(){ LAST_INPUT=Date.now(); }
+function sleepClock(){
+  const d=new Date(), pad=n=>String(n).padStart(2,"0");
+  $("#sleepClock").textContent=`${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  $("#sleepDate").textContent=`${d.getMonth()+1}월 ${d.getDate()}일 (${"일월화수목금토"[d.getDay()]})`;
+  $("#sleepMsg").textContent=`🌙 뗏목이 쉬는 중 · ${S.env.day}일차 · 주민 ${S.people.length}명`;
+  // 화면 잔상 방지 : 1분마다 글자 위치를 조금씩 옮김
+  $("#sleepOv .sbox").style.transform=`translate(${Math.round(rnd(-60,60))}px,${Math.round(rnd(-90,90))}px)`;
+}
+function enterSleep(){
+  if(SLEEP || ENDING) return;
+  closePanel && PANEL && closePanel();
+  save();
+  SLEEP={ at:Date.now() };
+  try{ if(AU.ctx && AU.ctx.state==="running") AU.ctx.suspend(); }catch(e){}
+  $("#sleepOv").classList.remove("hidden");
+  sleepClock(); SLEEP_TICK=setInterval(sleepClock, 60000);
+}
+function wakeUp(){
+  if(!SLEEP) return;
+  const away=(Date.now()-SLEEP.at)/1000;
+  SLEEP=null; clearInterval(SLEEP_TICK); markInput();
+  $("#sleepOv").classList.add("hidden");
+  try{ if(AU.ctx && AU.ctx.state==="suspended") AU.ctx.resume(); }catch(e){}
+  lastT=0; requestAnimationFrame(loop);
+  if(away>60){
+    const r=offlineGains(S, away); save();
+    showModal({ title:"🌙 절전모드에서 돌아옴", sub:`${S.env.day}일차 · 주민 ${S.people.length}명`,
+      body: Object.keys(r.got).length
+        ? `<p>쉬는 <b>${fmtTime(r.sec)}</b> 동안 주민들이 일을 계속함. (효율 ${Math.round(r.eff*100)}%)</p>`
+        : `<p>쉬는 <b>${fmtTime(r.sec)}</b> 동안 쌓인 자원이 없음.</p>`,
+      loot:r.got, btns:[{t:"수령",cls:"btn gold"}] });
+  }
+}
+function initSleep(){
+  ["pointerdown","keydown","wheel","touchstart"].forEach(ev=>window.addEventListener(ev, markInput, { capture:true, passive:true }));
+  $("#sleepOv").addEventListener("pointerup", (e)=>{ e.preventDefault(); e.stopPropagation(); wakeUp(); });
+  setInterval(()=>{
+    if(!VIEW.sleep || SLEEP || ENDING || document.hidden) return;
+    if(Date.now()-LAST_INPUT > VIEW.sleepMin*60000) enterSleep();
+  }, 5000);
 }
 function syncViewBtn(){ const b=$("#btnView"); if(b) b.textContent = VIEW.labels? "🏷️" : VIEW.clean? "🧹" : "👁️"; }
 /* 깔끔 보기 : 배고픈 주민 → 일하는 주민 → 쉬는 주민 순으로 일부만 그림 */
@@ -3446,6 +3621,7 @@ function checkQuest(){
   const [cur,need]=q.goal(S);
   if(cur>=need){
     S.quests++;
+    (S.qDone=S.qDone||[]).push(q.id);
     for(const k in q.rw) gain(k,q.rw[k]);
     toast(`📜 퀘스트 완료: <b>${q.t}</b>`, "good"); sfx("quest");
     fxRing(0,-20,"#ffd257");
@@ -7049,6 +7225,7 @@ function updHUD(dt){
     if(t==="tech" && !S.research && c.hasLab && TECH_KEYS.some(id=>canResearch(id))) dot=true;
     if(t==="expo" && c.hasDock && S.expos.length<c.boats) dot=true;
     if(t==="market" && S.trader) dot=true;
+    if(t==="more" && bonusQuests().some(bonusReady)) dot=true;
     const had=b.querySelector(".dot");
     if(had && !dot) had.remove();
     if(!had && dot){ const d=document.createElement("span"); d.className="dot"; b.appendChild(d); }
@@ -7465,16 +7642,24 @@ function viewSettings(){
       <div class="ico">${icon}</div><div class="info"><h3>${label} <span class="lv">${VIEW[k]?"켜짐":"꺼짐"}</span></h3><p>${desc}</p></div>
       <button class="btn ${VIEW[k]?"grey":"blue"}" onclick="setView('${k}',${!VIEW[k]})">${VIEW[k]?"끄기":"켜기"}</button></div>`;
   const opts=[15,30,50,999].map(n=>`<span class="tag ${VIEW.maxPeople===n?"on":""}" onclick="setView('maxPeople',${n})">${n>=999?"전부":n+"명"}</span>`).join("");
-  return `<div class="sectitle">화면 보기</div>
+  const mins=[3,5,10,20,30].map(n=>`<span class="tag ${VIEW.sleepMin===n?"on":""}" onclick="setView('sleepMin',${n})">${n}분</span>`).join("");
+  const sleepHtml = `<div class="sectitle">절전모드</div>`
+    + tg("sleep","🌙","절전모드 자동 전환",`${VIEW.sleepMin}분 동안 화면을 누르지 않으면 저장 후 검은 시계 화면으로 바뀜. 게임이 멈춰 배터리와 화면 잔상을 줄임. 돌아오면 쉬는 동안의 생산을 받음.`)
+    + (VIEW.sleep? `<div class="tagrow" style="margin:-2px 0 8px;font-size:11.5px;align-items:center">대기 시간 ${mins}</div>` : "")
+    + `<button class="btn blue" style="width:100%;margin-bottom:8px" onclick="enterSleep()">🌙 지금 절전모드 켜기</button>`;
+  return sleepHtml + `<div class="sectitle">화면 보기</div>
     <div class="hintbox">화면 오른쪽 🧹 버튼으로도 빠르게 바꿀 수 있음 (기본 → 깔끔 → 깔끔+이름표).</div>`
     + tg("clean","🧹","깔끔 보기","주민을 일부만 보여 주고, 하트·음표 풍선, 건물 레벨 숫자, 일꾼 필요(👤+) 표시, 뗏목 위 인구 말풍선을 숨김. 배고픔·목마름 말풍선은 그대로 보임.")
     + (VIEW.clean? `<div class="tagrow" style="margin:-2px 0 8px;font-size:11.5px;align-items:center">뗏목에 보일 주민 수 ${opts}</div>` : "")
+    + `<div class="card"><div class="ico">🎨</div><div class="info"><h3>그래픽 품질 <span class="lv">${GFX_NAME[VIEW.gfx]}</span></h3>
+        <p>${{high:"선명한 해상도, 뗏목 주변 물빛, 햇살, 물비늘, 유리 질감 화면.",mid:"물빛·물비늘은 켜고 해상도를 조금 낮춤.",low:"배터리 절약: 낮은 해상도, 30fps, 빛 효과 끔."}[VIEW.gfx]}</p>
+        <div class="tagrow" style="margin:6px 0 0">${["high","mid","low"].map(g=>`<span class="tag ${VIEW.gfx===g?"on":""}" onclick="setView('gfx','${g}')">${GFX_NAME[g]}</span>`).join("")}</div></div></div>`
     + tg("labels","🏷️","건물 이름표","건물 아래에 이름과 레벨을 글자로 표시함.")
     + tg("autoNet","🕸️","자동 수집","진주 특전 그물과 🥅 자원 그물 건물이 떠다니는 자원을 자동으로 주움."
          + (autoNetRate()>0? ` 지금 1분에 약 ${Math.round(autoNetRate()*60)}개.` : " 아직 그물이 없음."));
 }
 function uiAch(){
-  let html=`<div class="sectitle">업적 ${S.achs.length} / ${ACHS.length}</div>`;
+  let html=uiBonus()+`<div class="sectitle">업적 ${S.achs.length} / ${ACHS.length}</div>`;
   ACHS.forEach(a=>{
     const done=S.achs.includes(a.id);
     html+=`<div class="card ${done?"":"locked"}"><div class="ico">${done?a.icon:"🔒"}</div>
@@ -7601,6 +7786,9 @@ function uiHelp(){
     <p>오른쪽 🧹 버튼을 누를 때마다 <b>기본 → 깔끔 보기 → 깔끔+건물 이름표</b> 순서로 바뀜.
     깔끔 보기는 주민 일부만 보여 주고 하트·레벨 숫자·인구 말풍선을 숨김(배고픔·목마름 말풍선은 그대로).
     이름표를 켜면 건물마다 이름과 레벨이 글자로 붙음. 보일 주민 수는 [기록 → ⚙️ 설정]에서 고름.</p></div></div>
+  <div class="card"><div class="ico">🌙</div><div class="info"><h3>절전모드 · 그래픽 품질</h3>
+    <p>정해 둔 시간(기본 10분) 동안 조작이 없으면 자동 저장 후 검은 시계 화면으로 바뀌고 게임이 멈춤. 화면을 누르면 돌아오고, 쉬는 동안의 생산을 받음.
+    [기록 → ⚙️ 설정]에서 대기 시간, 끄기, "지금 절전모드 켜기"를 고름. 그래픽 품질은 고급·보통·절약 중 고르며, 절약은 배터리를 가장 아낌.</p></div></div>
   <div class="card"><div class="ico">⚡</div><div class="info"><h3>전력</h3>
     <p>담수기·레이더·등대는 전력을 씀. 전력이 모자라면 생산량이 비례해서 줄어듦. 태양광은 낮만, 풍력은 상시 작동함.</p></div></div>
   <div class="sectitle">후반 콘텐츠</div>
@@ -7723,6 +7911,7 @@ function boot(){
   $("#btnCenter").addEventListener("click", ()=>{ camCenter(); CAM.z=1; sfx("click"); });
   $("#btnAbyss").addEventListener("click", ()=>{ sfx("click"); openPanel("more"); moreTab("abyss"); });
   $("#btnView").addEventListener("click", cycleView);
+  applyGfx(); initSleep();
   syncViewBtn();
   $("#btnMute").textContent = AU.set.mute? "🔇" : "🔊";
   $("#btnMute").addEventListener("click", ()=>{ audioUnlock(); toggleMute(); });
@@ -7771,8 +7960,10 @@ function introModal(){
 }
 
 function loop(t){
+  if(SLEEP) return;                              // 절전모드 : 루프 자체를 멈춤(깨어나면 다시 시작)
   requestAnimationFrame(loop);
   if(ENDING){ lastT=t; return; }                 // 엔딩 중에는 게임을 멈춤
+  if(VIEW.gfx==="low" && lastT && t-lastT < 30) return;   // 절약 : 약 30fps
   if(!lastT) lastT=t;
   let dt=(t-lastT)/1000; lastT=t;
   dt=Math.min(dt, 0.1);
@@ -7797,6 +7988,7 @@ function loop(t){
   drawWorld(dt);
   drawWeather(dt);
   drawDayTint();
+  drawVignette();
   drawFly();
   updHUD(dt);
 }
