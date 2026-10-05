@@ -236,6 +236,7 @@ input.vol{width:100%;margin-top:6px;accent-color:#ffd257;height:22px;touch-actio
     <div class="sidestack" id="sideStack"></div>
     <div class="fab">
       <button class="fabbtn hidden" id="btnAbyss" title="무한 심연" style="background:linear-gradient(180deg,#8a5cff,#4a2aa8);border-color:#2a1660;box-shadow:0 3px 0 #2a1660">🌀</button>
+      <button class="fabbtn" id="btnView" title="화면 보기">🧹</button>
       <button class="fabbtn" id="btnMute">🔊</button>
       <button class="fabbtn" id="btnSpeed"><span class="speedlbl">x1</span></button>
       <button class="fabbtn" id="btnCenter">🎯</button>
@@ -374,6 +375,14 @@ const BLD = {
     convert:(lv)=>({ in:{ scrap: 0.10 + 0.03*(lv-1), wood: 0.15 }, out:{ parts: 0.035 + 0.015*(lv-1) } }),
   },
 
+  salvager: {
+    name:"고철 인양기", icon:"⚓", cat:"생산", art:"salvager", maxLv:8,
+    desc:"갈고리를 바다에 내려 가라앉은 고철을 건져 올림. 일꾼이 필요함.",
+    cost:(lv)=>({ wood: 120 + 80*(lv-1), scrap: lv>1? 6*(lv-1):0 }),
+    job:"engineer", slots:(lv)=> 1 + Math.floor(lv/2),
+    perWorker:(lv)=>({ scrap: 0.08 + 0.03*(lv-1) }),
+  },
+
   greenhouse: {
     name:"수경 온실", icon:"🥬", cat:"생산", art:"greenhouse", maxLv:8, tech:"hydroponics",
     desc:"식수로 채소를 키워 식량을 직접 생산함. 물고기가 필요 없음. 전력 소비.",
@@ -411,6 +420,12 @@ const BLD = {
     desc:"자원 저장 한도를 늘림.",
     cost:(lv)=>({ wood: 100 + 80*(lv-1), scrap: 6*(lv-1) }),
     storage:(lv)=> 220 + 160*(lv-1),
+  },
+  netpost: {
+    name:"자원 그물", icon:"🥅", cat:"시설", art:"netpost", maxLv:5,
+    desc:"바다에 그물을 쳐서 떠다니는 자원을 자동으로 주움. 진주 없이 쓰는 초반용 그물. 레벨이 오르면 더 자주 주움.",
+    cost:(lv)=>({ wood: 150 + 110*(lv-1), scrap: 8*(lv-1) }),
+    net:(lv)=> netpostGap(lv),
   },
   campfire: {
     name:"모닥불", icon:"🔥", cat:"시설", art:"campfire", maxLv:5,
@@ -663,15 +678,26 @@ const ISLE_KEYS = Object.keys(ISLES);
 
 /* ---------- 진주 상점(항해 영구 보너스) ---------- */
 const PERKS = {
-  richSea:   { name:"풍요로운 바다", icon:"🌊", max:10, cost:(n)=>1+n,   desc:(n)=>`모든 자원 생산 +${n*10}%` },
-  bigHands:  { name:"큰 손",         icon:"✋", max:10, cost:(n)=>1+n,   desc:(n)=>`수집(탭) 획득량 +${n*25}%` },
-  survivors: { name:"생존자의 지혜", icon:"🧠", max:8,  cost:(n)=>2+n,   desc:(n)=>`주민 소비량 -${n*5}%` },
-  quickStart:{ name:"빠른 출발",     icon:"🚀", max:6,  cost:(n)=>2+n*2, desc:(n)=>`항해 시작 시 판자 +${n*300}, 코인 +${n*150}` },
-  ironHull:  { name:"강철 선체",     icon:"🛡️", max:8,  cost:(n)=>2+n,   desc:(n)=>`방어력·내구도 +${n*15}%` },
-  navigator: { name:"노련한 항해사", icon:"🧭", max:8,  cost:(n)=>2+n,   desc:(n)=>`원정 시간 -${n*6}%, 보상 +${n*12}%` },
+  richSea:   { name:"풍요로운 바다", icon:"🌊", max:20, cost:(n)=>1+n,   desc:(n)=>`모든 자원 생산 +${n*10}%` },
+  bigHands:  { name:"큰 손",         icon:"✋", max:15, cost:(n)=>1+n,   desc:(n)=>`수집(탭) 획득량 +${n*25}%` },
+  survivors: { name:"생존자의 지혜", icon:"🧠", max:12, cost:(n)=>2+n,   desc:(n)=>`주민 소비량 -${n*5}%` },
+  quickStart:{ name:"빠른 출발",     icon:"🚀", max:10, cost:(n)=>2+n*2, desc:(n)=>`항해 시작 시 판자 +${n*300}, 코인 +${n*150}` },
+  ironHull:  { name:"강철 선체",     icon:"🛡️", max:15, cost:(n)=>2+n,   desc:(n)=>`방어력·내구도 +${n*15}%` },
+  navigator: { name:"노련한 항해사", icon:"🧭", max:10, cost:(n)=>2+n,   desc:(n)=>`원정 시간 -${n*6}%, 보상 +${n*12}%` },
   offline:   { name:"밤샘 작업",     icon:"🌙", max:5,  cost:(n)=>3+n*2, desc:(n)=>`오프라인 효율 +${n*12}% (기본 50%)` },
-  magnet:    { name:"해류 자석",     icon:"🧲", max:6,  cost:(n)=>2+n,   desc:(n)=>`떠다니는 자원 등장 +${n*20}%` },
+  magnet:    { name:"해류 자석",     icon:"🧲", max:10, cost:(n)=>2+n,   desc:(n)=>`떠다니는 자원 등장 +${n*20}%` },
+  autoNet:   { name:"자동 수집 그물", icon:"🕸️", max:8,  cost:(n)=>2+n*2, desc:(n)=>`떠다니는 자원을 ${autoNetGap(n)}초마다 ${autoNetPick(n)}개씩 자동으로 주움` },
+  treasure:  { name:"보물 사냥꾼",   icon:"💰", max:5,  cost:(n)=>2+n,   desc:(n)=>`보물상자 등장 +${n*30}%, 상자 보상 +${n*20}%` },
+  rescue:    { name:"구조 신호탄",   icon:"🛟", max:5,  cost:(n)=>2+n,   desc:(n)=>`표류자 등장 +${n*20}%` },
+  bigStore:  { name:"넓은 창고",     icon:"📦", max:8,  cost:(n)=>1+n,   desc:(n)=>`모든 자원 저장 한도 +${n*10}%` },
+  scholar:   { name:"학자의 혜안",   icon:"📖", max:5,  cost:(n)=>2+n,   desc:(n)=>`연구 비용 -${n*6}%` },
+  merchant:  { name:"단골 상인",     icon:"🤝", max:5,  cost:(n)=>2+n,   desc:(n)=>`상인 방문 간격 -${n*10}%, 거래 물량 +${n*15}%` },
 };
+/* 자동 수집 그물 : 레벨별 수집 간격(초)과 한 번에 줍는 개수 */
+function autoNetGap(n){ return [0,4,3.2,2.5,2,1.6,1.3,1,0.8][Math.min(8,n)]; }
+function autoNetPick(n){ return n>=7? 4 : n>=5? 3 : n>=3? 2 : 1; }
+/* 자원 그물 건물 : 레벨별 수집 간격(초), 1개씩 주움 */
+function netpostGap(lv){ return [0,8,6.5,5,4,3][Math.min(5,lv)]; }
 const PERK_KEYS = Object.keys(PERKS);
 
 /* ---------- 업적 ---------- */
@@ -894,6 +920,7 @@ function capOf(k){
   S.tiles.forEach(t=>{ if(t.b==="storage") add += BLD.storage.storage(t.lv); });
   let mul = 1;
   S.tech.forEach(id=>{ const e=TECH[id].eff; if(e.capMul && e.capMul[k]) mul += e.capMul[k]; });
+  mul += 0.10*perkLv(S,"bigStore");
   return Math.floor((base+add)*mul);
 }
 function canPay(cost){ for(const k in cost){ if((S.res[k]||0) < cost[k]) return false; } return true; }
@@ -1274,11 +1301,13 @@ function drawWorld(dt){
   const ents=[];
   tiles.forEach(t=>{ if(t.b){ const p=iso(t.x,t.y); ents.push({ d:t.x+t.y, z:p.y, f:()=>drawBuilding(t,p) }); } });
   // 원정 나간 주민은 뗏목에 그리지 않음
-  S.people.forEach(p=>{ if(p.away) return;
+  visiblePeople().forEach(p=>{
     const g=unIso(p.x,p.y); ents.push({ d:g.gx+g.gy, z:p.y, f:()=>drawPerson(p) }); });
   bossEnts(ents);
   ents.sort((a,b)=>a.z-b.z||a.d-b.d);
   ents.forEach(e=>e.f());
+  // 건물 이름표 (다른 그림에 가려지지 않게 맨 위에 그림)
+  if(VIEW.labels && !S.boss) tiles.forEach(t=>{ if(t.b) drawBuildingLabel(t); });
 
   // 3) 건설 가능 위치 표시 (전투 중에는 숨김)
   if(!S.boss) drawGhosts();
@@ -1481,6 +1510,8 @@ function drawBuilding(t,p){
     case "lodge": artLodge(p.x,p.y,lv); break;
     case "fishdock": artFishdock(p.x,p.y,lv); break;
     case "sawmill": artSawmill(p.x,p.y,lv); break;
+    case "salvager": artSalvager(p.x,p.y,lv); break;
+    case "netpost": artNetpost(p.x,p.y,lv); break;
     case "kitchen": artKitchen(p.x,p.y,lv); break;
     case "raincol": artRaincol(p.x,p.y,lv); break;
     case "desal": artDesal(p.x,p.y,lv); break;
@@ -1505,17 +1536,17 @@ function drawBuilding(t,p){
   }
   ctx.restore();
   // 최대 레벨 건물 : 반짝이는 별
-  if(lv>=def.maxLv){
+  if(lv>=def.maxLv && !VIEW.clean){
     const tw=(waveT*1.6+t.x*0.7+t.y*1.3)%3;
     if(tw<0.6){ ctx.save(); ctx.globalAlpha=Math.sin(tw/0.6*Math.PI); ctx.fillStyle="#fff6c2";
       ctx.translate(p.x+18,p.y-58); starPath(5); ctx.fill(); ctx.restore(); }
   }
   // 일꾼 필요 표시
-  if(def.slots && t.w < def.slots(lv) && S.people.some(pp=>pp.job==="idle")){
+  if(!VIEW.clean && def.slots && t.w < def.slots(lv) && S.people.some(pp=>pp.job==="idle")){
     bubbleIcon(p.x, p.y-64, "👤+", "#ffd257");
   }
   // 레벨 배지
-  if(lv>1) levelBadge(p.x+30,p.y-6,lv);
+  if(lv>1 && !VIEW.clean) levelBadge(p.x+30,p.y-6,lv);
 }
 function levelBadge(x,y,lv){
   ctx.save(); ctx.globalAlpha=.88;
@@ -1722,6 +1753,53 @@ function artWorkshop(x,y,lv){
   ctx.fillStyle="#9fe0c0"; ctx.beginPath(); ctx.arc(x+24,y-4,4,0,6.283); ctx.fill();
   if(lv>=3){ ctx.fillStyle="#b9c4cc";
     for(let i=0;i<3;i++){ ctx.beginPath(); ctx.arc(x-26,y-2-i*5,5,0,6.283); ctx.fill(); } }
+}
+/* --- 고철 인양기 : 기둥 + 기중기 팔 + 오르내리는 갈고리 + 고철 더미 --- */
+function artSalvager(x,y,lv){
+  fillP([[x-30,y+2],[x,y+17],[x+30,y+2],[x,y-13]],"#c9a170");
+  // 고철 더미
+  ctx.fillStyle=PAL.metalD; ctx.beginPath(); ctx.ellipse(x+14,y+4,12,6,0,0,6.283); ctx.fill();
+  ctx.fillStyle=PAL.metal; ctx.fillRect(x+6,y-2,8,4); ctx.fillRect(x+15,y-1,7,3);
+  ctx.fillStyle="#a8754a"; ctx.fillRect(x+10,y-5,6,3);
+  // 기둥
+  ctx.strokeStyle=PAL.woodD; ctx.lineWidth=4;
+  ctx.beginPath(); ctx.moveTo(x-14,y+6); ctx.lineTo(x-14,y-44); ctx.stroke();
+  // 팔
+  ctx.strokeStyle=PAL.wood; ctx.lineWidth=3;
+  ctx.beginPath(); ctx.moveTo(x-16,y-42); ctx.lineTo(x-38,y-30); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x-14,y-28); ctx.lineTo(x-34,y-32); ctx.stroke();
+  // 줄 + 갈고리 (천천히 오르내림)
+  const hy = y-18 + Math.sin(waveT*1.4)*10;
+  ctx.strokeStyle=PAL.rope; ctx.lineWidth=1.4;
+  ctx.beginPath(); ctx.moveTo(x-38,y-30); ctx.lineTo(x-38,hy); ctx.stroke();
+  ctx.strokeStyle=PAL.steel; ctx.lineWidth=2.2;
+  ctx.beginPath(); ctx.arc(x-35,hy+3,3.5,Math.PI*0.9,Math.PI*2.1); ctx.stroke();
+  // 손잡이 바퀴
+  ctx.fillStyle=PAL.metalD; ctx.beginPath(); ctx.arc(x-14,y-14,5,0,6.283); ctx.fill();
+  ctx.fillStyle=PAL.metal; ctx.beginPath(); ctx.arc(x-14,y-14,2,0,6.283); ctx.fill();
+  if(lv>=4){ ctx.fillStyle=PAL.metal; ctx.fillRect(x+18,y-8,6,4); }
+}
+/* --- 자원 그물 : 두 기둥 사이에 그물이 걸려 있음 --- */
+function artNetpost(x,y,lv){
+  fillP([[x-30,y+2],[x,y+17],[x+30,y+2],[x,y-13]],"#c9a170");
+  const ax=x-22, ay=y+2, bx=x+18, by=y-10, h=30;
+  // 그물
+  ctx.strokeStyle="rgba(240,248,255,.75)"; ctx.lineWidth=1;
+  for(let i=0;i<=6;i++){ const r=i/6;
+    ctx.beginPath(); ctx.moveTo(ax+(bx-ax)*r, ay+(by-ay)*r-h); ctx.lineTo(ax+(bx-ax)*r, ay+(by-ay)*r-2); ctx.stroke(); }
+  for(let j=0;j<=4;j++){ const d=h*j/4;
+    ctx.beginPath(); ctx.moveTo(ax,ay-h+d); ctx.quadraticCurveTo((ax+bx)/2,(ay+by)/2-h+d+4,bx,by-h+d); ctx.stroke(); }
+  // 기둥
+  ctx.strokeStyle=PAL.woodD; ctx.lineWidth=3.5;
+  ctx.beginPath(); ctx.moveTo(ax,ay+4); ctx.lineTo(ax,ay-h-4); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(bx,by+4); ctx.lineTo(bx,by-h-4); ctx.stroke();
+  // 걸린 판자·물고기
+  ctx.fillStyle=PAL.wood; ctx.save(); ctx.translate(x-6,y-16); ctx.rotate(-0.3); ctx.fillRect(-7,-2,14,4); ctx.restore();
+  if(lv>=2){ ctx.fillStyle="#ff9fb0"; ctx.beginPath(); ctx.ellipse(x+6,y-26,5,3,-0.3,0,6.283); ctx.fill(); }
+  if(lv>=4){ ctx.fillStyle=PAL.metal; ctx.fillRect(x-12,y-30,6,4); }
+  // 부표
+  ctx.fillStyle="#ff6b5a"; ctx.beginPath(); ctx.arc(ax,ay-h-5,3.5,0,6.283); ctx.fill();
+  ctx.fillStyle="#ff6b5a"; ctx.beginPath(); ctx.arc(bx,by-h-5,3.5,0,6.283); ctx.fill();
 }
 /* --- 태양광 --- */
 function artSolar(x,y,lv){
@@ -2142,7 +2220,7 @@ function drawPerson(p){
   ctx.restore();
 
   // 감정 풍선
-  if(p.emote>0 && !(p.hunger<35||p.thirst<35)){
+  if(p.emote>0 && !(p.hunger<35||p.thirst<35) && !(VIEW.clean && p.emoteK!=="sick")){
     const a=Math.min(1,p.emote*2);
     const ic={ heart:"♥", note:"♪", sad:"…", sick:"🤒" }[p.emoteK]||"♪";
     const col={ heart:"#ff6b8a", note:"#5ec3f0", sad:"#9fb3c4", sick:"#6fd06a" }[p.emoteK]||"#fff";
@@ -2865,6 +2943,7 @@ function simulate(dt){
 
   /* 물 위 오브젝트 */
   updFloats(dt);
+  updAutoNet(dt);
   updSharks(dt);
   updBoats(dt);
 
@@ -2937,6 +3016,41 @@ function removePerson(id){
   S.people.splice(i,1);
 }
 
+/* ---------- 화면 보기 설정 : 깔끔 보기 / 건물 이름표 (이 기기에만 저장) ---------- */
+const VIEW_KEY="wildocean_view_v1";
+const VIEW = (()=>{ const d={ clean:true, labels:false, maxPeople:30, autoNet:true };
+  try{ return Object.assign(d, JSON.parse(localStorage.getItem(VIEW_KEY)||"{}")); }catch(e){ return d; } })();
+function saveView(){ try{ localStorage.setItem(VIEW_KEY, JSON.stringify(VIEW)); }catch(e){} }
+function setView(k,v){ VIEW[k]=v; saveView(); syncViewBtn(); if(PANEL==="more" && MORE_TAB==="set") moreTab("set"); }
+/* 오른쪽 보기 버튼 : 기본 → 깔끔 → 깔끔+이름표 순서로 바꿈 */
+function cycleView(){
+  if(!VIEW.clean){ VIEW.clean=true; VIEW.labels=false; toast("🧹 깔끔 보기 — 주민 일부·하트·레벨 숫자·인구 말풍선을 숨김"); }
+  else if(!VIEW.labels){ VIEW.labels=true; toast("🏷️ 건물 이름표 켬"); }
+  else { VIEW.clean=false; VIEW.labels=false; toast("👁️ 기본 보기 — 모든 표시를 보여줌"); }
+  saveView(); syncViewBtn(); sfx("click");
+  if(PANEL==="more" && MORE_TAB==="set") moreTab("set");
+}
+function syncViewBtn(){ const b=$("#btnView"); if(b) b.textContent = VIEW.labels? "🏷️" : VIEW.clean? "🧹" : "👁️"; }
+/* 깔끔 보기 : 배고픈 주민 → 일하는 주민 → 쉬는 주민 순으로 일부만 그림 */
+function visiblePeople(){
+  const list=S.people.filter(p=>!p.away);
+  if(!VIEW.clean || list.length<=VIEW.maxPeople) return list;
+  const rank=p=> (p.hunger<35||p.thirst<35)? 0 : p.job!=="idle"? 1 : 2;
+  return list.slice().sort((a,b)=>rank(a)-rank(b)||a.id-b.id).slice(0,VIEW.maxPeople);
+}
+function drawBuildingLabel(t){
+  const def=BLD[t.b]; if(!def) return;
+  const p=iso(t.x,t.y);
+  const txt=`${def.icon} ${def.name}${t.lv>1?" "+t.lv:""}`;
+  ctx.save();
+  ctx.font="bold 10px sans-serif"; ctx.textAlign="center";
+  const w=ctx.measureText(txt).width+12;
+  ctx.fillStyle="rgba(10,30,50,.82)"; ctx.strokeStyle="rgba(255,255,255,.55)"; ctx.lineWidth=1.2;
+  rrect(p.x-w/2,p.y+8,w,16,6); ctx.fill(); ctx.stroke();
+  ctx.fillStyle="#fff"; ctx.fillText(txt,p.x,p.y+20);
+  ctx.restore();
+}
+
 /* ---------- 떠다니는 자원 ---------- */
 function raftRadius(){
   let r=0; S.tiles.forEach(t=>{ const p=iso(t.x,t.y); r=Math.max(r, Math.hypot(p.x,p.y)); });
@@ -2957,7 +3071,7 @@ function updFloats(dt){
     spawnFloat();
   }
   // 표류자
-  S.nextSurv -= dt*(1+(c.attract||0));
+  S.nextSurv -= dt*(1+(c.attract||0)+0.2*perkLv(S,"rescue"));
   if(S.nextSurv<=0){
     S.nextSurv = rnd(18,42);
     if(S.people.length < (c.popCap||0) && S.floats.filter(f=>f.k==="person").length<3) spawnFloat("person");
@@ -2972,6 +3086,32 @@ function updFloats(dt){
     if(f.life<=0 || dist>rad+520) S.floats.splice(i,1);
   }
 }
+/* 자동 수집 그물 : 뗏목에서 가까운 떠다니는 자원부터 자동으로 주움 */
+/* 초당 자동 수집 개수 : 진주 특전(그물) + 자원 그물 건물 */
+function autoNetRate(){
+  const lv=perkLv(S,"autoNet");
+  let r = lv? autoNetPick(lv)/autoNetGap(lv) : 0;
+  S.tiles.forEach(t=>{ if(t.b==="netpost") r += 1/netpostGap(t.lv); });
+  return r;
+}
+function updAutoNet(dt){
+  if(S.boss || !VIEW.autoNet){ S.netAcc=0; return; }
+  const rate=autoNetRate();
+  if(rate<=0){ S.netAcc=0; return; }
+  S.netAcc=Math.min(6,(S.netAcc||0)+rate*dt);
+  if(S.netAcc<1) return;
+  const cen=raftCenter();
+  const full = S.people.length >= (S.cache.popCap||0);
+  const list=S.floats.filter(f=>f.k!=="person" || !full)
+    .sort((a,b)=>Math.hypot(a.x-cen.x,a.y-cen.y)-Math.hypot(b.x-cen.x,b.y-cen.y));
+  if(!list.length){ S.netAcc=Math.min(S.netAcc,1); return; }
+  const n=Math.min(list.length, Math.floor(S.netAcc));
+  S.netAcc-=n;
+  list.slice(0,n).forEach(f=>{
+    fxRing(f.x,f.y,"#7fe0ff");
+    collectFloat(f, true);
+  });
+}
 function spawnFloat(force){
   const cen=raftCenter(), rad=raftRadius();
   const a=rnd(0,6.283), r=rad+rnd(40,260);
@@ -2983,7 +3123,7 @@ function spawnFloat(force){
     const w = lowWood? 0.72 : 0.58;
     if(r2<w) k="wood";
     else if(r2<w+(1-w)*0.6) k="fish";
-    else if(r2<w+(1-w)*0.88) k="scrap";
+    else if(r2<w+(1-w)*(0.88 - Math.min(0.2, 0.04*perkLv(S,"treasure")))) k="scrap";
     else k="crate";
     if(k==="scrap" && S.env.day<2) k="wood";
   }
@@ -3135,13 +3275,13 @@ function startTrader(){
   for(let i=0;i<3;i++){
     const give=pick(sellable);
     const want=pick(["coin","parts","scrap","wood","fish"].filter(k=>k!==give));
-    const n=rndi(30,140);
+    const n=Math.round(rndi(30,140)*(1+0.15*perkLv(S,"merchant")));
     deals.push({ give, gn:n, want, wn: Math.ceil(n*rnd(0.25,0.8)*(want==="parts"?0.12:want==="coin"?1.4:0.6)) });
   }
   S.trader = { t: 110, deals };
   S.boats.push({ kind:"trade", x:cen.x-rad-320, y:cen.y+60, tx:cen.x-rad-30, ty:cen.y+30,
     ph:rnd(0,6.28), life:115 });
-  S.nextTrader = rnd(280,420);
+  S.nextTrader = rnd(280,420)*(1-0.10*perkLv(S,"merchant"));
   toast("⛵ <b>상인 보트</b>가 도착함 — 교역 탭에서 거래 가능", "good"); sfx("coin");
 }
 function updTrader(dt){
@@ -3326,6 +3466,7 @@ function buyPerk(id){
   S.res.pearl-=cost; S.pearl=S.res.pearl;
   S.perks[id]=lv+1;
   toast(`🫧 <b>${d.name}</b> Lv${lv+1} 구매`, "good"); sfx("upgrade");
+  if(id==="autoNet" && lv===0) toast("🕸️ 이제 그물이 떠다니는 자원을 자동으로 주움 (설정에서 끄기 가능)");
   openPanel("more");
 }
 
@@ -3362,10 +3503,10 @@ function handleTap(sx,sy){
   const adj=[[1,0],[-1,0],[0,1],[0,-1]].some(d=>S.tiles.has(KEY(gx+d[0],gy+d[1])));
   if(adj){ buildFloor(gx,gy); return; }
 }
-function collectFloat(f){
+function collectFloat(f, auto){
   const i=S.floats.indexOf(f); if(i<0) return;
   const mul = 1 + 0.25*perkLv(S,"bigHands");
-  S.stats.tap++;
+  if(!auto) S.stats.tap++;
   if(f.k==="person"){
     const c=computeCache(S);
     if(S.people.length >= c.popCap){
@@ -3382,7 +3523,7 @@ function collectFloat(f){
   } else if(f.k==="crate"){
     const rolls=[["wood",rndi(40,120)],["fish",rndi(20,60)],["scrap",rndi(10,35)],
                  ["coin",rndi(30,110)],["parts",rndi(2,7)]];
-    const r=pick(rolls); const got=gain(r[0], Math.floor(r[1]*mul));
+    const r=pick(rolls); const got=gain(r[0], Math.floor(r[1]*mul*(1+0.2*perkLv(S,"treasure"))));
     fxText(f.x,f.y-34,`${RES[r[0]].icon}+${fmt(got)}`, RES[r[0]].col);
     fxRing(f.x,f.y,"#ffd257");
     emit(f.x,f.y-10,"star",10); emit(f.x,f.y,"dust",6,{col:"#d9a15c"});
@@ -6786,7 +6927,7 @@ function updHUD(dt){
   const fp = front? iso(front.x,front.y) : raftCenter();
   const sp=w2s(fp.x, fp.y+TH*0.55);
   const pb=$("#popBadge");
-  pb.classList.toggle("hidden", !!S.boss);          // 보스전 중에는 전장을 가리지 않도록 숨김
+  pb.classList.toggle("hidden", !!S.boss || VIEW.clean);   // 깔끔 보기 : 왼쪽 인구 칸과 겹치므로 숨김          // 보스전 중에는 전장을 가리지 않도록 숨김
   pb.style.left=sp.x+"px"; pb.style.top=sp.y+"px";
   const bub=$("#popBubble");
   bub.className="bubble"+(S.people.length>=c.popCap?" red":"");
@@ -6886,7 +7027,7 @@ function canResearch(id){
 }
 function researchCost(id){
   const t=TECH[id], c={};
-  const disc = S.blueprint>0? 0.6 : 1;
+  const disc = (S.blueprint>0? 0.6 : 1) * (1 - 0.06*perkLv(S,"scholar"));
   for(const k in t.cost) c[k]=Math.ceil(t.cost[k]*disc);
   return c;
 }
@@ -7260,7 +7401,7 @@ function uiSettings(){
   let html=`<div class="sectitle">보스 난이도</div>
     <div class="hintbox">보스(대해일·거대 문어·해적 전함·심해 해룡)에만 적용됨. 보스전 중에는 바꿀 수 없음.
     다음 보스: <b>${BOSSES[bossType(S.bossN)].icon} ${bossName(bossType(S.bossN))}</b> (${Math.max(0,S.bossDay-S.env.day)}일 뒤)</div>`;
-  html = hellCard() + html;
+  html = hellCard() + viewSettings() + html;
   Object.keys(DIFF).forEach(k=>{
     const d=DIFF[k], on=S.diff===k;
     html+=`<div class="card" style="${on?"border-color:#ffd257;background:rgba(255,210,87,.12)":""}">
@@ -7286,6 +7427,19 @@ function uiSettings(){
   return html;
 }
 
+function viewSettings(){
+  const tg=(k,icon,label,desc)=>`<div class="card" style="${VIEW[k]?"border-color:#ffd257;background:rgba(255,210,87,.12)":""}">
+      <div class="ico">${icon}</div><div class="info"><h3>${label} <span class="lv">${VIEW[k]?"켜짐":"꺼짐"}</span></h3><p>${desc}</p></div>
+      <button class="btn ${VIEW[k]?"grey":"blue"}" onclick="setView('${k}',${!VIEW[k]})">${VIEW[k]?"끄기":"켜기"}</button></div>`;
+  const opts=[15,30,50,999].map(n=>`<span class="tag ${VIEW.maxPeople===n?"on":""}" onclick="setView('maxPeople',${n})">${n>=999?"전부":n+"명"}</span>`).join("");
+  return `<div class="sectitle">화면 보기</div>
+    <div class="hintbox">화면 오른쪽 🧹 버튼으로도 빠르게 바꿀 수 있음 (기본 → 깔끔 → 깔끔+이름표).</div>`
+    + tg("clean","🧹","깔끔 보기","주민을 일부만 보여 주고, 하트·음표 풍선, 건물 레벨 숫자, 일꾼 필요(👤+) 표시, 뗏목 위 인구 말풍선을 숨김. 배고픔·목마름 말풍선은 그대로 보임.")
+    + (VIEW.clean? `<div class="tagrow" style="margin:-2px 0 8px;font-size:11.5px;align-items:center">뗏목에 보일 주민 수 ${opts}</div>` : "")
+    + tg("labels","🏷️","건물 이름표","건물 아래에 이름과 레벨을 글자로 표시함.")
+    + tg("autoNet","🕸️","자동 수집","진주 특전 그물과 🥅 자원 그물 건물이 떠다니는 자원을 자동으로 주움."
+         + (autoNetRate()>0? ` 지금 1분에 약 ${Math.round(autoNetRate()*60)}개.` : " 아직 그물이 없음."));
+}
 function uiAch(){
   let html=`<div class="sectitle">업적 ${S.achs.length} / ${ACHS.length}</div>`;
   ACHS.forEach(a=>{
@@ -7520,6 +7674,8 @@ function boot(){
   $("#panelClose").addEventListener("click", closePanel);
   $("#btnCenter").addEventListener("click", ()=>{ camCenter(); CAM.z=1; sfx("click"); });
   $("#btnAbyss").addEventListener("click", ()=>{ sfx("click"); openPanel("more"); moreTab("abyss"); });
+  $("#btnView").addEventListener("click", cycleView);
+  syncViewBtn();
   $("#btnMute").textContent = AU.set.mute? "🔇" : "🔊";
   $("#btnMute").addEventListener("click", ()=>{ audioUnlock(); toggleMute(); });
   setInterval(audioUpdate, 500);                        // 날씨에 맞춰 환경음 음량 조절
