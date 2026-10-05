@@ -8,7 +8,7 @@
 
 ## ▶️ 실행 방법
 - **Cloudflare에 올리기(권장)**: `explore-cloudflare.zip` 안의 `1-읽어보세요.txt` 참고.
-  `explore-worker.js`(워커 붙여넣기용)와 `dist/index.html`(Pages용)은 **그림 73장이 파일 안에 들어간 한 파일짜리**라 `img` 폴더가 필요 없음.
+  `explore-worker.js`(워커 붙여넣기용)와 `dist/index.html`(Pages용)은 **그림 151장이 파일 안에 들어간 한 파일짜리**라 `img` 폴더가 필요 없음.
   화면이나 그림을 고친 뒤에는 `node build-explore.mjs`로 다시 만듦.
 - **가장 쉬운 방법**: `explore` 폴더를 통째로 정적 호스팅(Cloudflare Pages, GitHub Pages 등)에 올리고 주소로 접속함.
 - **내 컴퓨터에서**: `explore` 폴더에서 아래 명령 실행 → 브라우저에서 `http://localhost:8000` 접속.
@@ -65,7 +65,7 @@
 
 ## 🎨 그림
 - 모든 그림은 **Canva AI 이미지 생성**으로 제작함(원작 게임의 그림·캐릭터·이름은 사용하지 않은 창작 에셋).
-- `raw/` = Canva 생성 원본(73장), `img/` = 배경 제거·WebP 변환본.
+- `raw/` = Canva 생성 원본, `img/` = 배경 제거·WebP 변환본.
 - 다시 변환하려면: `pip install pillow numpy` 후 `explore` 폴더에서 `python tools/cutout.py raw img`.
 - `tools/canva-assets.json` = 그림별 Canva 미디어 ID. `https://www.canva.com/M/<ID>`로 원본을 찾을 수 있음.
 - 참고: 제작 환경의 네트워크 정책상 Canva 원본 해상도 파일을 받을 수 없어 **미리보기 해상도(약 200px)를 2배 확대**해 사용함.

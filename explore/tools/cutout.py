@@ -5,6 +5,8 @@ from PIL import Image, ImageFilter
 from collections import deque
 
 ICON_MAX = 240
+HOLES = {'dec_moonarch', 'dec_carousel', 'dec_bench'}; HOLE_MIN = 120
+Q = 80   # WebP 품질(배포 파일이 무료 워커 3MB 한도 안에 들도록)
 def small(dst, im):
     n = os.path.basename(dst)
     if n[:2] in ('i_','u_','m_') and max(im.size) > ICON_MAX:
@@ -33,12 +35,25 @@ def cutout(src, dst, thr=34, scale=2):
             ny, nx = y+dy, x+dx
             if 0 <= ny < h and 0 <= nx < w and not mask[ny, nx] and bgish[ny, nx]:
                 mask[ny, nx] = True; q.append((ny, nx))
+    if os.path.splitext(os.path.basename(dst))[0] in HOLES:   # 안쪽에 갇힌 넓은 흰 배경(아치 사이·의자 등받이 틈)도 지움
+        seen = mask.copy()
+        for sy, sx in zip(*np.nonzero(bgish & ~mask)):
+            if seen[sy, sx]: continue
+            comp = [(sy, sx)]; seen[sy, sx] = True; k = 0
+            while k < len(comp):
+                y, x = comp[k]; k += 1
+                for dy, dx in ((1,0),(-1,0),(0,1),(0,-1)):
+                    ny, nx = y+dy, x+dx
+                    if 0 <= ny < h and 0 <= nx < w and not seen[ny, nx] and bgish[ny, nx]:
+                        seen[ny, nx] = True; comp.append((ny, nx))
+            if len(comp) >= HOLE_MIN:
+                for y, x in comp: mask[y, x] = True
     alpha = Image.fromarray(np.where(mask, 0, 255).astype(np.uint8))
     alpha = alpha.filter(ImageFilter.MinFilter(3)).filter(ImageFilter.GaussianBlur(1.2))
     out = im.convert('RGBA'); out.putalpha(alpha)
     bbox = alpha.point(lambda v: 255 if v > 20 else 0).getbbox()
     if bbox: out = out.crop(bbox)
-    out = small(dst, out); out.save(dst, 'WEBP', quality=86, method=6)
+    out = small(dst, out); out.save(dst, 'WEBP', quality=Q, method=6)
     print(os.path.basename(dst), out.size)
 
 def greenkey(src, dst):
@@ -51,7 +66,7 @@ def greenkey(src, dst):
     rgb = np.clip(rgb, 0, 255)
     out = Image.fromarray(np.dstack([rgb, alpha]).astype(np.uint8), 'RGBA')
     out = out.crop(out.getchannel('A').point(lambda v: 255 if v > 20 else 0).getbbox())
-    out.save(dst, 'WEBP', quality=86, method=6); print(os.path.basename(dst), out.size)
+    out.save(dst, 'WEBP', quality=Q, method=6); print(os.path.basename(dst), out.size)
 
 if __name__ == '__main__':
     raw, outdir = sys.argv[1], sys.argv[2]
@@ -68,7 +83,7 @@ if __name__ == '__main__':
             w, h = im.size; t = Image.new('RGB', (w*2, h*2))
             t.paste(im, (0,0)); t.paste(im.transpose(Image.FLIP_LEFT_RIGHT), (w,0))
             t.paste(im.transpose(Image.FLIP_TOP_BOTTOM), (0,h)); t.paste(im.transpose(Image.ROTATE_180), (w,h))
-            t.save(os.path.join(outdir, n+'.webp'), 'WEBP', quality=86, method=6); print(n, t.size); continue
+            t.save(os.path.join(outdir, n+'.webp'), 'WEBP', quality=Q, method=6); print(n, t.size); continue
         if n in keep:
-            Image.open(os.path.join(raw, f)).convert('RGB').resize((256,256), Image.LANCZOS).save(os.path.join(outdir, n+'.webp'), 'WEBP', quality=86, method=6); continue
+            Image.open(os.path.join(raw, f)).convert('RGB').resize((256,256), Image.LANCZOS).save(os.path.join(outdir, n+'.webp'), 'WEBP', quality=Q, method=6); continue
         cutout(os.path.join(raw, f), os.path.join(outdir, n+'.webp'))
