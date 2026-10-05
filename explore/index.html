@@ -2372,11 +2372,18 @@ function editTap(wx, wy){
   if (carry){ const g = unIso(wx, wy), x = Math.round(g.x), y = Math.round(g.y);
     if (!canPlace(x, y) && !(x === carry.x && y === carry.y && !world.tiles[y*world.N+x].o)){ sfx('no'); toast('초록색 빈칸에만 놓을 수 있어요'); return; }
     burst(x, y, '#ffd23a', 12); sfx('pop'); dropCarry(x, y); return; }
-  const hit = pickObject(wx, wy); if (!hit) return;
+  const hit = pickDecor(wx, wy) || pickObject(wx, wy); if (!hit) return;
   const t = world.tiles[hit.i], d = OBJS[t.o]; if (!d || !d.decor){ toast('장식품만 옮길 수 있어요'); return; }
   const N = world.N, x = hit.i % N, y = (hit.i / N)|0;
   S.decor = S.decor.filter(([k2,x2,y2]) => !(x2 === x && y2 === y));
   carry = {k:d.decor, x, y, f:!!t.flip}; t.o = null; t.flip = false; computeReach(); sfx('pop'); editBar();
+}
+// 배치 바꾸기 중에는 앞에 겹친 나무·건물보다 장식품을 먼저 고름
+function pickDecor(wx, wy){
+  const N = world.N; let best = null;
+  world.tiles.forEach((t, i) => { if (!t.o || !OBJS[t.o].decor) return; const x = i % N, y = (i / N)|0, r = spriteRect(t.o, x, y);
+    if (wx > r.x && wx < r.x + r.w && wy > r.y && wy < r.y + r.h + TH*.3 && (!best || x + y > best.d)) best = {i, d:x + y}; });
+  return best;
 }
 function endEdit(){ if (carry) dropCarry(carry.x, carry.y); editMode = false; carry = null; document.body.classList.remove('placing'); save(); }
 function openDecorItem(i){
