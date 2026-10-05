@@ -679,7 +679,7 @@ const REGIONS = {
   fairy:   {ch:4, name:'반딧불 요정 숲', img:'m_fairy',   lv:32, tex:'t_swamp',  tint:'rgba(60,40,120,.14)',
             mix:{fairyshroom:16,glowfern:16,mushrooms:8,spruce:8,log:8,twigpile:8,berrybush:6,bigrock:2}},
   pirate:  {ch:4, name:'해적 보물섬',   img:'m_pirate',  lv:34, tex:'t_sand',   tint:'rgba(0,0,0,0)',
-            mix:{shipwreck:14,clams:14,palm:12,driftwood:10,shells:8,sandstone:6,goldrock:4,bigrock:2}},
+            mix:{shipwreck:14,clams:14,palm:12,driftwood:10,shells:8,sandstone:6,goldrock:4,bigrock:1}},
   glacier: {ch:4, name:'오로라 빙하',   img:'m_glacier', lv:37, tex:'t_snow',   tint:'rgba(80,120,200,.10)',
             mix:{glacier:16,aurorastone:10,icerock:12,spruce:10,boulder:8,orerock:6,coalrock:4,bigrock:2}},
 };
@@ -2407,7 +2407,7 @@ function canPlace(x, y){ const w = world; if (!w || !w.home || x<1||y<1||x>=w.N-
 function decorGrid(items){
   return `<div class="grid">${items.map(([k,d]) => { if (!d.price){
       const th = FEST_THEMES.find(t => t.decor === k), tag = th ? th.name : '모든 축제';
-      return `<div class="cell fest"><img src="${src(d.img)}"><small>${d.name}</small><button class="gbtn" disabled>🎪 ${tag}</button></div>`; }
+      return `<div class="cell fest"><img src="${src(d.img)}"><small>${d.name}</small><button class="gbtn" disabled style="font-size:12px;padding:5px 6px;white-space:nowrap">🎪 ${tag}</button></div>`; }
     const [cur, n] = Object.entries(d.price)[0];
     return `<div class="cell"><img src="${src(d.img)}"><small>${d.season ? `<em style="font-style:normal;color:#c0392b">${d.season}</em> ` : ''}${d.name}</small>
       <button class="gbtn ${cur==='gems'?'blue':'gold'}" data-buy="${k}" ${(cur==='gems'?S.gems:S.coins) >= n ? '' : 'disabled'}>
