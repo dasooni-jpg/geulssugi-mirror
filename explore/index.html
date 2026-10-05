@@ -859,8 +859,19 @@ const DECOR = {
   lamp:     {name:'가로등',     img:'dec_lamp',      w:.55, price:{coins:200}},
   statue:   {name:'다람쥐 동상', img:'dec_statue',    w:.85, price:{gems:12}},
   fountain: {name:'분수',       img:'dec_fountain',  w:1.15,price:{gems:20}},
-  // 축제 한정(상점에 없음, 축제 미션 보상)
+  // 계절 장식(상점)
+  tulips:   {name:'튤립 화단',     img:'dec_tulips',   w:.95, price:{coins:120}, season:'봄'},
+  swing:    {name:'정원 그네',     img:'dec_swing',    w:1.0, price:{coins:300}, season:'봄'},
+  parasol:  {name:'비치 파라솔',   img:'dec_parasol',  w:1.0, price:{coins:220}, season:'여름'},
+  lemonade: {name:'레모네이드 가판대',img:'dec_lemonade',w:1.05,price:{gems:10}, season:'여름'},
+  haybale:  {name:'건초와 호박',   img:'dec_haybale',  w:.95, price:{coins:180}, season:'가을'},
+  xmastree: {name:'반짝이 트리',   img:'dec_xmastree', w:.9,  price:{gems:15}, season:'겨울'},
+  // 축제 한정(상점에 없음, 축제 미션 보상) — 2단계 보상은 주제마다 다름, 3단계 회전목마는 공통
   moonarch: {name:'달빛 등불 아치', img:'dec_moonarch', w:1.1, fest:true},
+  pavilion: {name:'벚꽃 정자',     img:'dec_pavilion', w:1.15, fest:true},
+  sandcastle:{name:'모래성',       img:'dec_sandcastle',w:1.0, fest:true},
+  scarecrow:{name:'허수아비',      img:'dec_scarecrow', w:.85, fest:true},
+  snowman:  {name:'눈사람',        img:'dec_snowman',  w:.85, fest:true},
   carousel: {name:'축제 회전목마', img:'dec_carousel', w:1.25, fest:true},
 };
 for (const [k,d] of Object.entries(DECOR)) OBJS['dec_'+k] = {name:d.name, img:d.img, w:d.w, fixed:true, act:'decor', decor:k};
@@ -952,9 +963,16 @@ const IMG_LIST = ['avatar','berrybush','board','boulder','cabin','chest','cloud'
   'u_trophy','m_fest','i_medal','lantern','giftbox','dec_fence','dec_flowerbed','dec_bench','dec_lamp','dec_statue','dec_fountain',
   'bamboo','cherry','crystal','stalagmite','vines','ruin','maple','pumpkins','m_bamboo','m_cave','m_jungle','m_maple','t_cave','t_autumn',
   'i_bamboo','i_crystal','i_vine','i_pumpkin','i_syrup','i_pumpkinpie','npc_owl','fix_stage','done_stage','dec_moonarch','dec_carousel','npc_husky','workshop','i_basket','i_crystallamp',
-  'm_fest_spring','m_fest_summer','m_fest_autumn','m_fest_winter'];
+  'm_fest_spring','m_fest_summer','m_fest_autumn','m_fest_winter',
+  'dec_pavilion','dec_sandcastle','dec_scarecrow','dec_snowman','dec_tulips','dec_swing','dec_parasol','dec_lemonade','dec_haybale','dec_xmastree',
+  'cloudpuff','rainbow','fairyshroom','glowfern','shipwreck','clams','glacier','aurorastone','m_sky','m_fairy','m_pirate','m_glacier',
+  'i_cotton','i_stardust','i_pearl','i_aurora'];
 // 그림이 아직 없을 때 대신 쓸 그림(화면 아이콘용)
-const IMG_FALLBACK = {workshop:'pottery', i_basket:'i_reed', i_crystallamp:'i_crystal', m_fest_spring:'m_fest', m_fest_summer:'m_fest', m_fest_autumn:'m_fest', m_fest_winter:'m_fest',
+const IMG_FALLBACK = {dec_pavilion:'dec_moonarch', dec_sandcastle:'shells', dec_scarecrow:'pumpkins', dec_snowman:'icerock', dec_tulips:'dec_flowerbed',
+  dec_swing:'dec_bench', dec_parasol:'palm', dec_lemonade:'giftbox', dec_haybale:'pumpkins', dec_xmastree:'spruce',
+  cloudpuff:'cloud', rainbow:'cherry', fairyshroom:'mushrooms', glowfern:'reeds', shipwreck:'driftwood', clams:'shells', glacier:'icerock', aurorastone:'crystal',
+  m_sky:'m_canyon', m_fairy:'m_swamp', m_pirate:'m_beach', m_glacier:'m_snow', i_cotton:'i_reed', i_stardust:'i_gold', i_pearl:'i_shell', i_aurora:'i_crystal',
+  workshop:'pottery', i_basket:'i_reed', i_crystallamp:'i_crystal', m_fest_spring:'m_fest', m_fest_summer:'m_fest', m_fest_autumn:'m_fest', m_fest_winter:'m_fest',
   bamboo:'reeds', cherry:'oak', crystal:'icerock', stalagmite:'boulder', vines:'redwood', ruin:'wall', maple:'oak', pumpkins:'berrybush',
   m_bamboo:'m_canyon', m_cave:'m_snow', m_jungle:'m_swamp', m_maple:'m_windmill', t_cave:'t_ash', t_autumn:'t_meadow',
   i_bamboo:'i_reed', i_crystal:'i_ice', i_vine:'i_reed', i_pumpkin:'i_coconut', i_syrup:'i_jar', i_pumpkinpie:'i_pie',
@@ -2295,15 +2313,15 @@ function renderQuestBtns(){
    회차마다 주제가 차례로 바뀜: 달빛 → 벚꽃 → 여름 바다 → 가을 수확 → 겨울 눈꽃 → 다시 달빛 …
    extra = 그 주제에만 섞여 나오는 장애물(메달은 등불·선물 상자에서 나옴) */
 const FEST_THEMES = [
-  {key:'moon',   name:'달빛 축제',      island:'달빛 축제 섬',   short:'달빛',   img:'m_fest',        tex:'t_meadow', tint:'rgba(120,80,200,.10)',
+  {key:'moon', decor:'moonarch',   name:'달빛 축제',      island:'달빛 축제 섬',   short:'달빛',   img:'m_fest',        tex:'t_meadow', tint:'rgba(120,80,200,.10)',
    extra:{flowers:14, berrybush:10, oak:6, log:8}},
-  {key:'spring', name:'벚꽃 축제',      island:'벚꽃 축제 섬',   short:'벚꽃',   img:'m_fest_spring', tex:'t_grass',  tint:'rgba(255,150,200,.12)',
+  {key:'spring', decor:'pavilion', name:'벚꽃 축제',      island:'벚꽃 축제 섬',   short:'벚꽃',   img:'m_fest_spring', tex:'t_grass',  tint:'rgba(255,150,200,.12)',
    extra:{cherry:16, flowers:14, bamboo:6}},
-  {key:'summer', name:'여름 바다 축제', island:'여름 바다 섬',   short:'파도',   img:'m_fest_summer', tex:'t_sand',   tint:'rgba(60,170,230,.08)',
+  {key:'summer', decor:'sandcastle', name:'여름 바다 축제', island:'여름 바다 섬',   short:'파도',   img:'m_fest_summer', tex:'t_sand',   tint:'rgba(60,170,230,.08)',
    extra:{palm:14, shells:12, driftwood:8}},
-  {key:'autumn', name:'가을 수확 축제', island:'가을 수확 섬',   short:'수확',   img:'m_fest_autumn', tex:'t_autumn', tint:'rgba(0,0,0,0)',
+  {key:'autumn', decor:'scarecrow', name:'가을 수확 축제', island:'가을 수확 섬',   short:'수확',   img:'m_fest_autumn', tex:'t_autumn', tint:'rgba(0,0,0,0)',
    extra:{maple:14, pumpkins:14, oak:4}},
-  {key:'winter', name:'겨울 눈꽃 축제', island:'겨울 눈꽃 섬',   short:'눈꽃',   img:'m_fest_winter', tex:'t_snow',   tint:'rgba(0,0,0,0)',
+  {key:'winter', decor:'snowman', name:'겨울 눈꽃 축제', island:'겨울 눈꽃 섬',   short:'눈꽃',   img:'m_fest_winter', tex:'t_snow',   tint:'rgba(0,0,0,0)',
    extra:{spruce:14, icerock:12, log:6}},
 ];
 const FEST_BASE = {lantern:18, giftbox:5, twigpile:12, boulder:8};
@@ -2315,6 +2333,8 @@ function applyFestTheme(){   // 주제에 맞게 섬·미션 글을 바꿔 끼�
   STORY.fest.repairs[0].name = `${t.short} 축제 무대`;
   Q[0].text = `부엉! ${t.name}에 온 걸 환영해요. 등불 더미를 치우면 반짝이는 축제 메달이 나와요!`;
   Q[2].title = `${t.short} 퍼레이드`;
+  Q[1].reward.decor = t.decor;
+  Q[1].text = `축제 무대가 무너졌어요. 판자와 들꽃으로 예쁘게 고쳐 주면 ${t.name} 한정 장식품 「${DECOR[t.decor].name}」을(를) 줄게요. 선물 상자도 열어 봐요!`;
   return t;
 }
 const EV_EPOCH = Date.UTC(2026, 0, 5);
@@ -2383,17 +2403,24 @@ function openEvent(){
 let placing = null, decorTab = 'shop';
 function canPlace(x, y){ const w = world; if (!w || !w.home || x<1||y<1||x>=w.N-1||y>=w.N-1) return false;
   const t = w.tiles[y*w.N+x]; return !t.o && !(x === Math.round(player.x) && y === Math.round(player.y)) && !(x === HOME_START.x && y === HOME_START.y); }
+// 장식품 칸 묶음: 살 수 있으면 가격 단추, 축제 한정이면 어느 축제 보상인지 표시
+function decorGrid(items){
+  return `<div class="grid">${items.map(([k,d]) => { if (!d.price){
+      const th = FEST_THEMES.find(t => t.decor === k), tag = th ? th.name : '모든 축제';
+      return `<div class="cell fest"><img src="${src(d.img)}"><small>${d.name}</small><button class="gbtn" disabled>🎪 ${tag}</button></div>`; }
+    const [cur, n] = Object.entries(d.price)[0];
+    return `<div class="cell"><img src="${src(d.img)}"><small>${d.season ? `<em style="font-style:normal;color:#c0392b">${d.season}</em> ` : ''}${d.name}</small>
+      <button class="gbtn ${cur==='gems'?'blue':'gold'}" data-buy="${k}" ${(cur==='gems'?S.gems:S.coins) >= n ? '' : 'disabled'}>
+      <img src="${src(cur==='gems'?'i_gem':'i_coin')}" style="width:18px;height:18px;vertical-align:middle"> ${n}</button></div>`; }).join('')}</div>`;
+}
 function openDecor(){
   const tabHtml = `<div class="tabs"><button class="tab ${decorTab==='shop'?'on':''}" data-dt="shop" title="상점"><img src="${src('u_register')}"></button>
     <button class="tab ${decorTab==='inv'?'on':''}" data-dt="inv" title="보관함"><img src="${src('u_bag')}"></button></div>`;
   const list = Object.entries(DECOR);
   const body = decorTab === 'shop'
-    ? `<div class="grid">${list.filter(([k,d]) => d.fest).map(([k,d]) => `<div class="cell fest"><img src="${src(d.img)}"><small>${d.name}</small>
-          <button class="gbtn" disabled>🌙 축제 보상</button></div>`).join('')}${list.filter(([k,d]) => d.price).map(([k,d]) => { const [cur, n] = Object.entries(d.price)[0];
-        return `<div class="cell"><img src="${src(d.img)}"><small>${d.name}</small>
-          <button class="gbtn ${cur==='gems'?'blue':'gold'}" data-buy="${k}" ${(cur==='gems'?S.gems:S.coins) >= n ? '' : 'disabled'}>
-          <img src="${src(cur==='gems'?'i_gem':'i_coin')}" style="width:18px;height:18px;vertical-align:middle"> ${n}</button></div>`; }).join('')}</div>
-       <p class="hint" style="margin-top:12px">장식품을 사서 캠프 빈자리에 놓아요. 놓을 때마다 경험치 +5. 🌙 표시는 달빛 축제 미션으로만 받을 수 있어요. 동상·분수는 축제 트로피 보상으로도 받아요.</p>`
+    ? [['기본 장식', ([k,d]) => d.price && !d.season], ['계절 장식', ([k,d]) => d.season], ['축제 한정 (축제 미션 보상)', ([k,d]) => d.fest]].map(([title, f]) =>
+        `<h3 class="subh">${title}</h3>` + decorGrid(list.filter(f))).join('')
+       + `<p class="hint" style="margin-top:12px">장식품을 사서 캠프 빈자리에 놓아요. 놓을 때마다 경험치 +5. 축제 한정 장식품은 그 회차 축제 미션에서만 받을 수 있어요. 동상·분수는 축제 트로피 보상으로도 받아요.</p>`
     : (list.some(([k]) => S.decorInv[k]) ? `<div class="grid">${list.filter(([k]) => S.decorInv[k]).map(([k,d]) =>
         `<div class="cell"><img src="${src(d.img)}"><b>${S.decorInv[k]}</b><small>${d.name}</small><button class="gbtn" data-place="${k}">놓기</button></div>`).join('')}</div>`
        : `<div class="empty">보관 중인 장식품이 없어요. 상점에서 사 보세요!</div>`);
