@@ -76,7 +76,7 @@ if __name__ == '__main__':
         n = os.path.splitext(f)[0]
         dst = os.path.join(outdir, n + '.webp')   # 이미 변환된 그림은 건너뜀(--all 이면 전부 다시)
         if not force and os.path.exists(dst) and os.path.getmtime(dst) >= os.path.getmtime(os.path.join(raw, f)): continue
-        if n == 'cloud':
+        if n in ('cloud', 'dec_snowman'):   # 흰 물체는 초록 배경으로 받아 초록만 지움
             greenkey(os.path.join(raw, f), os.path.join(outdir, n+'.webp')); continue
         if n.startswith('t_'):   # 바닥 텍스처: 거울 반복으로 이음새 없는 타일 제작
             im = Image.open(os.path.join(raw, f)).convert('RGB')
