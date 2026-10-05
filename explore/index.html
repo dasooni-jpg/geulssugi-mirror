@@ -1227,7 +1227,8 @@ function revealAround(w, cx, cy, rad){
   const R = Math.ceil(rad);
   for (let y=cy-R;y<=cy+R;y++) for (let x=cx-R;x<=cx+R;x++){
     if (x<0||y<0||x>=N||y>=N) continue;
-    if (Math.hypot(x-cx,y-cy) > rad) continue;
+    const wob = ((((x*92821) ^ (y*68917)) >>> 0) % 100 / 100 - .5) * .9;   // 가장자리를 조금씩 들쭉날쭉하게(칸마다 고정)
+    if (Math.hypot(x-cx,y-cy) > rad + wob) continue;
     const t = w.tiles[y*N+x]; if (!t.rev){ t.rev = true; out.push([x,y]); }
   }
   return out;
@@ -1364,11 +1365,13 @@ function renderFog(){
   c.fillStyle = '#eef1fb';
   for (const [x,y] of list){ const p = iso(x,y); diamond(c, p.x, p.y-6, 10); c.fill(); }
   // 2) 뭉게구름
-  for (const [x,y] of list){
-    const p = iso(x,y), h = ((x*73856093) ^ (y*19349663)) >>> 0, j = (h%1000)/1000, k = ((h>>10)%1000)/1000;
-    const cw = TW*(1.35 + j*.5), ch = cw * cloud.height / cloud.width;
-    c.drawImage(cloud, p.x - cw/2 + (k-.5)*30, p.y - ch*.72 + (j-.5)*14, cw, ch);
-  }
+  for (const [x,y] of list){ const r = cloudRect(x, y); c.drawImage(cloud, r.x, r.y, r.w, r.h); }
+}
+// 칸마다 정해진 뭉게구름 위치·크기(늘 같은 모양)
+function cloudRect(x, y){
+  const cloud = IMG.cloud, p = iso(x,y), h = ((x*73856093) ^ (y*19349663)) >>> 0, j = (h%1000)/1000, k = ((h>>10)%1000)/1000;
+  const cw = TW*(1.35 + j*.5), ch = cw * cloud.height / cloud.width;
+  return {x:p.x - cw/2 + (k-.5)*30, y:p.y - ch*.72 + (j-.5)*14, w:cw, h:ch};
 }
 
 /* ══════════ 오브젝트 스프라이트 크기 ══════════ */
@@ -1429,8 +1432,30 @@ function flyToBag(x, y, img, n){
   const p = iso(x,y);
   for (let i=0;i<Math.min(n,4);i++) fx.push({t:'fly', wx:p.x+(Math.random()-.5)*40, wy:p.y-50, img, age:-i*.08, life:1.0, jx:(Math.random()-.5)*80});
 }
-function fogPuffs(cells){
-  for (const [x,y] of cells){ const p = iso(x,y); fx.push({t:'puff', x:p.x, y:p.y-30, age:0, life:.9, s:1+Math.random()*.4}); }
+let fogFx = [];   // 걷히는 중인 구름(안개 그림 위에 따로 그림)
+function fogPuffs(cells, cx, cy){
+  if (cx == null){ cx = cells.reduce((a,c) => a + c[0], 0) / cells.length; cy = cells.reduce((a,c) => a + c[1], 0) / cells.length; }
+  const c0 = iso(cx, cy);
+  for (const [x,y] of cells){
+    const r = cloudRect(x, y), p = iso(x, y), dx = p.x - c0.x, dy = p.y - c0.y, d = Math.hypot(dx, dy) || 1;
+    fogFx.push({x, y, r, p, ux:dx/d, uy:dy/d, delay: Math.hypot(x-cx, y-cy) * .09, age:0, life:1.1});
+  }
+  fogFx.sort((a,b) => (a.x+a.y) - (b.x+b.y));
+}
+function drawFogFx(dt){
+  if (!fogFx.length) return;
+  const cloud = IMG.cloud;
+  for (const f of fogFx) f.age += dt;
+  fogFx = fogFx.filter(f => f.age < f.delay + f.life);
+  // 1) 바탕 안개: 구름보다 먼저 옅어짐
+  ctx.fillStyle = '#eef1fb';
+  for (const f of fogFx){ const a = Math.max(0, Math.min(1, (f.age - f.delay) / (f.life*.45)));
+    if (a >= 1) continue; ctx.globalAlpha = 1 - a; diamond(ctx, f.p.x, f.p.y-6, 10); ctx.fill(); }
+  // 2) 뭉게구름: 제자리에서 기다렸다가 → 바깥으로 밀려나며 부풀고 사라짐(부드러운 감속)
+  for (const f of fogFx){ const t = Math.max(0, (f.age - f.delay) / f.life), e = 1 - Math.pow(1 - t, 3);
+    const push = 70 * e, sc = 1 + .35*e, w = f.r.w*sc, h = f.r.h*sc, cxp = f.r.x + f.r.w/2 + f.ux*push, cyp = f.r.y + f.r.h/2 + f.uy*push*.6 - 26*e;
+    ctx.globalAlpha = Math.max(0, 1 - t*t*1.1); ctx.drawImage(cloud, cxp - w/2, cyp - h/2, w, h); }
+  ctx.globalAlpha = 1;
 }
 
 /* ══════════ 소리: 효과음 + 배경음악 (WebAudio로 즉석 합성, 소리 파일 없음) ══════════ */
@@ -1537,7 +1562,7 @@ document.addEventListener('click', e => { if (e.target.closest && e.target.close
 /* ══════════ 장면 전환 ══════════ */
 function enter(key){
   if (editMode) endEdit(); if (placing) endPlacing();
-  queue = []; fx.length = 0;
+  queue = []; fx.length = 0; fogFx = [];
   world = key === 'home' ? buildHome() : buildRegion(key);
   S.where = key;
   player.x = world.start.x; player.y = world.start.y; player.path = []; player.work = 0; player.target = null;
@@ -1649,7 +1674,7 @@ function finishWork(){
   t.o = null;
   w.region.cleared.push(i);
   const cells = revealAround(w, x, y, 2.3);
-  if (cells.length){ renderFog(); fogPuffs(cells); }
+  if (cells.length){ renderFog(); fogPuffs(cells, x, y); }
   computeReach();
   if (d.rune){
     w.region.runes++;
@@ -1826,6 +1851,7 @@ function draw(dt){
     else if (hov) later(drawCostBubble, p.x, r.y + r.h*.35, d.cost, 0, S.energy >= d.cost && standSpots(it.i).size > 0);
   }
   ctx.drawImage(fogC, b.x, b.y, b.w, b.h);
+  drawFogFx(dt);
   // 수리 지점 표시(망치) + 돋보기 화살표
   for (const i of (w.spots||[])){ const t = w.tiles[i]; if (!t.rev || !OBJS[t.o].repair) continue;
     const p = iso(i%N, (i/N)|0); later(drawReady, p.x, p.y - TH*1.2, 'i_plank', 0, T); }
@@ -2267,7 +2293,7 @@ function openRepair(sIdx){
     st.fixed = st.fixed || {}; st.fixed[sIdx] = 1;
     const ti = world.spots[sIdx], x = ti % world.N, y = (ti / world.N)|0;
     world.tiles[ti].o = 'done_' + rp.kind; burst(x, y, '#ffd23a', 30); sfx('build'); floatText(x, y, `${rp.name} 완성!`, '#ffe36a');
-    const cells = revealAround(world, x, y, 3.2); if (cells.length){ renderFog(); fogPuffs(cells); } computeReach();
+    const cells = revealAround(world, x, y, 3.2); if (cells.length){ renderFog(); fogPuffs(cells, x, y); } computeReach();
     closeModal(); gainXP(25); checkQuestReady(); updateQuest(); save(); };
 }
 
