@@ -334,6 +334,11 @@ body.pv-open #toast{top:auto;bottom:calc(env(safe-area-inset-bottom) + 260px)}
 .chbtn{width:46px;height:46px;border-radius:50%;background:linear-gradient(#f5d9a6,#dcae6a);border:2px solid #9a6a33;
   font-size:22px;color:#5a3510;display:grid;place-items:center}
 .chbtn:disabled{opacity:.35}
+.scroll.ch5{background:
+    radial-gradient(ellipse at 25% 35%,rgba(255,210,80,.25),transparent 55%),
+    radial-gradient(ellipse at 70% 30%,rgba(255,140,200,.22),transparent 55%),
+    repeating-radial-gradient(circle at 60% 50%,rgba(150,110,60,.05) 0 3px,transparent 3px 14px),
+    linear-gradient(#f8ecd6,#ecd8b4)}
 .scroll.ch4{background:
     radial-gradient(ellipse at 30% 30%,rgba(170,210,255,.35),transparent 55%),
     radial-gradient(ellipse at 75% 70%,rgba(150,120,230,.22),transparent 55%),
@@ -493,6 +498,7 @@ const CONFIG = {
   chapter2Level: 10,      // 2장 지도가 열리는 레벨
   chapter3Level: 20,      // 3장 지도가 열리는 레벨
   chapter4Level: 30,      // 4장 지도가 열리는 레벨
+  chapter5Level: 40,      // 5장 지도가 열리는 레벨
   buildingMaxLevel: 5,
   giftHours: 20,          // 일일 선물 간격(시간)
   dynamiteGems: 3,        // 다이너마이트 1개 보석 가격
@@ -560,6 +566,11 @@ const ITEMS = {
   pillow:  {name:'구름 베개',   img:'i_pillow',   tab:'craft', value:120},
   windchime:{name:'오로라 풍경', img:'i_windchime',tab:'craft', value:200},
   starcandy:{name:'별사탕',     img:'i_starcandy',tab:'food', value:60, eat:40},
+  // 5장
+  honey:   {name:'꿀',        img:'i_honey',  tab:'food', value:26, eat:10},
+  fossil:  {name:'화석',      img:'i_fossil', tab:'res',  value:42},
+  sugar:   {name:'설탕 조각', img:'i_sugar',  tab:'res',  value:18},
+  gear:    {name:'톱니바퀴',  img:'i_gear',   tab:'res',  value:48},
   rune:    {name:'룬 석판',  img:'rune',    tab:'treasure'},
   medal:   {name:'축제 메달', img:'i_medal', tab:'treasure'},
 };
@@ -614,6 +625,15 @@ const OBJS = {
   clams:    {name:'진주 조개 바위',img:'clams',   cost:6, drops:{pearl:1,shell:2},   w:.85, fx:'#ffe0f0'},
   glacier:  {name:'빙하 덩어리', img:'glacier',   cost:8, drops:{ice:3,crystal:1},   w:.95, fx:'#bfe8ff'},
   aurorastone:{name:'오로라 수정',img:'aurorastone',cost:9,drops:{aurora:2},          w:.85, fx:'#7affd8'},
+  // 5장 장애물
+  beehive:  {name:'벌집 나무',    img:'beehive',   cost:7, drops:{honey:2,wood:1},   w:.98, fx:'#ffc21a'},
+  sunflowers:{name:'해바라기 무리',img:'sunflowers',cost:3, drops:{flower:3},        w:.85, fx:'#ffd84a'},
+  fossilrock:{name:'화석 바위',   img:'fossilrock',cost:8, drops:{fossil:1,stone:3}, w:.92, fx:'#cdb48a'},
+  cycad:    {name:'소철 나무',    img:'cycad',     cost:5, drops:{wood:2,reed:1},    w:.9,  fx:'#5f9a2a'},
+  lollipop: {name:'막대사탕 나무',img:'lollipop',  cost:5, drops:{sugar:3},          w:.85, fx:'#ff7ac0'},
+  cookierock:{name:'쿠키 바위',   img:'cookierock',cost:6, drops:{cookies:1,sugar:2},w:.9,  fx:'#c88a4a'},
+  gearpile: {name:'톱니 고철 더미',img:'gearpile', cost:7, drops:{gear:1,ore:2},     w:.9,  fx:'#b08a50'},
+  clockruin:{name:'무너진 시계탑', img:'clockruin',cost:9, drops:{gear:2,stone:2},   w:.95, fx:'#9a8a70'},
   chest:    {name:'보물 상자',   img:'chest',    cost:3, drops:{},              w:.7,  fx:'#ffcf3a', chest:true},
   rune:     {name:'룬 석판',     img:'rune',     cost:10,drops:{rune:1},        w:.66, fx:'#ffcf3a', rune:true},
   // 캠프 전용(치울 수 없음)
@@ -687,11 +707,20 @@ const REGIONS = {
             mix:{shipwreck:14,clams:14,palm:12,driftwood:10,shells:8,sandstone:6,goldrock:4,bigrock:1}},
   glacier: {ch:4, name:'오로라 빙하',   img:'m_glacier', lv:37, tex:'t_snow',   tint:'rgba(80,120,200,.10)',
             mix:{glacier:16,aurorastone:10,icerock:12,spruce:10,boulder:8,orerock:6,coalrock:4,bigrock:2}},
+  // 5장. 경이로운 대륙
+  honey:   {ch:5, name:'꿀벌 해바라기 들판', img:'m_honey', lv:40, tex:'t_meadow', tint:'rgba(255,210,60,.10)',
+            mix:{beehive:14,sunflowers:18,flowers:10,oak:8,berrybush:8,twigpile:8,boulder:6,bigrock:1}},
+  dino:    {ch:5, name:'공룡 화석 계곡', img:'m_dino',  lv:42, tex:'t_sand',   tint:'rgba(180,120,60,.10)',
+            mix:{fossilrock:14,cycad:16,palm:8,boulder:10,sandstone:8,reeds:6,log:6,bigrock:2}},
+  candy:   {ch:5, name:'달콤한 과자 마을', img:'m_candy', lv:44, tex:'t_candy',  tint:'rgba(0,0,0,0)',
+            mix:{lollipop:18,cookierock:14,flowers:8,berrybush:10,cherry:6,twigpile:6,bigrock:1}},
+  clock:   {ch:5, name:'태엽 시계탑 폐허', img:'m_clock', lv:47, tex:'t_ash',    tint:'rgba(120,100,70,.12)',
+            mix:{gearpile:16,clockruin:12,wall:10,orerock:8,coalrock:8,boulder:8,burnttree:6,bigrock:2}},
 };
 
 /* ── 등장인물 ── */
 // 2·3장 지역의 개방 레벨은 '장 개방 레벨 + 지역 순서 간격'으로 계산(교사 설정에서 장 레벨만 바꾸면 됨)
-const CH_BASE = {2:10, 3:20, 4:30};   // 장마다 처음 지역의 기본 레벨
+const CH_BASE = {2:10, 3:20, 4:30, 5:40};   // 장마다 처음 지역의 기본 레벨
 for (const r of Object.values(REGIONS)) if (r.ch >= 2) r.lvOff = r.lv - CH_BASE[r.ch];
 function applyChapterLevels(){
   for (const r of Object.values(REGIONS)) if (r.ch >= 2) r.lv = CONFIG['chapter' + r.ch + 'Level'] + r.lvOff;
@@ -836,6 +865,39 @@ const STORY = {
        objs:[{t:'fix', s:0}, {t:'get', i:'aurora', n:4}], reward:{xp:230, gems:6, dynamite:2}},
       {npc:'farmer', title:'얼음 다리 너머', text:'오로라 조각과 수정 등불로 얼음 다리를 밝히면 건너갈 수 있단다. 마지막 룬 석판들이 기다리고 있을 게다.',
        objs:[{t:'fix', s:1}, {t:'rune', n:3}], reward:{xp:400, coins:700, gems:10}}]},
+  // 5장
+  honey:{repairs:[{kind:'bridge', name:'꿀벌 징검다리', need:{plank:8, honey:4}}, {kind:'well', name:'해바라기 우물', need:{stone:14, jar:3}}],
+    quests:[
+      {npc:'husky', title:'윙윙 꿀벌 들판', text:'해바라기가 해님처럼 활짝 피었어요! 벌집 나무에서 달콤한 꿀을 조심조심 모아 봐요.',
+       objs:[{t:'clear', o:'beehive', n:4}, {t:'get', i:'honey', n:6}], reward:{xp:220, coins:450}},
+      {npc:'carpenter', title:'꿀벌 징검다리', text:'개울을 건너는 징검다리를 꿀로 단단히 붙일 거예요. 해바라기 무리도 정리해 주세요!',
+       objs:[{t:'fix', s:0}, {t:'clear', o:'sunflowers', n:6}], reward:{xp:240, gems:6, dynamite:2}},
+      {npc:'farmer', title:'해바라기 우물', text:'우물에 물이 차면 해바라기가 더 높이 자란단다. 들판 끝의 룬 석판을 찾아보렴.',
+       objs:[{t:'fix', s:1}, {t:'rune', n:3}], reward:{xp:420, coins:760, gems:10}}]},
+  dino:{repairs:[{kind:'fence', name:'화석 발굴장 울타리', need:{plank:8, ironbar:3}}, {kind:'bridge', name:'계곡 흔들다리', need:{vine:10, fossil:4}}],
+    quests:[
+      {npc:'husky', title:'커다란 발자국', text:'킁킁! 이렇게 큰 발자국은 처음 봐요! 화석 바위를 깨서 옛날 동물의 화석을 찾아봐요.',
+       objs:[{t:'clear', o:'fossilrock', n:4}, {t:'get', i:'fossil', n:3}], reward:{xp:230, coins:470}},
+      {npc:'carpenter', title:'발굴장 울타리', text:'화석이 다치지 않게 발굴장에 울타리를 세워요. 소철 나무도 치워 길을 내 주세요!',
+       objs:[{t:'fix', s:0}, {t:'clear', o:'cycad', n:5}], reward:{xp:250, gems:6, dynamite:2}},
+      {npc:'farmer', title:'계곡 건너편', text:'흔들다리를 놓으면 계곡 건너편 큰 뼈 화석까지 갈 수 있단다. 그곳 룬 석판도 잊지 말거라.',
+       objs:[{t:'fix', s:1}, {t:'rune', n:3}], reward:{xp:440, coins:800, gems:10}}]},
+  candy:{repairs:[{kind:'bridge', name:'초콜릿 강 다리', need:{sugar:8, plank:6}}, {kind:'well', name:'레모네이드 샘', need:{sugar:6, jar:4}}],
+    quests:[
+      {npc:'husky', title:'달콤한 냄새', text:'와, 나무에 막대사탕이 열렸어요! 막대사탕 나무를 치우고 반짝이는 설탕 조각을 모아 봐요.',
+       objs:[{t:'clear', o:'lollipop', n:5}, {t:'get', i:'sugar', n:12}], reward:{xp:240, coins:480}},
+      {npc:'carpenter', title:'초콜릿 강 다리', text:'초콜릿 강에 빠지면 끈적끈적해요! 설탕 조각으로 다리를 놓아요. 쿠키 바위도 깨 주세요.',
+       objs:[{t:'fix', s:0}, {t:'clear', o:'cookierock', n:4}], reward:{xp:260, gems:6, dynamite:2}},
+      {npc:'farmer', title:'레모네이드 샘', text:'레모네이드 샘이 다시 솟으면 마을이 반짝반짝해진단다. 과자 마을 끝의 룬 석판을 찾아보렴.',
+       objs:[{t:'fix', s:1}, {t:'rune', n:3}], reward:{xp:460, coins:820, gems:11}}]},
+  clock:{repairs:[{kind:'fence', name:'톱니 울타리', need:{gear:6, ironbar:4}}, {kind:'bridge', name:'시계탑 다리', need:{gear:8, brick:6}}],
+    quests:[
+      {npc:'husky', title:'째깍째깍 소리', text:'어디선가 째깍째깍 소리가 나요! 톱니 고철 더미에서 쓸 만한 톱니바퀴를 찾아봐요.',
+       objs:[{t:'clear', o:'gearpile', n:5}, {t:'get', i:'gear', n:5}], reward:{xp:260, coins:500}},
+      {npc:'carpenter', title:'톱니 울타리', text:'톱니바퀴로 튼튼한 울타리를 만들 수 있어요. 무너진 시계탑 조각도 치워 주세요!',
+       objs:[{t:'fix', s:0}, {t:'clear', o:'clockruin', n:3}], reward:{xp:280, gems:7, dynamite:2}},
+      {npc:'farmer', title:'다시 움직이는 시계', text:'시계탑 다리를 이으면 멈춘 시계가 다시 돌 게다. 마지막 룬 석판들이 시계탑 너머에 있단다.',
+       objs:[{t:'fix', s:1}, {t:'rune', n:3}], reward:{xp:520, coins:900, gems:12}}]},
   // 축제 섬(회차마다 새로 시작)
   fest:{repairs:[{kind:'stage', name:'달빛 축제 무대', need:{plank:4, flower:8}}],
     quests:[
@@ -978,9 +1040,13 @@ const IMG_LIST = ['avatar','berrybush','board','boulder','cabin','chest','cloud'
   'm_fest_spring','m_fest_summer','m_fest_autumn','m_fest_winter',
   'dec_pavilion','dec_sandcastle','dec_scarecrow','dec_snowman','dec_tulips','dec_swing','dec_parasol','dec_lemonade','dec_haybale','dec_xmastree',
   'cloudpuff','rainbow','fairyshroom','glowfern','shipwreck','clams','glacier','aurorastone','m_sky','m_fairy','m_pirate','m_glacier',
-  'i_cotton','i_stardust','i_pearl','i_aurora','starshop','i_necklace','i_pillow','i_windchime','i_starcandy'];
+  'i_cotton','i_stardust','i_pearl','i_aurora','starshop','i_necklace','i_pillow','i_windchime','i_starcandy',
+  'beehive','sunflowers','fossilrock','cycad','lollipop','cookierock','gearpile','clockruin','m_honey','m_dino','m_candy','m_clock','t_candy',
+  'i_honey','i_fossil','i_sugar','i_gear'];
 // 그림이 아직 없을 때 대신 쓸 그림(화면 아이콘용)
-const IMG_FALLBACK = {starshop:'kiln', i_necklace:'i_pearl', i_pillow:'i_cotton', i_windchime:'i_aurora', i_starcandy:'i_stardust',
+const IMG_FALLBACK = {beehive:'oak', sunflowers:'flowers', fossilrock:'boulder', cycad:'palm', lollipop:'cherry', cookierock:'sandstone', gearpile:'orerock', clockruin:'wall',
+  m_honey:'m_windmill', m_dino:'m_desert', m_candy:'m_fest', m_clock:'m_volcano', t_candy:'t_meadow', i_honey:'i_jar', i_fossil:'i_stone', i_sugar:'i_ice', i_gear:'i_ironbar',
+  starshop:'kiln', i_necklace:'i_pearl', i_pillow:'i_cotton', i_windchime:'i_aurora', i_starcandy:'i_stardust',
   dec_pavilion:'dec_moonarch', dec_sandcastle:'shells', dec_scarecrow:'pumpkins', dec_snowman:'icerock', dec_tulips:'dec_flowerbed',
   dec_swing:'dec_bench', dec_parasol:'palm', dec_lemonade:'giftbox', dec_haybale:'pumpkins', dec_xmastree:'spruce',
   cloudpuff:'cloud', rainbow:'cherry', fairyshroom:'mushrooms', glowfern:'reeds', shipwreck:'driftwood', clams:'shells', glacier:'icerock', aurorastone:'crystal',
@@ -1153,8 +1219,21 @@ const MAPS = {
   glacier: {river:{kind:'ice', pts:[[0,10],[4,11],[9,13],[13,12],[17,11],[21,12]]}, gate:1, spots:[[6,17],[9,13]],
             path:[[11,19],[8,18],[6,18],[8,15],[9,14],[9,13],[9,10],[12,6],[12,5]], runes:[[3,3],[18,4],[15,8]],
             chests:[[16,17],[3,15],[19,15],[5,7],[10,2]], rocks:[[14,16],[16,5]]},
+  // 5장
+  honey:   {river:{kind:'water', pts:[[0,13],[5,12],[10,13],[15,11],[21,10]]}, gate:0, spots:[[10,13],[14,5]],
+            path:[[11,19],[10,16],[10,14],[10,13],[11,9],[14,6]], runes:[[3,4],[18,3],[6,9]],
+            chests:[[16,17],[3,17],[19,14],[2,8],[10,3]], rocks:[[7,16],[17,6]]},
+  dino:    {river:{kind:'chasm', pts:[[0,9],[5,10],[10,12],[15,12],[21,10]]}, gate:1, spots:[[5,16],[10,12]],
+            path:[[11,19],[8,18],[6,17],[8,15],[10,14],[10,13],[10,12],[10,9],[13,5]], runes:[[3,3],[17,4],[14,8]],
+            chests:[[16,16],[2,14],[19,14],[5,6],[11,2]], rocks:[[14,16],[3,7]]},
+  candy:   {river:{kind:'choco', pts:[[0,14],[6,13],[11,11],[16,10],[21,11]]}, gate:0, spots:[[11,11],[7,5]],
+            path:[[11,19],[11,15],[11,12],[11,11],[10,8],[7,6]], runes:[[2,4],[17,3],[16,7]],
+            chests:[[16,16],[4,17],[19,14],[11,3],[2,9]], rocks:[[7,16],[14,5]]},
+  clock:   {river:{kind:'chasm', pts:[[0,11],[4,12],[9,12],[13,10],[17,10],[21,8]]}, gate:1, spots:[[15,16],[13,10]],
+            path:[[11,19],[14,18],[15,17],[14,14],[13,12],[13,11],[13,10],[12,7],[9,4]], runes:[[3,4],[18,4],[7,8]],
+            chests:[[5,16],[19,15],[2,8],[16,6],[10,2]], rocks:[[8,15],[5,6]]},
 };
-const RIVER_COL = {sky:['#eef6ff','#a9cff2','#ffffff'], water:['#e6d3a0','#4aa8d8','#8fd0f0'], ice:['#e4f2fb','#9fd4ef','#d8f0ff'], swamp:['#6b6a3a','#556b32','#7f9a4a'],
+const RIVER_COL = {choco:['#f6cfe0','#6b3a1e','#a0603a'], sky:['#eef6ff','#a9cff2','#ffffff'], water:['#e6d3a0','#4aa8d8','#8fd0f0'], ice:['#e4f2fb','#9fd4ef','#d8f0ff'], swamp:['#6b6a3a','#556b32','#7f9a4a'],
   chasm:['#c48a52','#3b2a1e','#5a3e28'], lava:['#3a2a26','#e8541e','#ffb02e']};
 OBJS._water = {fixed:true, hidden:true};
 OBJS.hedge  = {name:'생울타리', img:'spruce', w:.9, fixed:true};
@@ -1539,12 +1618,13 @@ const SONGS = {
   camp:   {bpm:92,  scale:[0,2,4,7,9],  root:60, chords:[[0,4,7],[9,12,16],[5,9,12],[7,11,14]], lead:'triangle', drum:.5},  // 평화로운 캠프(장조)
   ch1:    {bpm:108, scale:[0,2,4,7,9],  root:62, chords:[[0,4,7],[7,11,14],[9,12,16],[5,9,12]], lead:'square',   drum:1},   // 숲 탐험
   ch2:    {bpm:116, scale:[0,2,4,7,9],  root:65, chords:[[0,4,7],[5,9,12],[7,11,14],[0,4,7]],  lead:'square',   drum:1},   // 바다·섬
+  ch5:    {bpm:120, scale:[0,2,4,5,7,9], root:62, chords:[[0,4,7],[5,9,12],[2,5,9],[7,11,14]], lead:'square', drum:1.1},  // 경이로운 대륙(통통 튀는)
   ch4:    {bpm:96,  scale:[0,2,4,7,11], root:64, chords:[[0,4,7,11],[5,9,12,16],[9,12,16],[7,11,14]], lead:'sine', drum:.6},   // 신비의 섬(몽글몽글)
   ch3:    {bpm:100, scale:[0,2,3,7,9],  root:57, chords:[[0,3,7],[5,8,12],[10,14,17],[7,10,14]], lead:'triangle', drum:.8}, // 산맥(단조 느낌)
   fest:   {bpm:128, scale:[0,2,4,7,9],  root:67, chords:[[0,4,7],[5,9,12],[0,4,7],[7,11,14]],  lead:'square',   drum:1.2}, // 축제
 };
 let BGM = {name:null, timer:0, step:0, next:0, seed:1};
-function songFor(key){ if (key === 'home') return 'camp'; if (key === 'fest') return 'fest'; const r = REGIONS[key]; return r ? 'ch' + Math.min(4, r.ch || 1) : 'camp'; }
+function songFor(key){ if (key === 'home') return 'camp'; if (key === 'fest') return 'fest'; const r = REGIONS[key]; return r ? 'ch' + Math.min(5, r.ch || 1) : 'camp'; }
 function playMusic(name){
   if (!S.music || !audio()) { stopMusic(); return; }
   if (BGM.name === name && BGM.timer) return;
@@ -2738,8 +2818,12 @@ MAP_CH[4] = {title:'4장. 신비의 섬들', order:['home','sky','fairy','pirate
   pos:{home:[11,72], sky:[31,36], fairy:[51,68], pirate:[67,30], glacier:[87,38]},
   mob:{home:[28,87], sky:[70,64], fairy:[30,52], pirate:[70,34], glacier:[32,17]},
   deco:[['cloudpuff',4,18,7],['glowfern',40,82,6],['shipwreck',60,44,7],['rainbow',80,6,6],['glacier',93,12,5],['cloud',44,6,11]]};
+MAP_CH[5] = {title:'5장. 경이로운 대륙', order:['home','honey','dino','candy','clock'],
+  pos:{home:[11,72], honey:[31,38], dino:[51,68], candy:[67,30], clock:[87,38]},
+  mob:{home:[28,87], honey:[70,64], dino:[30,52], candy:[70,34], clock:[32,17]},
+  deco:[['sunflowers',4,18,6],['cycad',40,82,6],['lollipop',60,44,5],['gearpile',80,6,6],['fossilrock',93,12,5],['cloud',44,6,11]]};
 const CH_LV = ch => ch >= 2 ? CONFIG['chapter' + ch + 'Level'] : 1;
-const CH_MAX = 4;
+const CH_MAX = 5;
 function openMap(ch){
   ch = ch || S.mapCh || 1; S.mapCh = ch;
   const M = MAP_CH[ch], pos = innerWidth <= 700 ? M.mob : M.pos;
@@ -2760,7 +2844,7 @@ function openMap(ch){
         <b>${name}</b><small>${sub}</small>
         ${here?`<svg class="flag" viewBox="0 0 30 40"><line x1="4" y1="4" x2="4" y2="38" stroke="#7a4a20" stroke-width="3"/><path d="M5 5 L28 10 L5 18z" fill="#e0402a"/><circle cx="4" cy="4" r="3" fill="#ffb000"/></svg>`:''}</button>`; }).join('')}
     <button class="evloc" data-fest><div class="medal" style="background-image:url(${src(festTheme().img)})"></div><b>${festTheme().name}</b><small>⏰ ${fmtDays(evLeft())}</small></button>
-    ${!chOpen ? `<div class="chlock"><b>레벨 ${CH_LV(ch)}부터 ${ch === 2 ? '배를 타고 건너갈' : ch === 3 ? '산맥을 넘어갈' : '하늘 배를 타고 갈'} 수 있어요</b></div>` : ''}
+    ${!chOpen ? `<div class="chlock"><b>레벨 ${CH_LV(ch)}부터 ${ch === 2 ? '배를 타고 건너갈' : ch === 3 ? '산맥을 넘어갈' : ch === 4 ? '하늘 배를 타고 갈' : '열기구를 타고 갈'} 수 있어요</b></div>` : ''}
   </div></div>`;
   root.querySelectorAll('[data-close]').forEach(b => b.onclick = closeModal);
   root.querySelectorAll('[data-ch]').forEach(b => b.onclick = () => openMap(+b.dataset.ch));
@@ -2777,7 +2861,7 @@ const CFG_FIELDS = [
     ['napEnergy','텐트 낮잠 에너지',0,5], ['napHours','낮잠 대기 시간(시간)',0,.5], ['prodSpeed','요리·제작 시간 배율 (0.5 = 두 배 빠름)',.05,.1]]],
   ['보상', [['coinMul','코인 보상 배율 (미션·주문·과제·상자)',0,.1], ['xpMul','경험치 배율',0,.1], ['levelUpGems','레벨업 보석',0,1],
     ['regionClearGems','지역 완료 보석',0,1], ['regionClearCoins','지역 완료 코인',0,50], ['giftHours','일일 선물 간격(시간)',1,1]]],
-  ['지역·축제', [['chapter2Level','2장 개방 레벨',1,1], ['chapter3Level','3장 개방 레벨',1,1], ['chapter4Level','4장 개방 레벨',1,1], ['eventLevel','축제 참가 레벨',1,1], ['eventDays','축제 한 회 기간(일)',1,1]]],
+  ['지역·축제', [['chapter2Level','2장 개방 레벨',1,1], ['chapter3Level','3장 개방 레벨',1,1], ['chapter4Level','4장 개방 레벨',1,1], ['chapter5Level','5장 개방 레벨',1,1], ['eventLevel','축제 참가 레벨',1,1], ['eventDays','축제 한 회 기간(일)',1,1]]],
 ];
 const CFG_KEYS = CFG_FIELDS.flatMap(([, f]) => f.map(x => x[0]));
 let teacherOpen = false;   // 이번 접속에서 비밀번호를 맞혔는지
