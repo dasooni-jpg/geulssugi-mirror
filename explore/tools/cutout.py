@@ -55,7 +55,7 @@ def greenkey(src, dst):
 
 if __name__ == '__main__':
     raw, outdir = sys.argv[1], sys.argv[2]
-    keep = {'avatar'}   # 배경 유지
+    keep = {'avatar', 'npc_husky'}   # 배경 유지(흰 털이 배경과 함께 지워지지 않게)
     force = '--all' in sys.argv
     for f in sorted(os.listdir(raw)):
         n = os.path.splitext(f)[0]
