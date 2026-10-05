@@ -493,7 +493,10 @@ const CONFIG = {
   speedUpMinPerGem: 3,    // 즉시 완성: 보석 1개당 줄여 주는 시간(분)
   eventDays: 7,           // 축제 섬 이벤트 한 회 기간(일). 끝나면 새 섬·새 기록으로 다시 시작
   eventLevel: 3,          // 축제 섬에 갈 수 있는 레벨
+  coinMul: 1,             // 코인 보상 배율(미션·주문·과제·보물 상자)
+  xpMul: 1,               // 경험치 배율
 };
+const CONFIG_DEFAULT = {...CONFIG};   // 교사 설정 '기본값으로' 용
 const SAVE_KEY = 'daram-explore-v1';
 
 /* ── 자원(아이템) ── */
@@ -540,9 +543,12 @@ const ITEMS = {
   pumpkin: {name:'호박',     img:'i_pumpkin', tab:'food', value:10, eat:5},
   syrup:   {name:'단풍 시럽', img:'i_syrup',  tab:'craft', value:24},
   pumpkinpie:{name:'호박 파이',img:'i_pumpkinpie', tab:'food', eat:50},
+  basket:  {name:'대나무 바구니', img:'i_basket', tab:'craft', value:60},
+  crystallamp:{name:'수정 등불', img:'i_crystallamp', tab:'craft', value:110},
   rune:    {name:'룬 석판',  img:'rune',    tab:'treasure'},
   medal:   {name:'축제 메달', img:'i_medal', tab:'treasure'},
 };
+const mulC = n => Math.round((n||0) * CONFIG.coinMul);   // 코인 보상에 배율 적용
 const sellPrice = k => { const d = ITEMS[k]; return d.tab === 'treasure' ? 0 : (d.value || (d.eat ? d.eat*2 : 0)); };
 
 /* ── 장애물 종류: cost=에너지, drops=얻는 자원, w=타일 대비 폭 ── */
@@ -597,6 +603,7 @@ const OBJS = {
   dairy:    {name:'치즈 공방',   img:'dairy',    w:1.85,fp:2, fixed:true, act:'dairy',  label:'치즈 공방',bld:'dairy'},
   kiln:     {name:'벽돌 가마',   img:'kiln',     w:1.8, fp:2, fixed:true, act:'kiln',   label:'벽돌 가마',bld:'kiln'},
   pottery:  {name:'도자기 공방', img:'pottery',  w:1.8, fp:2, fixed:true, act:'pottery',label:'도자기 공방',bld:'pottery'},
+  workshop: {name:'대나무 공방', img:'workshop', w:1.85,fp:2, fixed:true, act:'workshop',label:'대나무 공방',bld:'workshop'},
   coop:     {name:'닭장',        img:'coop',     w:1.9, fp:2, fixed:true, act:'coop',   label:'닭장',     bld:'coop', animal:'hen'},
   barn:     {name:'외양간',      img:'barn',     w:1.9, fp:2, fixed:true, act:'barn',   label:'외양간',   bld:'barn', animal:'cow'},
   field:    {name:'밭',          img:'f_empty',  w:1.95,fp:2, fixed:true, act:'field',  flat:true},
@@ -649,6 +656,12 @@ const REGIONS = {
 };
 
 /* ── 등장인물 ── */
+// 2·3장 지역의 개방 레벨은 '장 개방 레벨 + 지역 순서 간격'으로 계산(교사 설정에서 장 레벨만 바꾸면 됨)
+for (const r of Object.values(REGIONS)) if (r.ch >= 2) r.lvOff = r.lv - (r.ch === 2 ? 10 : 20);
+function applyChapterLevels(){
+  for (const r of Object.values(REGIONS)) if (r.ch >= 2) r.lv = (r.ch === 2 ? CONFIG.chapter2Level : CONFIG.chapter3Level) + r.lvOff;
+  BUILDINGS.workshop.unlock = CONFIG.chapter3Level;
+}
 const NPCS = {
   husky:     {name:'썰매견 눈송이', img:'npc_husky'},
   farmer:    {name:'보리 할아버지', img:'npc_farmer'},
@@ -747,11 +760,11 @@ const STORY = {
        objs:[{t:'fix', s:0}, {t:'clear', o:'ruin', n:3}], reward:{xp:160, gems:4, dynamite:2}},
       {npc:'farmer', title:'잃어버린 샘물', text:'옛 유적의 샘물을 되살리면 정글이 길을 열어 줄 게다. 유적 깊숙한 룬 석판을 찾아보렴.',
        objs:[{t:'fix', s:1}, {t:'rune', n:3}], reward:{xp:260, coins:480, gems:7}}]},
-  maple:{repairs:[{kind:'fence', name:'단풍 농장 울타리', need:{plank:6, wood:10}}, {kind:'bridge', name:'단풍 계곡 다리', need:{plank:8, brick:4}}],
+  maple:{repairs:[{kind:'fence', name:'단풍 농장 울타리', need:{plank:4, basket:2}}, {kind:'bridge', name:'단풍 계곡 다리', need:{plank:8, brick:4}}],
     quests:[
       {npc:'husky', title:'바스락 낙엽 길', text:'온 산이 황금빛이에요! 호박 덩굴을 치우고 커다란 호박을 모아 봐요.',
        objs:[{t:'clear', o:'pumpkins', n:5}, {t:'get', i:'pumpkin', n:12}], reward:{xp:150, coins:300}},
-      {npc:'carpenter', title:'호박 농장 울타리', text:'호박 농장 울타리가 쓰러졌어요. 단풍나무에서 달콤한 시럽도 받아 와요!',
+      {npc:'carpenter', title:'호박 농장 울타리', text:'호박 농장 울타리가 쓰러졌어요. 대나무 공방에서 바구니를 만들어 오고, 단풍나무에서 달콤한 시럽도 받아 와요!',
        objs:[{t:'fix', s:0}, {t:'get', i:'syrup', n:4}], reward:{xp:170, gems:5, dynamite:2}},
       {npc:'farmer', title:'단풍 계곡 건너기', text:'계곡에 다리를 놓으면 산꼭대기까지 갈 수 있단다. 마지막 룬 석판들이 단풍 속에 숨어 있을 게다.',
        objs:[{t:'fix', s:1}, {t:'rune', n:3}], reward:{xp:300, coins:520, gems:8}}]},
@@ -805,12 +818,14 @@ const PROD = {
   dairy:  [{id:'cheese',   need:{milk:3},                min:6, xp:7}],
   kiln:   [{id:'brick',    need:{clay:2,coal:1},         min:4, xp:5}],
   pottery:[{id:'jar',      need:{clay:3},                min:5, xp:6}],
+  workshop:[{id:'basket',  need:{bamboo:4,vine:2},      min:6, xp:8},
+           {id:'crystallamp',need:{crystal:2,ironbar:1,bamboo:2}, min:9, xp:12}],
   // 동물: 칸마다 따로(동시에) 생산
   coop:   [{id:'egg',      need:{wheat:1},               min:3, xp:2}],
   barn:   [{id:'milk',     need:{corn:1},                min:5, xp:3}],
 };
 const PROD_NAME = {kitchen:'캠프 부엌', sawmill:'제재소', forge:'대장간', bakery:'빵집', dairy:'치즈 공방',
-  kiln:'벽돌 가마', pottery:'도자기 공방', coop:'닭장', barn:'외양간'};
+  kiln:'벽돌 가마', pottery:'도자기 공방', coop:'닭장', barn:'외양간', workshop:'대나무 공방'};
 const isAnimal = k => k === 'coop' || k === 'barn';
 const animalsOf = k => k === 'coop' ? 2 + (S.bld.coop||1) : 1 + (S.bld.barn||1);
 const capOf = k => isAnimal(k) ? animalsOf(k) : slotsOf(S.bld[k]||1);
@@ -849,6 +864,9 @@ const BUILDINGS = {
            fx:l => `작업 칸 ${slotsOf(l)}개 · 작업 시간 -${Math.round(10*(l-1))}%`},
   pottery:{start:0, unlock:7, build:{plank:4, brick:4, clay:6, coins:220}, cost:l => ({plank:2*l, brick:2*l, coins:160*l}),
            fx:l => `작업 칸 ${slotsOf(l)}개 · 작업 시간 -${Math.round(10*(l-1))}%`},
+  // 3장 전용: 대나무·덩굴·수정으로 공예품
+  workshop:{start:0, unlock:20, build:{bamboo:12, plank:6, vine:4, coins:400}, cost:l => ({bamboo:8*l, plank:4*l, coins:300*l}),
+           fx:l => `작업 칸 ${slotsOf(l)}개 · 작업 시간 -${Math.round(10*(l-1))}%`},
 };
 const slotsOf = l => 2 + l;   // 작업 칸: Lv1 3칸 ~ Lv5 7칸
 const napEnergy = l => CONFIG.napEnergy + 10*(l-1);
@@ -870,9 +888,11 @@ const IMG_LIST = ['avatar','berrybush','board','boulder','cabin','chest','cloud'
   'fix_bridge','fix_well','fix_fence','done_bridge','done_well','done_fence','npc_farmer','npc_carpenter',
   'u_trophy','m_fest','i_medal','lantern','giftbox','dec_fence','dec_flowerbed','dec_bench','dec_lamp','dec_statue','dec_fountain',
   'bamboo','cherry','crystal','stalagmite','vines','ruin','maple','pumpkins','m_bamboo','m_cave','m_jungle','m_maple','t_cave','t_autumn',
-  'i_bamboo','i_crystal','i_vine','i_pumpkin','i_syrup','i_pumpkinpie','npc_owl','fix_stage','done_stage','dec_moonarch','dec_carousel','npc_husky'];
+  'i_bamboo','i_crystal','i_vine','i_pumpkin','i_syrup','i_pumpkinpie','npc_owl','fix_stage','done_stage','dec_moonarch','dec_carousel','npc_husky','workshop','i_basket','i_crystallamp',
+  'm_fest_spring','m_fest_summer','m_fest_autumn','m_fest_winter'];
 // 그림이 아직 없을 때 대신 쓸 그림(화면 아이콘용)
-const IMG_FALLBACK = {bamboo:'reeds', cherry:'oak', crystal:'icerock', stalagmite:'boulder', vines:'redwood', ruin:'wall', maple:'oak', pumpkins:'berrybush',
+const IMG_FALLBACK = {workshop:'pottery', i_basket:'i_reed', i_crystallamp:'i_crystal', m_fest_spring:'m_fest', m_fest_summer:'m_fest', m_fest_autumn:'m_fest', m_fest_winter:'m_fest',
+  bamboo:'reeds', cherry:'oak', crystal:'icerock', stalagmite:'boulder', vines:'redwood', ruin:'wall', maple:'oak', pumpkins:'berrybush',
   m_bamboo:'m_canyon', m_cave:'m_snow', m_jungle:'m_swamp', m_maple:'m_windmill', t_cave:'t_ash', t_autumn:'t_meadow',
   i_bamboo:'i_reed', i_crystal:'i_ice', i_vine:'i_reed', i_pumpkin:'i_coconut', i_syrup:'i_jar', i_pumpkinpie:'i_pie',
   npc_owl:'npc_farmer', npc_husky:'husky', fix_stage:'fix_fence', done_stage:'done_fence', dec_moonarch:'lantern', dec_carousel:'giftbox',
@@ -911,12 +931,13 @@ let S;
 function freshState(){
   return {v:1, energy:CONFIG.energyBase, energyTs:Date.now(), xp:0, level:1, coins:150, gems:10,
     inv:{}, seen:{wood:1,twig:1,berry:1,stone:1,flower:1}, regions:{}, orders:[], nextOrderId:1,
-    where:'home', napTs:0, sound:true, cfg:{}, bld:{}, prod:{}, mapCh:1,
+    where:'home', napTs:0, sound:true, music:true, vol:.7, cfg:{}, bld:{}, prod:{}, mapCh:1,
     fields:[], fieldsOpen:2, tasks:[], stats:{}, giftTs:0, nextTaskId:1};
 }
 function migrate(){   // 예전 저장본에 새 항목 채우기
   S.bld = S.bld || {}; S.prod = S.prod || {}; S.mapCh = S.mapCh || 1;
   S.fields = S.fields || []; S.fieldsOpen = S.fieldsOpen || 2; S.tasks = S.tasks || []; S.stats = S.stats || {};
+  if (S.music == null) S.music = true; if (S.vol == null) S.vol = .7;
   S.giftTs = S.giftTs || 0; S.nextTaskId = S.nextTaskId || 1;
   S.decor = S.decor || []; S.decorInv = S.decorInv || {}; S.event = S.event || {w:-1, medals:0, claimed:[]};
   for (const k of ['got','made','harvest','clearedBy']) S.stats[k] = S.stats[k] || {};
@@ -927,7 +948,7 @@ function load(){
   try { S = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch(e){ S = null; }
   if (!S || S.v !== 1) S = freshState();
   Object.assign(CONFIG, S.cfg || {});
-  migrate();
+  migrate(); applyClassLink(); applyChapterLevels();
 }
 let saveTimer = 0;
 function save(){
@@ -953,6 +974,7 @@ const stat = (k, n=1) => { S.stats[k] = (S.stats[k]||0) + n; };
 const has = (need) => Object.entries(need).every(([k,n]) => (S.inv[k]||0) >= n);
 
 function gainXP(n){
+  n = Math.max(0, Math.round(n * CONFIG.xpMul));
   S.xp += n;
   let ups = 0;
   while (S.xp >= xpNeed(S.level)){ S.xp -= xpNeed(S.level); S.level++; ups++; }
@@ -1075,7 +1097,7 @@ OBJS.tent_camp = {img:'tent', w:1.3, fixed:true};
 const HOME_N = 18;
 const HOME_POS = {cabin:[2,2], kitchen:[5,2], bakery:[8,2], dairy:[11,2], sawmill:[14,2],
   coop:[2,5], barn:[2,8], tent:[2,11], pottery:[2,14],
-  forge:[14,5], kiln:[14,8], board:[14,11]};
+  forge:[14,5], kiln:[14,8], board:[14,11], workshop:[14,14]};
 const FIELD_POS = [[6,6],[9,6],[6,9],[9,9],[6,12],[9,12]];
 const HOME_START = {x:8, y:8};
 const fpOf = o => (OBJS[o] && OBJS[o].fp) || 1;
@@ -1094,7 +1116,9 @@ function buildHome(){
   for (const [k,[x,y]] of Object.entries(HOME_POS)) placeObj(w, x, y, k);
   FIELD_POS.forEach(([x,y], n) => placeObj(w, x, y, 'field', {fid:n}));
   tiles[12*N+12].o = 'husky';
-  for (const [k,x,y,f] of S.decor) if (tiles[y*N+x] && !tiles[y*N+x].o && DECOR[k]){ tiles[y*N+x].o = 'dec_' + k; tiles[y*N+x].flip = !!f; }
+  S.decor = S.decor.filter(([k,x,y,f]) => { const t = tiles[y*N+x]; if (!DECOR[k]) return false;
+    if (!t || t.o){ S.decorInv[k] = (S.decorInv[k]||0) + 1; return false; }   // 자리를 빼앗기면 보관함으로
+    t.o = 'dec_' + k; t.flip = !!f; return true; });
   const r = rng(77);
   for (let y=0;y<N;y++) for (let x=0;x<N;x++){
     const edge = x<1 || y<1 || x>N-2 || y>N-2;
@@ -1315,19 +1339,105 @@ function fogPuffs(cells){
   for (const [x,y] of cells){ const p = iso(x,y); fx.push({t:'puff', x:p.x, y:p.y-30, age:0, life:.9, s:1+Math.random()*.4}); }
 }
 
-/* ══════════ 효과음(WebAudio, 파일 없음) ══════════ */
-let AC = null;
-function sfx(kind){
-  if (!S.sound) return;
-  try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); } catch(e){ return; }
-  const t = AC.currentTime, o = AC.createOscillator(), g = AC.createGain();
-  o.connect(g); g.connect(AC.destination);
-  const set = {chop:['triangle',180,90,.12,.18], pop:['sine',520,880,.1,.12], coin:['square',880,1320,.08,.12],
-               level:['sine',523,1046,.5,.2], boom:['sawtooth',120,40,.35,.25], no:['sawtooth',160,110,.18,.08], step:['sine',300,260,.05,.03]}[kind] || ['sine',440,440,.1,.1];
-  o.type = set[0]; o.frequency.setValueAtTime(set[1], t); o.frequency.exponentialRampToValueAtTime(set[2], t+set[3]);
-  g.gain.setValueAtTime(set[4], t); g.gain.exponentialRampToValueAtTime(0.001, t+set[3]+.05);
-  o.start(t); o.stop(t+set[3]+.08);
+/* ══════════ 소리: 효과음 + 배경음악 (WebAudio로 즉석 합성, 소리 파일 없음) ══════════ */
+let AC = null, MASTER = null, SFXBUS = null, BGMBUS = null, NOISE = null;
+function audio(){
+  if (AC) return AC;
+  try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){ return null; }
+  MASTER = AC.createGain(); MASTER.connect(AC.destination);
+  SFXBUS = AC.createGain(); SFXBUS.connect(MASTER); BGMBUS = AC.createGain(); BGMBUS.connect(MASTER);
+  const len = AC.sampleRate * .5, buf = AC.createBuffer(1, len, AC.sampleRate), d = buf.getChannelData(0);
+  for (let i=0;i<len;i++) d[i] = Math.random()*2 - 1; NOISE = buf;
+  setVolume(); return AC;
 }
+function setVolume(){ if (!AC) return; const v = S.vol == null ? .7 : S.vol;
+  MASTER.gain.value = v; SFXBUS.gain.value = S.sound ? 1 : 0; BGMBUS.gain.value = S.music ? .55 : 0; }
+// 음 하나: 주파수(f → f2로 미끄러짐), 길이, 파형, 크기, 시작 지연
+function tone(f, dur, type='sine', vol=.12, at=0, f2=null, bus=SFXBUS){
+  const t = AC.currentTime + at, o = AC.createOscillator(), g = AC.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + .012); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); g.connect(bus); o.start(t); o.stop(t + dur + .05);
+}
+// 잡음(나무 찍기·바위·물): 필터 종류와 주파수로 질감을 바꿈
+function noise(dur, ftype='lowpass', freq=800, vol=.15, at=0, bus=SFXBUS){
+  const t = AC.currentTime + at, src = AC.createBufferSource(), f = AC.createBiquadFilter(), g = AC.createGain();
+  src.buffer = NOISE; f.type = ftype; f.frequency.value = freq;
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  src.connect(f); f.connect(g); g.connect(bus); src.start(t); src.stop(t + dur + .02);
+}
+const SFX = {
+  pop:   () => tone(520, .1, 'sine', .12, 0, 880),
+  click: () => tone(1200, .04, 'triangle', .05),
+  step:  () => tone(300, .05, 'sine', .03, 0, 260),
+  no:    () => { tone(220, .12, 'sawtooth', .06, 0, 180); tone(180, .16, 'sawtooth', .06, .1, 140); },
+  coin:  () => { tone(988, .08, 'square', .06); tone(1319, .18, 'square', .06, .07); },
+  chop:  () => { noise(.07, 'bandpass', 1400, .22); tone(140, .08, 'triangle', .14, 0, 90); },          // 도끼질
+  wood:  () => { noise(.18, 'lowpass', 900, .2); tone(110, .2, 'triangle', .16, 0, 60); },             // 나무가 쓰러짐
+  rock:  () => { noise(.22, 'lowpass', 500, .3); tone(90, .18, 'sine', .14, 0, 50); },                 // 돌 깨짐
+  leaf:  () => { noise(.15, 'highpass', 3000, .08); tone(660, .12, 'sine', .07, .03, 990); },          // 덤불·꽃
+  ice:   () => { [1568, 2093, 2637].forEach((f, k) => tone(f, .25, 'sine', .05, k*.04)); noise(.12, 'highpass', 5000, .06); },
+  boom:  () => { noise(.6, 'lowpass', 300, .5); tone(80, .5, 'sawtooth', .18, 0, 30); },
+  chest: () => { [523, 659, 784, 1047, 1319].forEach((f, k) => tone(f, .22, 'triangle', .08, k*.06)); },
+  rune:  () => { [392, 587, 784, 1175].forEach((f, k) => tone(f, .5, 'sine', .09, k*.09)); noise(.5, 'highpass', 6000, .03, .1); },
+  harvest:() => { tone(440, .1, 'triangle', .09, 0, 660); tone(660, .14, 'triangle', .09, .08, 990); noise(.12, 'highpass', 2500, .06); },
+  build: () => { [0, .16, .32].forEach(at => { noise(.06, 'bandpass', 2200, .25, at); tone(300, .06, 'square', .05, at); }); tone(784, .3, 'sine', .08, .5); tone(1047, .4, 'sine', .08, .6); },
+  quest: () => { [[523,0],[659,.1],[784,.2],[1047,.32],[784,.46],[1047,.56]].forEach(([f, at]) => tone(f, .22, 'square', .05, at)); },
+  level: () => { [523, 659, 784, 1047].forEach((f, k) => tone(f, .3, 'sine', .12, k*.09)); tone(1568, .6, 'sine', .06, .4); },
+  splash:() => { noise(.3, 'bandpass', 1200, .18); tone(500, .2, 'sine', .05, 0, 200); },
+};
+function sfx(kind){
+  if (!S.sound || !audio()) return;
+  if (AC.state === 'suspended') AC.resume();
+  (SFX[kind] || SFX.pop)();
+}
+// 치운 물체에 어울리는 소리
+function sfxFor(d){
+  if (d.tool) return 'boom'; if (d.rune) return 'rune'; if (d.chest) return 'chest';
+  const k = Object.keys(d.drops || {});
+  if (k.includes('ice') || k.includes('crystal')) return 'ice';
+  if (k.some(i => ['stone','coal','ore','gold','obsidian','sandstone','fire','clay'].includes(i))) return 'rock';
+  if (k.includes('wood') || k.includes('bamboo') || k.includes('vine')) return 'wood';
+  return 'leaf';
+}
+
+/* 배경음악: 장면마다 다른 분위기의 짧은 곡을 즉석 연주(반복). 화음 진행 + 베이스 + 멜로디 + 가벼운 박자 */
+const N2F = n => 440 * Math.pow(2, (n - 69) / 12);
+const SONGS = {
+  camp:   {bpm:92,  scale:[0,2,4,7,9],  root:60, chords:[[0,4,7],[9,12,16],[5,9,12],[7,11,14]], lead:'triangle', drum:.5},  // 평화로운 캠프(장조)
+  ch1:    {bpm:108, scale:[0,2,4,7,9],  root:62, chords:[[0,4,7],[7,11,14],[9,12,16],[5,9,12]], lead:'square',   drum:1},   // 숲 탐험
+  ch2:    {bpm:116, scale:[0,2,4,7,9],  root:65, chords:[[0,4,7],[5,9,12],[7,11,14],[0,4,7]],  lead:'square',   drum:1},   // 바다·섬
+  ch3:    {bpm:100, scale:[0,2,3,7,9],  root:57, chords:[[0,3,7],[5,8,12],[10,14,17],[7,10,14]], lead:'triangle', drum:.8}, // 산맥(단조 느낌)
+  fest:   {bpm:128, scale:[0,2,4,7,9],  root:67, chords:[[0,4,7],[5,9,12],[0,4,7],[7,11,14]],  lead:'square',   drum:1.2}, // 축제
+};
+let BGM = {name:null, timer:0, step:0, next:0, seed:1};
+function songFor(key){ if (key === 'home') return 'camp'; if (key === 'fest') return 'fest'; const r = REGIONS[key]; return r ? 'ch' + Math.min(3, r.ch || 1) : 'camp'; }
+function playMusic(name){
+  if (!S.music || !audio()) { stopMusic(); return; }
+  if (BGM.name === name && BGM.timer) return;
+  stopMusic(); BGM = {name, timer:0, step:0, next:AC.currentTime + .1, seed:hashKey(name)};
+  BGM.timer = setInterval(bgmTick, 100);
+}
+function stopMusic(){ if (BGM.timer) clearInterval(BGM.timer); BGM.timer = 0; BGM.name = null; }
+function bgmTick(){
+  if (!AC || AC.state !== 'running') { if (AC && AC.state === 'suspended' && !document.hidden) AC.resume(); return; }
+  const sg = SONGS[BGM.name], spb = 60 / sg.bpm / 2;          // 8분음표 길이
+  while (BGM.next < AC.currentTime + .3){
+    const st = BGM.step, bar = Math.floor(st / 8) % 4, beat = st % 8, at = BGM.next - AC.currentTime, ch = sg.chords[bar];
+    if (beat === 0) ch.forEach(n => tone(N2F(sg.root + n - 12), spb*7.5, 'triangle', .035, at, null, BGMBUS));   // 화음 깔기
+    if (beat % 4 === 0) tone(N2F(sg.root + ch[0] - 24), spb*3, 'sine', .09, at, null, BGMBUS);                     // 베이스
+    // 멜로디: 곡마다 정해진 무늬(매번 같은 곡으로 반복)
+    const r = rng((BGM.seed + st % 32 * 97) >>> 0);
+    if (r() < .62){ const deg = Math.floor(r() * sg.scale.length), oct = r() < .25 ? 12 : 0;
+      tone(N2F(sg.root + sg.scale[deg] + oct), spb * (r() < .3 ? 1.8 : .9), sg.lead, .028, at, null, BGMBUS); }
+    if (sg.drum && beat % 2 === 0) noise(.04, 'highpass', 7000, .025 * sg.drum, at, BGMBUS);      // 찰랑
+    if (sg.drum && beat === 4) noise(.08, 'bandpass', 1800, .04 * sg.drum, at, BGMBUS);           // 딱
+    BGM.step++; BGM.next += spb;
+  }
+}
+// 브라우저는 사용자가 한 번 누른 뒤에야 소리를 낼 수 있음 → 첫 터치에서 음악 시작
+addEventListener('pointerdown', () => { if (S && S.music && audio()){ if (AC.state === 'suspended') AC.resume(); playMusic(songFor(S.where)); } }, {once:true});
+document.addEventListener('click', e => { if (e.target.closest && e.target.closest('.gbtn, .tab, .chbtn, .qbtn')) sfx('click'); }, true);
 
 /* ══════════ 장면 전환 ══════════ */
 function enter(key){
@@ -1343,6 +1453,7 @@ function enter(key){
   if (!world.home && STORY[key]){ const st = ensureQuest(key);
     if (st && !st.introSeen){ st.introSeen = 1; setTimeout(() => openQuest(key), 500); } }
   updateQuest(); updateHUD(); renderQuestBtns(); save();
+  if (AC && S.music) playMusic(songFor(key));
 }
 
 /* ══════════ 탭 처리 ══════════ */
@@ -1428,13 +1539,13 @@ function updatePlayer(dt){
 function finishWork(){
   const w = world, i = player.target, t = w.tiles[i], d = OBJS[t.o], x = i % w.N, y = (i / w.N)|0;
   queue.shift(); player.work = 0; player.target = null; stat('cleared'); S.stats.clearedBy[t.o] = (S.stats.clearedBy[t.o]||0) + 1;
-  burst(x, y, d.fx, 18); sfx(d.tool ? 'boom' : 'pop');
+  burst(x, y, d.fx, 18); sfx(sfxFor(d));
   let lines = [];
   for (const [k,n] of Object.entries(d.drops)){ if (k === 'medal'){ evCheck(); S.event.medals += n; S.seen.medal = 1; S.stats.got.medal = (S.stats.got.medal||0) + n; } else addItem(k, n);
     flyToBag(x, y, k==='flower'?'flowers':ITEMS[k].img, n); lines.push(`+${n} ${ITEMS[k].name}`); }
   if (d.chest){
     const r = Math.random(), coins = 40 + (Math.random()*80|0);
-    S.coins += coins; lines.push(`+${coins} 코인`); flyToBag(x,y,'i_coin',3);
+    const cc = mulC(coins); S.coins += cc; lines.push(`+${cc} 코인`); flyToBag(x,y,'i_coin',3);
     if (r < .45){ S.gems += 2; lines.push('+2 보석'); }
     if (r > .5){ addEnergy(10); lines.push('+10 에너지'); }
     sfx('coin');
@@ -1530,7 +1641,7 @@ function fieldTap(fid){
   const c = CROPS[f.crop];   // 수확
   addItem(f.crop, c.yield); S.stats.harvest[f.crop] = (S.stats.harvest[f.crop]||0) + c.yield;
   flyToBag(cx, cy, ITEMS[f.crop].img, c.yield); floatText(cx, cy, `+${c.yield} ${ITEMS[f.crop].name}`);
-  burst(cx, cy, c.tint, 16); sfx('coin'); gainXP(c.yield);
+  burst(cx, cy, c.tint, 16); sfx('harvest'); gainXP(c.yield);
   f.crop = null; f.end = 0; save();
 }
 function plant(fid, crop, quiet){
@@ -1998,7 +2109,7 @@ function objText(o, key){
 function objIcon(o, key){ return o.t === 'clear' ? OBJS[o.o].img : o.t === 'get' ? ITEMS[o.i].img : o.t === 'fix' ? 'fix_' + STORY[key].repairs[o.s].kind : 'rune'; }
 function josa(w, pair){ const c = w.charCodeAt(w.length-1) - 0xAC00; const [a,b] = pair.split('/'); return c >= 0 && c <= 11171 && c % 28 ? a : b; }
 function rewardHtml(rw){
-  return [rw.xp && `<span><img src="${src('i_energy')}" style="filter:hue-rotate(200deg)">★${rw.xp}</span>`, rw.coins && `<span><img src="${src('i_coin')}">${rw.coins}</span>`,
+  return [rw.xp && `<span><img src="${src('i_energy')}" style="filter:hue-rotate(200deg)">★${rw.xp}</span>`, rw.coins && `<span><img src="${src('i_coin')}">${mulC(rw.coins)}</span>`,
     rw.gems && `<span><img src="${src('i_gem')}">${rw.gems}</span>`, rw.dynamite && `<span><img src="${src('i_dynamite')}">${rw.dynamite}</span>`,
     rw.decor && `<span><img src="${src(DECOR[rw.decor].img)}">${DECOR[rw.decor].name}</span>`].filter(Boolean).join('');
 }
@@ -2027,9 +2138,9 @@ function openQuest(key){
 function claimQuest(key){
   const st = S.regions[key], story = STORY[key], q = story.quests[st.qi]; if (!questReady(key)) return;
   const rw = q.reward;
-  if (rw.coins) S.coins += rw.coins; if (rw.gems) S.gems += rw.gems; if (rw.dynamite) addItem('dynamite', rw.dynamite);
+  if (rw.coins) S.coins += mulC(rw.coins); if (rw.gems) S.gems += rw.gems; if (rw.dynamite) addItem('dynamite', rw.dynamite);
   if (rw.decor) S.decorInv[rw.decor] = (S.decorInv[rw.decor]||0) + 1;
-  sfx('coin'); toast(`미션 완료! 「${q.title}」`);
+  sfx('quest'); toast(`미션 완료! 「${q.title}」`);
   st.qi++;
   if (st.qi >= story.quests.length){ st.qdone = 1; closeModal(); if (rw.xp) gainXP(rw.xp); save(); renderQuestBtns();
     if (key === 'fest') festComplete(rw); else if (world.key === key) regionComplete(); else toast(`${REGIONS[key].name} 탐험 완료!`); return; }
@@ -2060,7 +2171,7 @@ function openRepair(sIdx){
     if (!has(rp.need)) return; for (const [i,n] of Object.entries(rp.need)) S.inv[i] -= n;
     st.fixed = st.fixed || {}; st.fixed[sIdx] = 1;
     const ti = world.spots[sIdx], x = ti % world.N, y = (ti / world.N)|0;
-    world.tiles[ti].o = 'done_' + rp.kind; burst(x, y, '#ffd23a', 30); sfx('level'); floatText(x, y, `${rp.name} 완성!`, '#ffe36a');
+    world.tiles[ti].o = 'done_' + rp.kind; burst(x, y, '#ffd23a', 30); sfx('build'); floatText(x, y, `${rp.name} 완성!`, '#ffe36a');
     const cells = revealAround(world, x, y, 3.2); if (cells.length){ renderFog(); fogPuffs(cells); } computeReach();
     closeModal(); gainXP(25); checkQuestReady(); updateQuest(); save(); };
 }
@@ -2103,13 +2214,38 @@ function renderQuestBtns(){
 }
 
 
-/* ══════════ 달빛 축제 섬(기간 한정 이벤트) ══════════ */
+/* ══════════ 축제 섬(기간 한정 이벤트) ══════════
+   회차마다 주제가 차례로 바뀜: 달빛 → 벚꽃 → 여름 바다 → 가을 수확 → 겨울 눈꽃 → 다시 달빛 …
+   extra = 그 주제에만 섞여 나오는 장애물(메달은 등불·선물 상자에서 나옴) */
+const FEST_THEMES = [
+  {key:'moon',   name:'달빛 축제',      island:'달빛 축제 섬',   short:'달빛',   img:'m_fest',        tex:'t_meadow', tint:'rgba(120,80,200,.10)',
+   extra:{flowers:14, berrybush:10, oak:6, log:8}},
+  {key:'spring', name:'벚꽃 축제',      island:'벚꽃 축제 섬',   short:'벚꽃',   img:'m_fest_spring', tex:'t_grass',  tint:'rgba(255,150,200,.12)',
+   extra:{cherry:16, flowers:14, bamboo:6}},
+  {key:'summer', name:'여름 바다 축제', island:'여름 바다 섬',   short:'파도',   img:'m_fest_summer', tex:'t_sand',   tint:'rgba(60,170,230,.08)',
+   extra:{palm:14, shells:12, driftwood:8}},
+  {key:'autumn', name:'가을 수확 축제', island:'가을 수확 섬',   short:'수확',   img:'m_fest_autumn', tex:'t_autumn', tint:'rgba(0,0,0,0)',
+   extra:{maple:14, pumpkins:14, oak:4}},
+  {key:'winter', name:'겨울 눈꽃 축제', island:'겨울 눈꽃 섬',   short:'눈꽃',   img:'m_fest_winter', tex:'t_snow',   tint:'rgba(0,0,0,0)',
+   extra:{spruce:14, icerock:12, log:6}},
+];
+const FEST_BASE = {lantern:18, giftbox:5, twigpile:12, boulder:8};
+const FEST_OFFSET = 1;   // 주제를 넣은 주(2026년 10월 첫 회차)가 '달빛'이 되도록 맞춘 값
+const festTheme = () => { const n = FEST_THEMES.length; return FEST_THEMES[(((evWeek() + FEST_OFFSET) % n) + n) % n]; };
+function applyFestTheme(){   // 주제에 맞게 섬·미션 글을 바꿔 끼움
+  const t = festTheme(), R = REGIONS.fest, Q = STORY.fest.quests;
+  Object.assign(R, {name:t.island, img:t.img, tex:t.tex, tint:t.tint, mix:{...FEST_BASE, ...t.extra}});
+  STORY.fest.repairs[0].name = `${t.short} 축제 무대`;
+  Q[0].text = `부엉! ${t.name}에 온 걸 환영해요. 등불 더미를 치우면 반짝이는 축제 메달이 나와요!`;
+  Q[2].title = `${t.short} 퍼레이드`;
+  return t;
+}
 const EV_EPOCH = Date.UTC(2026, 0, 5);
 const evLen = () => Math.max(1, CONFIG.eventDays) * 86400e3;
 const evWeek = () => Math.floor((Date.now() - EV_EPOCH) / evLen());
 const evLeft = () => EV_EPOCH + (evWeek()+1)*evLen() - Date.now();
 function evCheck(){   // 새 회차가 되면 기록·섬 초기화
-  const w = evWeek();
+  const w = evWeek(); applyFestTheme();
   if (S.event.w !== w){ S.event = {w, medals:0, claimed:[]}; delete S.regions.fest; save(); }
 }
 function fmtDays(ms){ const h = Math.floor(ms/3600e3), d = Math.floor(h/24); return d ? `${d}일 ${h%24}시간` : `${h}시간 ${Math.floor(ms/60000)%60}분`; }
@@ -2135,7 +2271,7 @@ function buildFestival(){
 }
 function festComplete(rw){
   sfx('level'); updateHUD();
-  showModal('달빛 퍼레이드!', `<div class="celebrate"><img src="${src('npc_owl')}" style="width:120px;border-radius:50%">
+  showModal(`${festTheme().short} 퍼레이드!`, `<div class="celebrate"><img src="${src('npc_owl')}" style="width:120px;border-radius:50%">
     <p>축제 미션을 모두 끝냈어요! 이번 축제의 특별 장식품을 받았어요.</p>
     <div class="qv-reward" style="justify-content:center">${rewardHtml(rw)}</div>
     <p class="hint">장식품은 꾸미기 → 보관함에서 캠프에 놓을 수 있어요. 메달을 더 모아 트로피도 받아 보세요!</p>
@@ -2147,7 +2283,8 @@ function trophyRewardHtml(r){ return [r.gems && `<span><img src="${src('i_gem')}
 function openEvent(){
   evCheck();
   const m = S.event.medals, top = TROPHY[TROPHY.length-1].n, ok = S.level >= CONFIG.eventLevel;
-  const body = `<div class="evhead"><img src="${src('m_fest')}" class="evmedal"><div>
+  const th = festTheme(), nx = FEST_THEMES[(FEST_THEMES.indexOf(th) + 1) % FEST_THEMES.length];
+  const body = `<div class="evhead"><img src="${src(th.img)}" class="evmedal"><div>
       <p>등불과 선물 상자를 치우면 <b>축제 메달</b>이 나와요. 메달을 모아 트로피 단계를 올리세요!</p>
       <div class="evtime">⏰ 남은 시간 ${fmtDays(evLeft())}</div>
       <div class="evbar"><i style="width:${Math.min(100, m/top*100)}%"></i><b><img src="${src('i_medal')}"> ${m} / ${top}</b></div></div></div>
@@ -2155,8 +2292,8 @@ function openEvent(){
       return `<div class="troph ${got?'got':''} ${can?'can':''}"><div class="tn">🏆 ${t.n}</div><div class="reward">${trophyRewardHtml(t.r)}</div>
         ${got ? '<i class="chk">✓</i>' : `<button class="gbtn gold" data-tr="${k}" ${can?'':'disabled'}>받기</button>`}</div>`; }).join('')}</div>
     <div class="row-btns">${S.where === 'fest' ? '' : `<button class="gbtn blue" id="goFest" ${ok?'':'disabled'}>${ok ? '축제 섬으로 가기' : `레벨 ${CONFIG.eventLevel}부터 갈 수 있어요`}</button>`}</div>
-    <p class="hint">기간이 끝나면 새로운 축제 섬이 열리고 메달 기록은 처음부터 다시 시작해요.</p>`;
-  showModal('달빛 축제', body);
+    <p class="hint">기간이 끝나면 다음 축제(<b>${nx.name}</b>)가 열리고, 메달 기록과 축제 미션은 처음부터 다시 시작해요.</p>`;
+  showModal(festTheme().name, body);
   root.querySelectorAll('[data-tr]').forEach(b => b.onclick = () => { const k = +b.dataset.tr, t = TROPHY[k]; if (S.event.medals < t.n || S.event.claimed.includes(k)) return;
     S.event.claimed.push(k); const r = t.r;
     if (r.gems) S.gems += r.gems; if (r.coins) S.coins += r.coins; if (r.dynamite) addItem('dynamite', r.dynamite);
@@ -2293,7 +2430,7 @@ function makeTask(){
   const pool = opts.filter(o => o.kind === kind), t = pool[Math.floor(Math.random()*pool.length)];
   t.id = S.nextTaskId++;
   t.base = t.kind === 'harvest' ? (S.stats.harvest[t.key]||0) : t.kind === 'make' ? (S.stats.made[t.key]||0) : (S.stats[t.kind]||0);
-  t.coins = 40 + lv*15; t.xp = 15 + lv*5; const r = Math.random(); t.gems = r < .3 ? 1 : 0; t.dyn = r > .8 ? 1 : 0;
+  t.coins = mulC(40 + lv*15); t.xp = 15 + lv*5; const r = Math.random(); t.gems = r < .3 ? 1 : 0; t.dyn = r > .8 ? 1 : 0;
   return t;
 }
 function openTasks(){
@@ -2373,9 +2510,9 @@ function openBuilding(k){
   if (k === 'board') body += `<div class="row-btns"><button class="gbtn gold" id="goOrd">주문판 열기</button></div>`;
   showModal(O.name, body);
   const on = (id, f) => { const e = document.getElementById(id); if (e) e.onclick = f; };
-  on('doBuild', () => { if (!canPay(B.build)) return; pay(B.build); S.bld[k] = 1; sfx('level'); gainXP(20);
+  on('doBuild', () => { if (!canPay(B.build)) return; pay(B.build); S.bld[k] = 1; sfx('build'); gainXP(20);
     toast(`${O.name} 완성!`); if (world.home) { const [x,y] = objPos(k); burst(x, y, '#ffd23a', 24); } save(); openBuilding(k); });
-  on('doUp', () => { const c = B.cost(lv); if (!canPay(c)) return; pay(c); S.bld[k] = lv+1; sfx('level'); gainXP(15*lv);
+  on('doUp', () => { const c = B.cost(lv); if (!canPay(c)) return; pay(c); S.bld[k] = lv+1; sfx('build'); gainXP(15*lv);
     if (k === 'cabin') S.energy = Math.min(maxEnergy(), S.energy + 10);
     toast(`${O.name} Lv${lv+1}!`); if (world.home){ const [x,y] = objPos(k); burst(x, y, '#ffd23a', 24); } updateHUD(); save(); openBuilding(k); });
   on('goBag', openBag); on('goProd', () => openProd(k)); on('goOrd', openOrders);
@@ -2388,7 +2525,7 @@ function makeOrder(){
   const r = Math.random, need = {}, kinds = 1 + (r() < .55 ? 1 : 0) + (S.level >= 4 && r() < .3 ? 1 : 0);
   for (let i=0;i<kinds;i++){ const k = pool[Math.floor(r()*pool.length)]; need[k] = (need[k]||0) + Math.max(2, Math.round((3 + S.level*1.5) * (8/ITEMS[k].value) * (.7 + r()*.6))); }
   let val = 0; for (const [k,n] of Object.entries(need)) val += n*ITEMS[k].value;
-  return {id:S.nextOrderId++, need, coins:Math.round(val*1.4*(1 + .15*((S.bld.board||1)-1))/5)*5, xp:Math.round(val/3), who:['썰매견 눈송이','대장장이 곰돌','요리사 토끼','지도 제작자 부엉'][Math.floor(r()*4)]};
+  return {id:S.nextOrderId++, need, coins:Math.round(mulC(val*1.4*(1 + .15*((S.bld.board||1)-1)))/5)*5, xp:Math.round(val/3), who:['썰매견 눈송이','대장장이 곰돌','요리사 토끼','지도 제작자 부엉'][Math.floor(r()*4)]};
 }
 function openOrders(){
   const bl = S.bld.board || 1;
@@ -2468,7 +2605,7 @@ function openMap(ch){
         <div class="medal" style="background-image:url(${src(img)})">${st && (st.qdone || st.clears) ? `<svg class="done" viewBox="0 0 40 40"><path d="M5 21l10 10L36 8" stroke="#1d6b10" stroke-width="10" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 21l10 10L36 8" stroke="#6ee04a" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>` : ''}${locked?`<div class="lock"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="12" rx="3" fill="#3a3a3a"/><path d="M8 10V7a4 4 0 018 0v3" stroke="#3a3a3a" stroke-width="2.6" fill="none"/><circle cx="12" cy="16" r="2" fill="#ffd23a"/></svg></div>`:''}</div>
         <b>${name}</b><small>${sub}</small>
         ${here?`<svg class="flag" viewBox="0 0 30 40"><line x1="4" y1="4" x2="4" y2="38" stroke="#7a4a20" stroke-width="3"/><path d="M5 5 L28 10 L5 18z" fill="#e0402a"/><circle cx="4" cy="4" r="3" fill="#ffb000"/></svg>`:''}</button>`; }).join('')}
-    <button class="evloc" data-fest><div class="medal" style="background-image:url(${src('m_fest')})"></div><b>달빛 축제</b><small>⏰ ${fmtDays(evLeft())}</small></button>
+    <button class="evloc" data-fest><div class="medal" style="background-image:url(${src(festTheme().img)})"></div><b>${festTheme().name}</b><small>⏰ ${fmtDays(evLeft())}</small></button>
     ${!chOpen ? `<div class="chlock"><b>레벨 ${CH_LV(ch)}부터 ${ch === 2 ? '배를 타고 건너갈' : '산맥을 넘어갈'} 수 있어요</b></div>` : ''}
   </div></div>`;
   root.querySelectorAll('[data-close]').forEach(b => b.onclick = closeModal);
@@ -2480,25 +2617,78 @@ function openMap(ch){
     closeModal(); if (S.where !== k) enter(k); });
 }
 
-/* 설정 */
+/* 설정: 소리(누구나) + 교사 설정(비밀번호로 잠금 가능) */
+const CFG_FIELDS = [
+  ['수업 속도', [['regenMinutes','에너지 1 충전 시간(분)',.1,.5], ['energyBase','1레벨 최대 에너지',10,10], ['energyPerLevel','레벨마다 늘어나는 최대 에너지',0,1],
+    ['napEnergy','텐트 낮잠 에너지',0,5], ['napHours','낮잠 대기 시간(시간)',0,.5], ['prodSpeed','요리·제작 시간 배율 (0.5 = 두 배 빠름)',.05,.1]]],
+  ['보상', [['coinMul','코인 보상 배율 (미션·주문·과제·상자)',0,.1], ['xpMul','경험치 배율',0,.1], ['levelUpGems','레벨업 보석',0,1],
+    ['regionClearGems','지역 완료 보석',0,1], ['regionClearCoins','지역 완료 코인',0,50], ['giftHours','일일 선물 간격(시간)',1,1]]],
+  ['지역·축제', [['chapter2Level','2장 개방 레벨',1,1], ['chapter3Level','3장 개방 레벨',1,1], ['eventLevel','축제 참가 레벨',1,1], ['eventDays','축제 한 회 기간(일)',1,1]]],
+];
+const CFG_KEYS = CFG_FIELDS.flatMap(([, f]) => f.map(x => x[0]));
+let teacherOpen = false;   // 이번 접속에서 비밀번호를 맞혔는지
+const pinHash = pin => hashKey('daram-pin:' + pin);
+const cfgCode = () => btoa(unescape(encodeURIComponent(JSON.stringify(Object.fromEntries(CFG_KEYS.filter(k => CONFIG[k] !== CONFIG_DEFAULT[k]).map(k => [k, CONFIG[k]]))))));
+function readCfgCode(code){
+  try { const o = JSON.parse(decodeURIComponent(escape(atob(code.trim())))), out = {};
+    for (const k of CFG_KEYS) if (typeof o[k] === 'number' && isFinite(o[k])) out[k] = o[k];
+    return out; } catch(e){ return null; }
+}
+function applyCfg(obj){ S.cfg = {...S.cfg, ...obj}; Object.assign(CONFIG, CONFIG_DEFAULT, S.cfg); applyChapterLevels(); save(); updateTimer(); updateHUD(); }
+// 학급 링크(주소 끝 #cfg=코드)로 들어오면 선생님 설정을 적용
+function applyClassLink(){
+  const m = (location.hash || '').match(/cfg=([A-Za-z0-9+/=%]+)/); if (!m) return;
+  const o = readCfgCode(decodeURIComponent(m[1])); if (!o) return;
+  S.cfg = {...S.cfg, ...o}; Object.assign(CONFIG, S.cfg); setTimeout(() => toast('선생님이 정한 학급 설정을 적용했어요'), 1500);
+}
 function openSettings(){
-  const body = `
+  const vol = Math.round((S.vol == null ? .7 : S.vol) * 100);
+  const sound = `<h3 class="subh">🔊 소리</h3>
     <div class="setrow"><span>효과음</span><button class="gbtn ${S.sound?'':'red'}" id="sndBtn">${S.sound?'켜짐':'꺼짐'}</button></div>
-    <div class="setrow"><span>에너지 1 충전 시간(분)<br><span class="hint">수업 시간에 맞게 조절하세요</span></span><input type="number" id="cfgRegen" min="0.1" step="0.5" value="${CONFIG.regenMinutes}"></div>
-    <div class="setrow"><span>1레벨 최대 에너지</span><input type="number" id="cfgBase" min="10" step="10" value="${CONFIG.energyBase}"></div>
-    <div class="setrow"><span>낮잠 에너지 / 대기 시간(시간)</span><span><input type="number" id="cfgNap" min="0" value="${CONFIG.napEnergy}"> <input type="number" id="cfgNapH" min="0" step="0.5" value="${CONFIG.napHours}"></span></div>
-    <div class="setrow"><span>요리·제작 시간 배율<br><span class="hint">0.5 = 두 배 빠름 · 1 = 기본</span></span><input type="number" id="cfgProd" min="0.05" step="0.1" value="${CONFIG.prodSpeed}"></div>
-    <div class="row-btns"><button class="gbtn" id="saveCfg">설정 저장</button><button class="gbtn red" id="resetAll">처음부터 다시</button></div>
-    <p class="hint" style="margin-top:14px">진행 상황은 이 기기 브라우저에만 저장돼요. 이름·사진 같은 개인정보는 저장하지 않아요.<br>그림: Canva AI 이미지 생성으로 제작.</p>`;
+    <div class="setrow"><span>배경음악<br><span class="hint">캠프·지역·축제마다 곡이 달라요</span></span><button class="gbtn ${S.music?'':'red'}" id="bgmBtn">${S.music?'켜짐':'꺼짐'}</button></div>
+    <div class="setrow"><span>음량 <b id="volV">${vol}</b></span><input type="range" id="volR" min="0" max="100" step="5" value="${vol}" style="width:150px"></div>`;
+  const locked = S.pinHash && !teacherOpen;
+  const teacher = locked
+    ? `<h3 class="subh">🔒 교사 설정</h3><div class="setrow"><span>교사 비밀번호</span><span><input type="password" id="pinIn" inputmode="numeric" maxlength="8" style="width:90px;font-size:16px;padding:4px 6px;border-radius:8px;border:2px solid var(--paper-d)"> <button class="gbtn" id="pinOk">열기</button></span></div>`
+    : `<h3 class="subh">🧑‍🏫 교사 설정</h3>` + CFG_FIELDS.map(([title, f]) => `<div class="hint" style="margin-top:8px;font-weight:bold">${title}</div>` +
+        f.map(([k, label, min, step]) => `<div class="setrow"><span>${label}${CONFIG[k] !== CONFIG_DEFAULT[k] ? ' <em style="color:#c0392b;font-style:normal">●</em>' : ''}</span>
+          <input type="number" data-cfg="${k}" min="${min}" step="${step}" value="${CONFIG[k]}"></div>`).join('')).join('') + `
+      <div class="row-btns"><button class="gbtn" id="saveCfg">설정 저장</button><button class="gbtn blue" id="defCfg">기본값으로</button></div>
+      <h3 class="subh">📋 학급에 같은 설정 나누기</h3>
+      <p class="hint">아래 <b>설정 코드</b>를 복사해 학생 기기의 이 칸에 붙여 넣거나, <b>학급 링크</b>로 접속하게 하면 같은 설정이 적용돼요. (진행 기록은 옮겨지지 않아요)</p>
+      <div class="setrow"><input id="codeBox" value="${cfgCode()}" style="flex:1;font-size:13px;padding:6px;border-radius:8px;border:2px solid var(--paper-d)"><button class="gbtn" id="codeCopy">복사</button></div>
+      <div class="row-btns"><button class="gbtn blue" id="codeApply">붙여 넣은 코드 적용</button><button class="gbtn" id="linkCopy">학급 링크 복사</button></div>
+      <h3 class="subh">🔑 교사 비밀번호</h3>
+      <div class="setrow"><span>${S.pinHash ? '비밀번호가 걸려 있어요' : '비밀번호를 걸면 학생이 교사 설정을 바꿀 수 없어요'}</span>
+        <span><input type="password" id="pinNew" inputmode="numeric" maxlength="8" placeholder="숫자 4~8자리" style="width:110px;font-size:15px;padding:4px 6px;border-radius:8px;border:2px solid var(--paper-d)"> <button class="gbtn" id="pinSet">${S.pinHash ? '바꾸기' : '걸기'}</button>${S.pinHash ? ' <button class="gbtn red" id="pinDel">풀기</button>' : ''}</span></div>`;
+  const body = sound + teacher + `
+    <div class="row-btns" style="margin-top:14px"><button class="gbtn red" id="resetAll">처음부터 다시</button></div>
+    <p class="hint" style="margin-top:14px">진행 상황은 이 기기 브라우저에만 저장돼요. 이름·사진 같은 개인정보는 저장하지 않아요. '처음부터 다시'를 해도 교사 설정과 비밀번호는 남아요.<br>그림: Canva AI 이미지 생성으로 제작. 소리: 브라우저에서 즉석 합성.</p>`;
   showModal('설정', body);
-  document.getElementById('sndBtn').onclick = () => { S.sound = !S.sound; save(); openSettings(); };
-  document.getElementById('saveCfg').onclick = () => {
-    const num = (id, min) => Math.max(min, parseFloat(document.getElementById(id).value) || min);
-    S.cfg = {regenMinutes:num('cfgRegen',.1), energyBase:num('cfgBase',10), napEnergy:num('cfgNap',0), napHours:num('cfgNapH',0), prodSpeed:num('cfgProd',.05)};
-    Object.assign(CONFIG, S.cfg); save(); updateTimer(); toast('설정을 저장했어요'); closeModal(); };
-  const rb = document.getElementById('resetAll');   // confirm() 대신 두 번 누르기로 확인
+  const $ = id => document.getElementById(id), on = (id, f) => { const b = $(id); if (b) b.onclick = f; };
+  on('sndBtn', () => { S.sound = !S.sound; audio(); setVolume(); save(); openSettings(); });
+  on('bgmBtn', () => { S.music = !S.music; audio(); setVolume(); if (S.music) playMusic(songFor(S.where)); else stopMusic(); save(); openSettings(); });
+  $('volR').oninput = e => { S.vol = e.target.value / 100; $('volV').textContent = e.target.value; audio(); setVolume(); save(); };
+  on('pinOk', () => { if (pinHash($('pinIn').value) === S.pinHash){ teacherOpen = true; openSettings(); } else { sfx('no'); toast('비밀번호가 달라요'); } });
+  on('saveCfg', () => { const o = {};
+    root.querySelectorAll('[data-cfg]').forEach(i => { const f = CFG_FIELDS.flatMap(([, f]) => f).find(x => x[0] === i.dataset.cfg);
+      o[i.dataset.cfg] = Math.max(f[2], parseFloat(i.value) || f[2]); });
+    applyCfg(o); toast('설정을 저장했어요'); openSettings(); });
+  on('defCfg', () => { S.cfg = {}; Object.assign(CONFIG, CONFIG_DEFAULT); applyChapterLevels(); save(); updateTimer(); updateHUD(); toast('기본값으로 되돌렸어요'); openSettings(); });
+  const copy = (text, msg) => { const done = () => toast(msg);
+    if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, () => { $('codeBox').value = text; $('codeBox').select(); toast('복사가 막혀 있어요. 칸의 글자를 직접 복사하세요'); });
+    else { $('codeBox').value = text; $('codeBox').select(); toast('칸의 글자를 직접 복사하세요'); } };
+  on('codeCopy', () => copy($('codeBox').value, '설정 코드를 복사했어요'));
+  on('linkCopy', () => copy(location.href.split('#')[0] + '#cfg=' + encodeURIComponent(cfgCode()), '학급 링크를 복사했어요'));
+  on('codeApply', () => { const o = readCfgCode($('codeBox').value); if (!o){ sfx('no'); toast('코드가 올바르지 않아요'); return; }
+    S.cfg = {}; applyCfg(o); toast('설정 코드를 적용했어요'); openSettings(); });
+  on('pinSet', () => { const v = $('pinNew').value; if (!/^\d{4,8}$/.test(v)){ sfx('no'); toast('숫자 4~8자리로 정해 주세요'); return; }
+    S.pinHash = pinHash(v); teacherOpen = false; save(); toast('교사 비밀번호를 걸었어요'); openSettings(); });
+  on('pinDel', () => { delete S.pinHash; save(); toast('비밀번호를 풀었어요'); openSettings(); });
+  const rb = $('resetAll');   // confirm() 대신 두 번 누르기로 확인
   rb.onclick = () => { if (!rb.dataset.sure){ rb.dataset.sure = 1; rb.textContent = '정말 지워요? 한 번 더 누르기'; return; }
-    try { localStorage.removeItem(SAVE_KEY); } catch(e){} S = freshState(); closeModal(); enter('home'); };
+    const keep = {cfg:S.cfg, pinHash:S.pinHash, sound:S.sound, music:S.music, vol:S.vol};
+    try { localStorage.removeItem(SAVE_KEY); } catch(e){} S = Object.assign(freshState(), keep); migrate(); closeModal(); enter('home'); };
 }
 
 /* ══════════ 버튼 연결·시작 ══════════ */
@@ -2517,10 +2707,10 @@ document.getElementById('enPlus').onclick = () => openShop(false);
 document.querySelectorAll('[data-shop]').forEach(b => b.onclick = () => openShop(false));
 document.getElementById('gearBtn').onclick = openSettings;
 addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
-document.addEventListener('visibilitychange', () => { if (!document.hidden) updateTimer(); else save(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden){ updateTimer(); if (AC) AC.resume(); } else { save(); if (AC) AC.suspend(); } });
 
 (async function start(){
-  load(); resize();
+  load(); evCheck(); resize();
   await loadImages();
   tickEnergy();
   enter(S.where && (S.where === 'home' || REGIONS[S.where]) ? S.where : 'home');
