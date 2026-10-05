@@ -749,6 +749,14 @@ const ACHS = [
   { id:"abyss5",      name:"심연 탐험가",   icon:"🌀", desc:"무한 심연 5층 돌파",         check:s=>((s.abyss&&s.abyss.best)||0)>=5,  rw:{pearl:2} },
   { id:"abyss10",     name:"심연의 항해사", icon:"🌌", desc:"무한 심연 10층 돌파",        check:s=>((s.abyss&&s.abyss.best)||0)>=10, rw:{pearl:3} },
   { id:"abyss20",     name:"끝없는 심연",   icon:"♾️", desc:"무한 심연 20층 돌파",        check:s=>((s.abyss&&s.abyss.best)||0)>=20, rw:{pearl:5} },
+  { id:"salv1",       name:"첫 인양",       icon:"⚓", desc:"고철 인양기 건설",          check:s=>cntBld(s,"salvager")>=1, rw:{scrap:30} },
+  { id:"salvMax",     name:"인양 명인",     icon:"🏗️", desc:"고철 인양기 Lv8 달성",      check:s=>[...s.tiles.values()].some(t=>t.b==="salvager"&&t.lv>=8), rw:{pearl:1} },
+  { id:"scrap2k",     name:"고철 수집가",   icon:"⚙️", desc:"누적 고철 2,000 획득",      check:s=>(s.stats.totScrap||0)>=2000,  rw:{parts:15} },
+  { id:"scrap10k",    name:"고철 거상",     icon:"🏭", desc:"누적 고철 10,000 획득",     check:s=>(s.stats.totScrap||0)>=10000, rw:{pearl:1} },
+  { id:"net100",      name:"그물 장인",     icon:"🥅", desc:"그물로 자원 100개 자동 수집", check:s=>(s.stats.autoPick||0)>=100,  rw:{coin:300} },
+  { id:"net1000",     name:"바다 청소부",   icon:"🧹", desc:"그물로 자원 1,000개 자동 수집", check:s=>(s.stats.autoPick||0)>=1000, rw:{pearl:1} },
+  { id:"netTech",     name:"그물 박사",     icon:"🌐", desc:"그물·인양기 연구 3종 완료",  check:s=>["fineMesh","deepHook","tidalNet"].every(k=>s.tech.includes(k)), rw:{parts:20} },
+  { id:"perkAll",     name:"진주 수집가",   icon:"🫧", desc:"진주 특전 14종 모두 Lv1 이상", check:s=>PERK_KEYS.every(k=>(s.perks&&s.perks[k]||0)>0), rw:{pearl:2} },
   { id:"legend1",     name:"전설의 섬 발견", icon:"🌟", desc:"전설의 섬 원정 성공",       check:s=>(s.expoDone.legend||0)>=1, rw:{pearl:5} },
   { id:"shark50",     name:"작살의 달인",   icon:"🔱", desc:"상어 직접 공격 50회",       check:s=>(s.stats.sharkHit||0)>=50, rw:{scrap:120} },
   { id:"crisis5",     name:"위기 관리자",   icon:"🧯", desc:"위기 이벤트 5회 극복",      check:s=>(s.stats.crisis||0)>=5,  rw:{coin:600,parts:12} },
@@ -766,13 +774,16 @@ const QUESTS = [
   { id:"q6",  t:"마실 물이 필요하다",          d:"빗물 수집기 1개", goal:s=>[cntBld(s,"raincol"),1],       rw:{water:40},           tip:"식수가 떨어지면 주민이 떠남." },
   { id:"q7",  t:"기술을 연구하자",             d:"연구소 건설 후 기술 1개", goal:s=>[s.tech.length,1],     rw:{parts:4,coin:50},    tip:"연구소가 있어야 연구 탭이 열림." },
   { id:"q8",  t:"공동체를 키우자",             d:"주민 10명", goal:s=>[s.people.length,10],                rw:{coin:120},           tip:"인구 수용은 텐트·오두막이 결정함." },
+  { id:"q8b", t:"그물을 치자",                 d:"자원 그물 1개 건설", goal:s=>[cntBld(s,"netpost"),1],    rw:{wood:120},           tip:"건설 → 시설 → 자원 그물. 떠다니는 자원을 자동으로 주움." },
   { id:"q9",  t:"고철을 모으자",               d:"고철 50 보유", goal:s=>[s.res.scrap,50],                 rw:{parts:5},            tip:"바다의 녹슨 통과 원정으로 고철을 얻음." },
+  { id:"q9b", t:"고철을 직접 건지자",          d:"고철 인양기 건설 + 일꾼 1명", goal:s=>[s.tiles&&[...s.tiles.values()].some(t=>t.b==="salvager"&&t.w>0)?1:0,1], rw:{scrap:40}, tip:"건설 → 생산 → 고철 인양기. 건물을 탭해 ＋로 일꾼을 넣을 것." },
   { id:"q10", t:"부품을 생산하자",             d:"작업장에서 부품 10 생산", goal:s=>[s.stats.totParts,10],  rw:{coin:200},           tip:"인양 기술 연구 → 작업장 건설." },
   { id:"q11", t:"뗏목을 지켜라",               d:"작살포 1개 건설", goal:s=>[cntBld(s,"harpoon"),1],       rw:{scrap:40},           tip:"상어 습격은 시간이 지날수록 강해짐." },
   { id:"q12", t:"첫 원정을 떠나자",            d:"원정 1회 완료", goal:s=>[s.stats.expo,1],                rw:{coin:150},           tip:"조선술 연구 → 부두 건설 → 탐험가 파견." },
   { id:"q13", t:"전력을 생산하자",             d:"전력 생산 5 이상", goal:s=>[Math.floor(s.cache.powerGen),5], rw:{parts:8},        tip:"태양광은 낮에만 작동함." },
   { id:"q14", t:"마을을 확장하자",             d:"바닥 25칸", goal:s=>[s.tiles.size,25],                   rw:{coin:300},           tip:"창고를 올려 저장 한도를 늘릴 것." },
   { id:"q15", t:"교역을 시작하자",             d:"코인 1,000 보유", goal:s=>[s.res.coin,1000],             rw:{parts:12},           tip:"교역소에서 남는 자원을 팔 수 있음." },
+  { id:"q15b", t:"그물 기술을 익히자",         d:"촘촘한 그물코 + 심해 갈고리 연구", goal:s=>[(s.tech.includes("fineMesh")?1:0)+(s.tech.includes("deepHook")?1:0),2], rw:{parts:12,coin:200}, tip:"그물 낚시·인양 기술을 먼저 연구해야 열림." },
   { id:"q16", t:"습격을 막아내자",             d:"습격 10회 격퇴", goal:s=>[s.stats.raidWin,10],           rw:{coin:500,parts:10},  tip:"경비를 작살포에 배치할 것." },
   { id:"q16b", t:"대해일을 견뎌라",           d:"대해일 1회 생존", goal:s=>[s.stats.tempest||0,1],        rw:{parts:15,coin:300},  tip:"거대한 파도를 탭해서 부수면 피해가 줄어듦." },
   { id:"q16c", t:"심해의 괴물",               d:"거대 문어 1회 격퇴", goal:s=>[s.stats.kraken||0,1],       rw:{pearl:1,coin:500},   tip:"촉수를 탭해 공격하고, 작살포·대포가 자동으로 지원 사격함." },
@@ -780,11 +791,23 @@ const QUESTS = [
   { id:"q16e", t:"심연의 해룡",               d:"심해 해룡 1회 격퇴", goal:s=>[s.stats.serpent||0,1],      rw:{pearl:2},            tip:"해룡이 고개를 들면 목의 푸른 약점을 재빨리 탭할 것." },
   { id:"q17", t:"심해로",                      d:"심해 탐사 연구", goal:s=>[s.tech.includes("deepSea")?1:0,1], rw:{pearl:1},        tip:"레이더 탑과 항해술이 선행 기술임." },
   { id:"q18", t:"대항해의 준비",               d:"주민 25명 + 기술 12개", goal:s=>[Math.min(s.people.length/25,s.tech.length/12)*100|0,100], rw:{coin:1000}, tip:"조건을 채우면 새 해류로 항해(프레스티지)가 열림." },
+  { id:"q18b", t:"진주 특전을 사자",           d:"진주 특전 1개 구매", goal:s=>[PERK_KEYS.some(k=>(s.perks&&s.perks[k]||0)>0)?1:0,1], rw:{pearl:1}, tip:"기록 → 🫧 진주 상점. 자동 수집 그물을 추천함." },
   { id:"q19", t:"미지의 군도",                 d:"진주 채취법 연구", goal:s=>[s.tech.includes("pearlDiving")?1:0,1], rw:{pearl:2},   tip:"엔드 콘텐츠 원정이 해금됨." },
   { id:"q20", t:"해상 도시",                   d:"주민 50명", goal:s=>[s.people.length,50],                rw:{pearl:3,coin:3000},  tip:"공동 숙소와 공동체 정신이 필요함." },
   { id:"q21", t:"전설의 섬",                   d:"전설의 섬 원정 성공", goal:s=>[s.expoDone.legend||0,1],    rw:{pearl:5},            tip:"보스 4종을 모두 한 번씩 물리치면 원정지가 나타남." },
   { id:"q22", t:"심연의 군주",                 d:"최종 보스 격파", goal:s=>[s.stats.final||0,1],           rw:{pearl:5},            tip:"전설의 섬에서 돌아온 다음 날 오후에 나타남. 3단계 전투임." },
 ];
+
+/* 퀘스트 목록이 바뀌기 전(버전 1)의 id 순서 : 예전 저장본의 진행 위치를 id로 옮겨 줌 */
+const QUEST_V = 2;
+const OLD_QUEST_IDS = ["q1","q2","q3","q4","q5","q6","q7","q8","q9","q10","q11","q12","q13","q14","q15","q16","q16b","q16c","q16d","q16e","q17","q18","q19","q20","q21","q22"];
+function migrateQuests(s, o){
+  if(o.questV>=QUEST_V) return;
+  const n=o.quests||0;
+  if(n>=OLD_QUEST_IDS.length) s.quests=QUESTS.length;
+  else { const i=QUESTS.findIndex(q=>q.id===OLD_QUEST_IDS[n]); s.quests = i<0? n : i; }
+  s.questV=QUEST_V;
+}
 
 /* 보조: 특정 건물 개수 */
 function cntBld(s, id){ let n=0; s.tiles.forEach(t=>{ if(t.b===id) n++; }); return n; }
@@ -845,7 +868,7 @@ function newState(carry){
     people: [],
     tech: [], research: null,
     expos: [], expoDone: {},
-    quests: 0, questRw: [],
+    quests: 0, questRw: [], questV: 2,
     achs: [],
     perks: carry? carry.perks : {},
     pearl: 0,
@@ -864,7 +887,7 @@ function newState(carry){
              expo:0, raidWin:0, raidLose:0, storm:0, rescued:0, lost:0, playTime:0,
              tempest:0, kraken:0, sharkHit:0, crisis:0,
              warship:0, serpent:0, hardClear:0, intercept:0,
-             final:0, finalLose:0, finalHard:0, endingSeen:0 },
+             final:0, finalLose:0, finalHard:0, endingSeen:0, totScrap:0, autoPick:0 },
     finalStage: 0, finalDay: null, finalWarned: 0,     // 최종 보스 : 0 봉인 · 1 예고됨 · 2 격파
     ch2: newCh2(),                                     // 2장 '별빛 등대' 진행
     ch3: newCh2(),                                     // 3장 '새벽섬의 등대' 진행
@@ -941,6 +964,7 @@ function gain(k,n,silent){
   if(k==="fish") S.stats.totFish+=got;
   if(k==="food") S.stats.totFood+=got;
   if(k==="parts") S.stats.totParts+=got;
+  if(k==="scrap") S.stats.totScrap=(S.stats.totScrap||0)+got;
   if(k==="coin") S.stats.totCoin+=got;
   return got;
 }
@@ -989,6 +1013,7 @@ function stateFromRaw(raw){
     const defStats = { ...s.stats };
     Object.assign(s, o);
     s.stats = Object.assign(defStats, o.stats||{});   // 이전 버전 저장본에 없는 통계 항목 보충
+    migrateQuests(s, o);                               // 퀘스트 추가 전 저장본 : 진행 위치 보정
     if(s.bossDay==null) s.bossDay = Math.max(6, (s.env&&s.env.day||1)+2);
     if(s.nextCrisis==null) s.nextCrisis = 380;
     if(s.bossN==null) s.bossN = 0;
@@ -3514,6 +3539,7 @@ function collectFloat(f, auto){
   const i=S.floats.indexOf(f); if(i<0) return;
   const mul = 1 + 0.25*perkLv(S,"bigHands");
   if(!auto) S.stats.tap++;
+  else S.stats.autoPick=(S.stats.autoPick||0)+1;
   if(f.k==="person"){
     const c=computeCache(S);
     if(S.people.length >= c.popCap){
