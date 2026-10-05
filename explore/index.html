@@ -68,8 +68,8 @@ canvas#game.dragging{cursor:grabbing}
 .money .track{min-width:130px}
 .money .track i{display:none}
 
-/* ── 지역 진행 카드 ── */
-.quest{position:fixed;left:calc(env(safe-area-inset-left) + 12px);top:calc(env(safe-area-inset-top) + 172px);
+/* ── 지역 진행 카드(오른쪽) ── */
+.quest{position:fixed;right:calc(env(safe-area-inset-right) + 12px);top:calc(env(safe-area-inset-top) + 156px);
   background:rgba(255,244,224,.94);border:3px solid var(--wood-l);border-radius:14px;padding:8px 12px;
   box-shadow:0 3px 0 rgba(0,0,0,.2);font-size:14px;min-width:160px}
 .quest h4{margin:0 0 4px;font-size:15px;color:var(--wood-d)}
@@ -111,7 +111,7 @@ canvas#game.dragging{cursor:grabbing}
   background:radial-gradient(ellipse 30% 34% at 50% 52%, rgba(10,14,30,0) 0%, rgba(10,14,30,0) 55%, rgba(10,14,30,.72) 100%);
   animation:fadein .2s}
 .pv > *{pointer-events:auto}
-body.pv-open .hud, body.pv-open .events, body.pv-open .quest, body.pv-open .dock, body.pv-open .gear{display:none}
+body.pv-open .hud, body.pv-open .events, body.pv-open .quest, body.pv-open .dock, body.pv-open .gear, body.pv-open .qbtns{display:none}
 @keyframes fadein{from{opacity:0}}
 .pv-top{position:absolute;top:calc(env(safe-area-inset-top) + 14px);left:0;right:0;display:flex;justify-content:center;align-items:center;gap:26px}
 .pv-top h2{margin:0;font-size:clamp(28px,4vw,44px);color:#ffd84a;-webkit-text-stroke:1.5px #6a3300;paint-order:stroke fill;
@@ -169,6 +169,57 @@ body.pv-open .hud, body.pv-open .events, body.pv-open .quest, body.pv-open .dock
   .dock{gap:2px}.dock.left{left:6px}.dock.right{right:6px}
   .btn-round{width:58px;height:66px}.btn-round img{width:50px;height:46px}.btn-round span{font-size:12px;padding:1px 6px}
   .btn-round .plusb{width:22px;height:22px;font-size:16px;bottom:18px}
+}
+
+/* ── 이야기 미션 화면(원작 '후속 조치'·'구멍' 화면 구성) ── */
+.qv{position:fixed;inset:0;z-index:40;background:rgba(10,14,30,.66);animation:fadein .2s;overflow:auto}
+.qv-top{text-align:center;padding-top:calc(env(safe-area-inset-top) + 16px)}
+.qv-top h2{margin:0;font-size:clamp(26px,4vw,40px);color:#ffd84a;-webkit-text-stroke:1.5px #6a3300;paint-order:stroke fill;text-shadow:0 3px 0 #6a3300}
+.qv-top small{color:#ffe9b8;font-size:15px}
+.qv-talk{display:flex;align-items:center;max-width:900px;margin:14px auto 0;padding:0 16px}
+.portrait{width:150px;height:150px;flex:none;border-radius:50%;border:6px solid #d98a3a;background:#fff4e0 center 18%/cover no-repeat;
+  box-shadow:0 4px 0 rgba(0,0,0,.35);position:relative;z-index:2}
+.portrait.big{width:190px;height:190px}
+.bubble{background:rgba(20,18,24,.85);color:#fff;border-radius:0 22px 22px 0;padding:14px 22px 14px 40px;margin-left:-26px;flex:1;font-size:clamp(15px,2vw,20px);line-height:1.5}
+.bubble b{color:#ffd84a;font-size:15px}.bubble p{margin:4px 0 0}
+.qv-reward{display:flex;justify-content:center;align-items:center;gap:16px;margin:12px 0;color:#fff;font-size:22px;flex-wrap:wrap}
+.qv-reward em{color:#ffd84a;font-style:normal;font-size:18px}
+.qv-reward span{display:flex;align-items:center;gap:4px}.qv-reward img{width:36px;height:36px;object-fit:contain}
+.qv-objs{display:flex;flex-direction:column;gap:10px;max-width:760px;margin:0 auto;padding:0 16px}
+.qobj{display:flex;align-items:center;gap:14px;background:linear-gradient(#fff4e0,#f6e2bf);border-radius:16px;padding:10px 18px;box-shadow:0 4px 0 rgba(0,0,0,.3);position:relative;min-height:74px}
+.qobj img{width:64px;height:56px;object-fit:contain}
+.qobj span{flex:1;font-size:clamp(15px,2vw,20px);color:#6a3a12}
+.qobj .cnt{color:#e5452d;font-size:17px}
+.chk{font-style:normal;font-size:38px;color:#3fae2a;font-weight:900;text-shadow:0 2px 0 #1d6b10}
+.seek{width:46px;height:46px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#8fd8ff,#1c7fe0);border:3px solid #fff;font-size:20px;box-shadow:0 2px 0 rgba(0,0,0,.3)}
+.qv-ok{display:block;margin:18px auto calc(env(safe-area-inset-bottom) + 20px);background:linear-gradient(#6ee04a,#2f9a1c);color:#fff;font-size:28px;font-weight:900;
+  border:3px solid #1f6e10;border-radius:18px;padding:8px 60px;text-shadow:0 2px 0 #1d5a0d;box-shadow:0 4px 0 #1d5a0d}
+.qv-ok:disabled{filter:grayscale(1) opacity(.6)}
+.rv-head{display:flex;align-items:center;justify-content:center;gap:24px;margin-top:10px}
+.stage{color:#fff;font-size:24px}
+.rv-cards{display:flex;justify-content:center;gap:14px;flex-wrap:wrap;margin-top:16px;padding:0 16px}
+.rcard{width:220px;background:linear-gradient(#fff6e4,#f6e2bf);border-radius:20px;padding:12px;text-align:center;box-shadow:0 4px 0 rgba(0,0,0,.3);display:flex;flex-direction:column;align-items:center;gap:6px}
+.rcard h4{margin:0;font-size:20px;color:#6a3a12;font-weight:500}
+.rcard img{width:90px;height:76px;object-fit:contain}
+.rcard b{font-size:24px;color:#6a3a12}.rcard b.lack{color:#e5452d}
+.rcard .gbtn{font-size:20px;padding:6px 34px}
+/* 왼쪽 미션 단추 */
+.qbtns{position:fixed;left:calc(env(safe-area-inset-left) + 12px);top:calc(env(safe-area-inset-top) + 168px);display:flex;flex-direction:column;gap:10px}
+.qbtn{position:relative;width:70px;display:flex;flex-direction:column;align-items:center}
+.qbtn .portrait{width:64px;height:64px;border-width:4px}
+.qbtn small{margin-top:-8px;background:rgba(30,30,40,.85);color:#fff;border-radius:8px;padding:0 8px;font-size:12px;position:relative;z-index:3}
+.qbtn em{position:absolute;top:-4px;right:0;background:#ffd23a;color:#6b3b00;width:24px;height:24px;border-radius:50%;font-style:normal;font-weight:900;
+  display:grid;place-items:center;border:2px solid #fff;z-index:3;animation:bagpulse 1s infinite}
+.loc .done{position:absolute;right:2%;bottom:4%;width:40%;aspect-ratio:1;z-index:2}
+@media (max-width:700px){
+  .portrait{width:96px;height:96px;border-width:4px}.portrait.big{width:110px;height:110px}
+  .bubble{padding:10px 14px 10px 30px;margin-left:-20px}
+  .qobj{padding:8px 10px;gap:8px;min-height:60px}.qobj img{width:44px;height:40px}
+  .rcard{width:150px}.rcard .gbtn{padding:4px 18px}
+  .qbtns{top:calc(env(safe-area-inset-top) + 222px)}
+  .qbtn .portrait{width:52px;height:52px}
+  .qv .pv-x{top:calc(env(safe-area-inset-top) + 8px);right:10px}
+  .qv-top{padding-top:calc(env(safe-area-inset-top) + 40px)}
 }
 
 /* 시장·과제·도감 */
@@ -319,7 +370,7 @@ body.pv-open #toast{top:auto;bottom:calc(env(safe-area-inset-bottom) + 260px)}
   .gear{top:calc(env(safe-area-inset-top) + 158px)}
   .energy{position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top) + 104px);flex:none}
   #energyTrack{width:190px}
-  .quest{top:calc(env(safe-area-inset-top) + 222px)}
+  .quest{top:calc(env(safe-area-inset-top) + 214px)}
   .money .track{min-width:84px}
   .frame h3{font-size:18px}
   .scroll{border-left-width:12px;border-right-width:12px;aspect-ratio:auto;height:min(92vh,calc((100vw - 20px)*1.3))}
@@ -360,6 +411,7 @@ body.pv-open #toast{top:auto;bottom:calc(env(safe-area-inset-bottom) + 260px)}
   <button class="ev" id="evShop"><img data-img="u_shop" alt=""><span>상점</span></button>
   <button class="ev" id="evGift"><img data-img="u_gift" alt=""><span id="evGiftT">선물</span><em class="dot hidden" id="giftDot">!</em></button>
 </div>
+<div class="qbtns" id="qbtns"></div>
 <div class="quest" id="quest"></div>
 <button class="gear" id="gearBtn" aria-label="설정"><svg viewBox="0 0 24 24"><path d="M19.4 13a7.7 7.7 0 000-2l2.1-1.6-2-3.5-2.5 1a7.6 7.6 0 00-1.7-1L14.9 3h-4l-.4 2.9a7.6 7.6 0 00-1.7 1l-2.5-1-2 3.5L6.4 11a7.7 7.7 0 000 2l-2.1 1.6 2 3.5 2.5-1c.5.4 1.1.7 1.7 1l.4 2.9h4l.4-2.9c.6-.3 1.2-.6 1.7-1l2.5 1 2-3.5zM12.9 15.5a3.5 3.5 0 110-7 3.5 3.5 0 010 7z"/></svg></button>
 
@@ -496,6 +548,13 @@ const OBJS = {
   barn:     {name:'외양간',      img:'barn',     w:1.9, fp:2, fixed:true, act:'barn',   label:'외양간',   bld:'barn', animal:'cow'},
   field:    {name:'밭',          img:'f_empty',  w:1.95,fp:2, fixed:true, act:'field',  flat:true},
   _blk:     {fixed:true, hidden:true},
+  // 미션 수리 지점(고치기 전 / 고친 뒤)
+  fix_bridge:{name:'무너진 다리', img:'fix_bridge', w:1.15, fixed:true, act:'repair', repair:true},
+  fix_well:  {name:'막힌 우물',   img:'fix_well',   w:1.0,  fixed:true, act:'repair', repair:true},
+  fix_fence: {name:'부서진 울타리',img:'fix_fence', w:1.1,  fixed:true, act:'repair', repair:true},
+  done_bridge:{img:'done_bridge', w:1.15, fixed:true},
+  done_well:  {img:'done_well',   w:1.0,  fixed:true},
+  done_fence: {img:'done_fence',  w:1.1,  fixed:true},
   husky:    {name:'썰매견 눈송이',img:'husky',   w:.72, fixed:true, act:'pet'},
   deco_spruce:{img:'spruce',w:.8,fixed:true}, deco_oak:{img:'oak',w:.98,fixed:true}, deco_redwood:{img:'redwood',w:.62,fixed:true},
   deco_flowers:{img:'flowers',w:.72,fixed:true}, deco_bush:{img:'berrybush',w:.72,fixed:true},
@@ -520,6 +579,81 @@ const REGIONS = {
             mix:{cactus:16,sandstone:16,goldrock:8,boulder:8,driftwood:6,twigpile:8,wall:6,orerock:6,claypit:4,bigrock:5}},
   volcano: {ch:2, name:'잠든 화산 기슭', img:'m_volcano', lv:17, tex:'t_ash', tint:'rgba(0,0,0,0)',
             mix:{obsidian:16,burnttree:16,firecrystal:8,coalrock:10,boulder:8,goldrock:4,orerock:6,bigrock:6}},
+};
+
+/* ── 등장인물 ── */
+const NPCS = {
+  husky:     {name:'썰매견 눈송이', img:'npc_husky'},
+  farmer:    {name:'보리 할아버지', img:'npc_farmer'},
+  carpenter: {name:'목수 단단',     img:'npc_carpenter'},
+};
+/* ── 지역 이야기 미션: 수리 지점 2곳 + 미션 3단계(마지막은 룬 석판) ──
+   목표 종류: clear(그 장애물 n개 치우기) · get(그 자원 n개 얻기) · fix(수리 지점 고치기) · rune(룬 석판 모으기) */
+const STORY = {
+  canyon:{repairs:[{kind:'bridge', name:'끊어진 출렁다리', need:{wood:6, twig:8}}, {kind:'well', name:'막힌 옛 우물', need:{stone:10, wood:4}}],
+    quests:[
+      {npc:'husky', title:'길을 찾아라', text:'킁킁! 계곡 안쪽에서 시원한 바람 냄새가 나요. 길을 막은 나뭇가지부터 치우고 목재를 모아 봐요!',
+       objs:[{t:'clear', o:'twigpile', n:5}, {t:'get', i:'wood', n:8}], reward:{xp:30, coins:60}},
+      {npc:'carpenter', title:'출렁다리 고치기', text:'계곡을 건너는 출렁다리가 끊어졌어요. 목재와 나뭇가지만 있으면 내가 금방 고쳐 줄게요!',
+       objs:[{t:'fix', s:0}, {t:'clear', o:'berrybush', n:4}], reward:{xp:50, gems:2, dynamite:1}},
+      {npc:'farmer', title:'폭포 너머의 비밀', text:'옛 우물을 다시 쓰면 마을이 살아날 게다. 그리고 이 계곡 어딘가에 룬 석판이 잠들어 있단다.',
+       objs:[{t:'fix', s:1}, {t:'rune', n:3}], reward:{xp:80, coins:150, gems:3}}]},
+  nest:{repairs:[{kind:'fence', name:'부서진 울타리 문', need:{plank:3, twig:6}}, {kind:'well', name:'말라 버린 우물', need:{stone:12, clay:4}}],
+    quests:[
+      {npc:'farmer', title:'둥지 둘레 정리', text:'거인 나무 둥지 근처가 엉망이구나. 덤불을 치우고 베리를 모아 오렴. 새들이 좋아할 게다.',
+       objs:[{t:'clear', o:'berrybush', n:6}, {t:'get', i:'berry', n:12}], reward:{xp:40, coins:80}},
+      {npc:'carpenter', title:'울타리 다시 세우기', text:'둥지로 가는 울타리 문이 부서졌어요. 판자만 구해 오면 튼튼하게 세워 줄게요!',
+       objs:[{t:'fix', s:0}, {t:'clear', o:'oak', n:4}], reward:{xp:60, gems:2, dynamite:1}},
+      {npc:'husky', title:'거인 나무의 수수께끼', text:'우물에서 물이 나오면 나무가 기뻐할 거예요. 나무뿌리 사이에 반짝이는 룬 석판이 있다는 소문이 있어요!',
+       objs:[{t:'fix', s:1}, {t:'rune', n:3}], reward:{xp:90, coins:180, gems:3}}]},
+  windmill:{repairs:[{kind:'fence', name:'풍차 앞 울타리', need:{plank:4, stone:6}}, {kind:'bridge', name:'개울 돌다리', need:{plank:5, brick:2}}],
+    quests:[
+      {npc:'husky', title:'돌담 사이로', text:'라벤더 향기가 가득해요! 그런데 무너진 돌담이 길을 막고 있어요. 돌을 모아 두면 쓸모가 많을 거예요.',
+       objs:[{t:'clear', o:'wall', n:5}, {t:'get', i:'stone', n:15}], reward:{xp:50, coins:100}},
+      {npc:'carpenter', title:'울타리와 석탄', text:'풍차 앞 울타리를 고쳐야 양들이 도망가지 않아요. 석탄 바위도 좀 캐 주세요!',
+       objs:[{t:'fix', s:0}, {t:'clear', o:'coalrock', n:3}], reward:{xp:70, gems:2, dynamite:1}},
+      {npc:'farmer', title:'다시 도는 풍차', text:'개울 돌다리만 고치면 풍차까지 곡식을 나를 수 있단다. 풍차 언덕의 룬 석판도 찾아보렴.',
+       objs:[{t:'fix', s:1}, {t:'rune', n:3}], reward:{xp:100, coins:200, gems:3}}]},
+  snow:{repairs:[{kind:'bridge', name:'얼음 계곡 다리', need:{plank:6, ironbar:2}}, {kind:'well', name:'얼어붙은 우물', need:{stone:12, coal:4}}],
+    quests:[
+      {npc:'husky', title:'눈길 헤치기', text:'와, 눈이다! 나는 추위에 강해요. 얼음 결정을 깨서 길을 내 봐요!',
+       objs:[{t:'clear', o:'icerock', n:5}, {t:'get', i:'ice', n:10}], reward:{xp:60, coins:120}},
+      {npc:'carpenter', title:'얼음 계곡 다리', text:'계곡 다리가 얼어서 부서졌어요. 판자와 철 주괴로 튼튼하게 다시 놓아요.',
+       objs:[{t:'fix', s:0}, {t:'clear', o:'spruce', n:5}], reward:{xp:80, gems:3, dynamite:1}},
+      {npc:'farmer', title:'따뜻한 우물', text:'석탄으로 얼어붙은 우물을 녹이자꾸나. 눈 속 어딘가에 룬 석판이 반짝이고 있을 게다.',
+       objs:[{t:'fix', s:1}, {t:'rune', n:3}], reward:{xp:120, coins:250, gems:4}}]},
+  beach:{repairs:[{kind:'bridge', name:'부서진 부두 다리', need:{plank:6, reed:6}}, {kind:'well', name:'모래에 묻힌 우물', need:{sandstone:6, stone:8}}],
+    quests:[
+      {npc:'husky', title:'파도 소리 따라', text:'바다다! 야자수에 코코넛이 주렁주렁해요. 시원한 코코넛을 모아 봐요!',
+       objs:[{t:'clear', o:'palm', n:4}, {t:'get', i:'coconut', n:8}], reward:{xp:70, coins:150}},
+      {npc:'carpenter', title:'부두 다리 고치기', text:'배를 대려면 부두 다리가 필요해요. 판자와 갈대로 엮어 봐요.',
+       objs:[{t:'fix', s:0}, {t:'clear', o:'shells', n:5}], reward:{xp:90, gems:3, dynamite:1}},
+      {npc:'farmer', title:'모래 속 보물', text:'모래에 묻힌 우물을 파내면 맑은 물이 나올 게다. 해변의 룬 석판도 잊지 말거라.',
+       objs:[{t:'fix', s:1}, {t:'rune', n:3}], reward:{xp:130, coins:280, gems:4}}]},
+  swamp:{repairs:[{kind:'fence', name:'늪지 나무 울타리', need:{plank:5, reed:8}}, {kind:'bridge', name:'늪 위 징검다리', need:{stone:10, brick:3}}],
+    quests:[
+      {npc:'husky', title:'반딧불 따라가기', text:'반딧불이 반짝반짝! 거대 버섯을 조심조심 치우며 따라가 봐요.',
+       objs:[{t:'clear', o:'mushrooms', n:5}, {t:'get', i:'mushroom', n:10}], reward:{xp:80, coins:160}},
+      {npc:'carpenter', title:'늪지 울타리', text:'발이 빠지지 않게 울타리를 세워야 해요. 갈대도 넉넉히 베어 주세요.',
+       objs:[{t:'fix', s:0}, {t:'clear', o:'reeds', n:6}], reward:{xp:100, gems:3, dynamite:1}},
+      {npc:'farmer', title:'늪 건너기', text:'징검다리를 놓으면 늪 건너편까지 갈 수 있단다. 그곳에 룬 석판이 있을 게야.',
+       objs:[{t:'fix', s:1}, {t:'rune', n:3}], reward:{xp:140, coins:300, gems:5}}]},
+  desert:{repairs:[{kind:'well', name:'오아시스 우물', need:{sandstone:8, jar:2}}, {kind:'bridge', name:'협곡 밧줄 다리', need:{plank:6, reed:6}}],
+    quests:[
+      {npc:'husky', title:'뜨거운 모래길', text:'헥헥, 덥다! 선인장 사이로 금빛이 반짝여요. 금덩이를 찾아봐요!',
+       objs:[{t:'clear', o:'cactus', n:5}, {t:'get', i:'gold', n:4}], reward:{xp:90, coins:200}},
+      {npc:'carpenter', title:'오아시스 살리기', text:'오아시스 우물을 고치려면 사암과 항아리가 필요해요. 도자기 공방에서 항아리를 만들어 와요!',
+       objs:[{t:'fix', s:0}, {t:'clear', o:'sandstone', n:4}], reward:{xp:110, gems:3, dynamite:1}},
+      {npc:'farmer', title:'협곡 건너편', text:'밧줄 다리를 걸면 협곡 건너편으로 갈 수 있단다. 붉은 모래 속 룬 석판을 찾아보렴.',
+       objs:[{t:'fix', s:1}, {t:'rune', n:3}], reward:{xp:150, coins:320, gems:5}}]},
+  volcano:{repairs:[{kind:'bridge', name:'용암 위 돌다리', need:{brick:6, obsidian:4}}, {kind:'fence', name:'화산 관측소 울타리', need:{ironbar:3, plank:6}}],
+    quests:[
+      {npc:'husky', title:'잠든 화산', text:'바닥이 따뜻해요! 불탄 나무를 치우고 흑요석을 모아 봐요. 발 조심!',
+       objs:[{t:'clear', o:'burnttree', n:5}, {t:'get', i:'obsidian', n:6}], reward:{xp:100, coins:220}},
+      {npc:'carpenter', title:'용암 위 돌다리', text:'벽돌과 흑요석이면 용암도 건널 수 있는 돌다리를 놓을 수 있어요!',
+       objs:[{t:'fix', s:0}, {t:'clear', o:'firecrystal', n:3}], reward:{xp:120, gems:4, dynamite:2}},
+      {npc:'farmer', title:'화산 관측소', text:'관측소 울타리를 세우면 화산을 안전하게 지켜볼 수 있단다. 마지막 룬 석판들이 여기 있을 게다.',
+       objs:[{t:'fix', s:1}, {t:'rune', n:3}], reward:{xp:200, coins:400, gems:6}}]},
 };
 
 /* ── 생산 건물 제조법(분 단위, CONFIG.prodSpeed 배율 적용) ── */
@@ -598,9 +732,11 @@ const IMG_LIST = ['avatar','berrybush','board','boulder','cabin','chest','cloud'
   'm_beach','m_swamp','m_desert','m_volcano','t_sand','t_swamp','t_ash','sawmill','forge',
   'bakery','dairy','kiln','pottery','coop','barn','hen','cow','f_empty','f_sprout','f_wheat','f_corn','claypit','bigrock',
   'i_wheat','i_corn','i_flour','i_egg','i_milk','i_cheese','i_bread','i_cookies','i_brick','i_jar','i_clay','i_dynamite',
-  'u_register','u_notebook','u_bag','u_map','u_gift','u_camera','u_shop'];
+  'u_register','u_notebook','u_bag','u_map','u_gift','u_camera','u_shop',
+  'fix_bridge','fix_well','fix_fence','done_bridge','done_well','done_fence','npc_husky','npc_farmer','npc_carpenter'];
 // 그림이 아직 없을 때 대신 쓸 그림(화면 아이콘용)
-const IMG_FALLBACK = {u_register:'i_coin', u_notebook:'board', u_bag:'chest', u_map:'m_canyon', u_gift:'chest', u_camera:'rune',
+const IMG_FALLBACK = {fix_bridge:'log', fix_well:'claypit', fix_fence:'wall', done_bridge:'fix_bridge', done_well:'fix_well',
+  done_fence:'fix_fence', npc_husky:'husky', npc_farmer:'explorer', npc_carpenter:'avatar',u_register:'i_coin', u_notebook:'board', u_bag:'chest', u_map:'m_canyon', u_gift:'chest', u_camera:'rune',
   u_shop:'i_energy', claypit:'boulder', bigrock:'boulder', i_corn:'i_wheat', i_flour:'i_wheat', i_egg:'hen', i_milk:'cow',
   i_cheese:'dairy', i_bread:'bakery', i_cookies:'bakery', i_brick:'kiln', i_jar:'pottery', i_clay:'i_sandstone', i_dynamite:'i_coal'};
 const FAILED = new Set();
@@ -614,12 +750,13 @@ function loadImages(){
     const fin = () => { done++; document.getElementById('lbar').style.width = (done/IMG_LIST.length*100)+'%'; res(); };
     im.onload = fin; im.src = src(n); IMG[n] = im;
   }))).then(() => {   // 없는 그림은 비슷한 그림으로 대신
-    for (const n of FAILED) if (IMG_FALLBACK[n] && !FAILED.has(IMG_FALLBACK[n])) IMG[n] = IMG[IMG_FALLBACK[n]];
+    const fb = n => { let k = n; for (let d=0; d<3 && FAILED.has(k) && IMG_FALLBACK[k]; d++) k = IMG_FALLBACK[k]; return k; };
+    for (const n of FAILED) if (!FAILED.has(fb(n))) IMG[n] = IMG[fb(n)];
     applyDomImages();
   });
 }
 // 그림 주소: 한 파일 빌드(IMG_DATA가 있을 때)는 파일 안의 그림, 아니면 img/ 폴더
-const src = n => { if (FAILED.has(n) && IMG_FALLBACK[n]) n = IMG_FALLBACK[n];
+const src = n => { for (let d=0; d<3 && FAILED.has(n) && IMG_FALLBACK[n]; d++) n = IMG_FALLBACK[n];
   return (window.IMG_DATA && IMG_DATA[n]) || 'img/' + n + '.webp'; };
 function applyDomImages(){
   document.querySelectorAll('[data-img]').forEach(e => e.src = src(e.dataset.img));
@@ -639,7 +776,7 @@ function migrate(){   // 예전 저장본에 새 항목 채우기
   S.bld = S.bld || {}; S.prod = S.prod || {}; S.mapCh = S.mapCh || 1;
   S.fields = S.fields || []; S.fieldsOpen = S.fieldsOpen || 2; S.tasks = S.tasks || []; S.stats = S.stats || {};
   S.giftTs = S.giftTs || 0; S.nextTaskId = S.nextTaskId || 1;
-  for (const k of ['got','made','harvest']) S.stats[k] = S.stats[k] || {};
+  for (const k of ['got','made','harvest','clearedBy']) S.stats[k] = S.stats[k] || {};
   for (const [k,b] of Object.entries(BUILDINGS)) if (S.bld[k] == null) S.bld[k] = b.start;
   for (const k of Object.keys(PROD)) S.prod[k] = S.prod[k] || [];
 }
@@ -723,12 +860,47 @@ function buildRegion(key){
   for (let i=0;i<CONFIG.chestsPerRegion;i++){ const t = tiles[take(mid)]; if (t.o !== 'rune') t.o = 'chest'; }
   tiles[start.y*N+start.x-2] && (tiles[(start.y)*N+start.x-2].o = 'tent_camp');
   const w = {key, N, tiles, start, tex:R.tex, tint:R.tint, region:st, home:false};
-  for (const i of st.cleared) tiles[i].o = null;
+  layPathsAndSpots(w, rng((st.seed ^ 0x5f3759df) >>> 0));
+  st.fixed = st.fixed || {};
+  for (const [s2, done] of Object.entries(st.fixed)) if (done && w.spots[s2] != null){ const t = tiles[w.spots[s2]]; t.o = 'done_' + STORY[key].repairs[s2].kind; }
+  for (const i of st.cleared) if (!OBJS[tiles[i].o] || !OBJS[tiles[i].o].fixed) tiles[i].o = null;
   revealAround(w, start.x, start.y, 3.2);
   for (const i of st.cleared) revealAround(w, i % N, (i / N)|0, 2.3);
   return w;
 }
 OBJS.tent_camp = {img:'tent', w:1.3, fixed:true};
+
+/* ── 지역의 길과 수리 지점: 출발점 → 수리 지점1 → 수리 지점2 → 가까운 룬 석판으로 흙길을 냄 ── */
+function layPathsAndSpots(w, r){
+  const N = w.N, st0 = w.start, story = STORY[w.key], tiles = w.tiles;
+  w.spots = [];
+  if (!story) return;
+  const pick = (dmin, dmax) => { for (let k=0;k<400;k++){
+      const x = 2 + Math.floor(r()*(N-4)), y = 2 + Math.floor(r()*(N-4)), d = Math.hypot(x-st0.x, y-st0.y);
+      const t = tiles[y*N+x]; if (d >= dmin && d <= dmax && t.o !== 'rune' && t.o !== 'chest' && t.o !== 'tent_camp') return [x,y]; }
+    return [st0.x, Math.max(2, st0.y - Math.round(dmin))]; };
+  const sp = [pick(N*.28, N*.42), pick(N*.5, N*.75)];
+  // 길 내기: 목표 쪽으로 한 칸씩, 가끔 옆으로 흔들리며
+  const light = ['twigpile','flowers', null, null, null, null, null, null];   // 길은 대부분 비어 있고 가끔 가벼운 장애물
+  const carve = (ax, ay, bx, by) => { let x = ax, y = ay, guard = 0;
+    while ((x !== bx || y !== by) && guard++ < 200){
+      const dx = Math.sign(bx-x), dy = Math.sign(by-y);
+      if (dx && (!dy || r() < .5)) x += dx; else if (dy) y += dy;
+      if (r() < .18){ const sx = r() < .5 ? 1 : -1; if (x+sx > 0 && x+sx < N-1) x += sx; }
+      const t = tiles[y*N+x]; if (!t) continue;
+      if (x === bx && y === by) break;
+      if (!t.path){ t.path = true; if (!['rune','chest','tent_camp'].includes(t.o)) t.o = light[Math.floor(r()*light.length)]; }
+      // 길 폭을 넓게: 옆 칸 하나도 길로
+      if (r() < .55){ const [ox, oy] = r() < .5 ? [x+1, y] : [x, y+1]; const t2 = tiles[oy*N+ox];
+        if (t2 && ox < N-1 && oy < N-1 && !t2.path){ t2.path = true; if (!['rune','chest','tent_camp'].includes(t2.o)) t2.o = light[Math.floor(r()*light.length)]; } }
+    } };
+  carve(st0.x, st0.y, sp[0][0], sp[0][1]);
+  carve(sp[0][0], sp[0][1], sp[1][0], sp[1][1]);
+  const runes = []; tiles.forEach((t,i) => { if (t.o === 'rune') runes.push(i); });
+  if (runes.length){ runes.sort((a,b) => Math.hypot(a%N-sp[1][0], (a/N|0)-sp[1][1]) - Math.hypot(b%N-sp[1][0], (b/N|0)-sp[1][1]));
+    carve(sp[1][0], sp[1][1], runes[0]%N, runes[0]/N|0); }
+  sp.forEach(([x,y], k) => { const i = y*N+x; tiles[i].o = 'fix_' + story.repairs[k].kind; tiles[i].spot = k; tiles[i].path = true; w.spots[k] = i; });
+}
 
 /* ── 캠프 배치: 큰 건물은 2×2칸(fp:2), 좌표는 왼쪽 위 칸 ── */
 const HOME_N = 18;
@@ -843,7 +1015,19 @@ function renderGround(){
     const v = (t.seed - .5);
     diamond(c, p.x, p.y, 1);
     c.fillStyle = v > 0 ? `rgba(255,240,180,${v*0.16})` : `rgba(40,60,10,${-v*0.16})`; c.fill();
-    if (t.seed > .86 && !w.home){ c.fillStyle = 'rgba(120,80,30,.16)'; c.beginPath(); c.ellipse(p.x, p.y, TW*.3, TH*.26, 0, 0, 7); c.fill(); }
+    if (t.seed > .86 && !w.home && !t.path){ c.fillStyle = 'rgba(120,80,30,.16)'; c.beginPath(); c.ellipse(p.x, p.y, TW*.3, TH*.26, 0, 0, 7); c.fill(); }
+  }
+  // 흙길(원작처럼 지역을 가로지르는 길)
+  const pathCol = w.tex === 't_snow' ? 'rgba(170,190,215,.75)' : w.tex === 't_ash' ? 'rgba(70,60,58,.7)' : w.tex === 't_sand' ? 'rgba(190,140,80,.6)' : 'rgba(156,112,60,.72)';
+  for (let y=0;y<N;y++) for (let x=0;x<N;x++){ const t = w.tiles[y*N+x]; if (!t.path) continue; const p = iso(x,y);
+    diamond(c, p.x, p.y, 3); c.fillStyle = pathCol; c.fill(); }
+  const pr = rng(9);
+  for (let y=0;y<N;y++) for (let x=0;x<N;x++){ const t = w.tiles[y*N+x]; if (!t.path) continue; const p = iso(x,y);
+    for (let k=0;k<4;k++){ c.beginPath(); c.ellipse(p.x+(pr()-.5)*TW*.6, p.y+(pr()-.5)*TH*.5, 4+pr()*5, 2.5+pr()*2.5, 0, 0, 7);
+      c.fillStyle = `rgba(${200+pr()*40|0},${185+pr()*30|0},${160+pr()*30|0},.8)`; c.fill(); }
+    // 길 가장자리 풀
+    c.strokeStyle = 'rgba(70,110,30,.35)'; c.lineWidth = 2;
+    for (let k=0;k<3;k++){ const ex = p.x + (pr()<.5?-1:1)*TW*.38, ey = p.y + (pr()-.5)*TH*.3; c.beginPath(); c.moveTo(ex, ey); c.lineTo(ex+2, ey-8); c.stroke(); }
   }
   // 가장자리 안쪽 그림자
   const sh = c.createLinearGradient(0, a.y-TH/2, 0, cc.y+TH/2);
@@ -977,7 +1161,9 @@ function enter(key){
   const p = iso(player.x, player.y); cam.x = p.x; cam.y = p.y - (world.home ? 20 : 60);  cam.z = Math.max(cam.zMin || .35, Math.min(1, world.home ? (W < 700 ? W/900 : Math.min(H/1000, W/1500)) : (W < 700 ? W/680 : W/1100)));
   // 저장된 작업 줄 복구(에너지는 이미 사용됨)
   if (world.region && world.region.queue){ for (const i of world.region.queue){ const t = world.tiles[i]; if (t && t.o) queue.push({i, cost:OBJS[t.o].cost}); } }
-  updateQuest(); updateHUD(); save();
+  if (!world.home && STORY[key]){ const st = ensureQuest(key);
+    if (st && !st.introSeen){ st.introSeen = 1; setTimeout(() => openQuest(key), 500); } }
+  updateQuest(); updateHUD(); renderQuestBtns(); save();
 }
 
 /* ══════════ 탭 처리 ══════════ */
@@ -1019,6 +1205,7 @@ function onTap(sx, sy){
 }
 function doAct(a, i){
   if (a === 'field') fieldTap(world.tiles[i].fid);
+  else if (a === 'repair') openRepair(world.tiles[i].spot);
   else if (a === 'cabin' || a === 'tent') openBuilding(a);
   else if (PROD[a]) prodTap(a);
   else if (a === 'order') openOrders();
@@ -1058,7 +1245,7 @@ function updatePlayer(dt){
 }
 function finishWork(){
   const w = world, i = player.target, t = w.tiles[i], d = OBJS[t.o], x = i % w.N, y = (i / w.N)|0;
-  queue.shift(); player.work = 0; player.target = null; stat('cleared');
+  queue.shift(); player.work = 0; player.target = null; stat('cleared'); S.stats.clearedBy[t.o] = (S.stats.clearedBy[t.o]||0) + 1;
   burst(x, y, d.fx, 18); sfx(d.tool ? 'boom' : 'pop');
   let lines = [];
   for (const [k,n] of Object.entries(d.drops)){ addItem(k, n); flyToBag(x, y, k==='flower'?'flowers':ITEMS[k].img, n); lines.push(`+${n} ${ITEMS[k].name}`); }
@@ -1077,9 +1264,9 @@ function finishWork(){
   computeReach();
   if (d.rune){
     w.region.runes++;
-    if (w.region.runes >= CONFIG.runesPerRegion) setTimeout(regionComplete, 700);
-    else toast(`룬 석판 발견! (${w.region.runes}/${CONFIG.runesPerRegion})`);
+    toast(`룬 석판 발견! (${Math.min(w.region.runes, CONFIG.runesPerRegion)}/${CONFIG.runesPerRegion})`);
   }
+  checkQuestReady();
   updateQuest(); updateHUD(); save();
 }
 function regionComplete(){
@@ -1175,7 +1362,10 @@ function plant(fid, crop, quiet){
 let hoverI = -1, last = performance.now();
 function frame(now){
   const dt = Math.min(.05, (now - last)/1000); last = now;
-  if (world){ updatePlayer(dt); draw(dt); }
+  if (world){ updatePlayer(dt);
+    if (camGo){ const k = Math.min(1, dt*6); cam.x += (camGo.x - cam.x)*k; cam.y += (camGo.y - cam.y)*k;
+      if (Math.hypot(camGo.x - cam.x, camGo.y - cam.y) < 2) camGo = null; }
+    draw(dt); }
   requestAnimationFrame(frame);
 }
 function draw(dt){
@@ -1218,6 +1408,9 @@ function draw(dt){
     if (hov || ghost){ ctx.save(); if (hov) ctx.filter = 'brightness(1.18)'; if (ghost){ ctx.filter = 'grayscale(1) brightness(1.1)'; ctx.globalAlpha = .55; } }
     ctx.drawImage(im, r.x + ox + r.w*(1-sc)/2, r.y + r.h*(1-sc), r.w*sc, r.h*sc);
     if (hov || ghost) ctx.restore();
+    if (it.o.startsWith('done_') && FAILED.has(it.o)){ // 고친 뒤 그림이 아직 없으면 초록 체크 표시
+      ctx.fillStyle = '#3fae2a'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(p.x + r.w*.3, r.y + 20, 18, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(p.x + r.w*.3 - 8, r.y + 20); ctx.lineTo(p.x + r.w*.3 - 2, r.y + 27); ctx.lineTo(p.x + r.w*.3 + 9, r.y + 12); ctx.stroke(); }
     if (d.animal && !ghost) drawAnimals(it, d.animal, T);
     if (d.label && world.home){
       const lv = S.bld[d.bld];
@@ -1236,6 +1429,13 @@ function draw(dt){
     else if (hov) later(drawCostBubble, p.x, r.y + r.h*.35, d.cost, 0, S.energy >= d.cost && standSpots(it.i).size > 0);
   }
   ctx.drawImage(fogC, b.x, b.y, b.w, b.h);
+  // 수리 지점 표시(망치) + 돋보기 화살표
+  for (const i of (w.spots||[])){ const t = w.tiles[i]; if (!t.rev || !OBJS[t.o].repair) continue;
+    const p = iso(i%N, (i/N)|0); later(drawReady, p.x, p.y - TH*1.2, 'i_plank', 0, T); }
+  if (HL && performance.now() < HL.until){ const p = iso(HL.i%N, (HL.i/N)|0), bob = Math.abs(Math.sin(T*6))*14;
+    later(() => { ctx.save(); ctx.translate(p.x, p.y - TH*1.9 - bob); ctx.fillStyle = '#ffd23a'; ctx.strokeStyle = '#7a3f00'; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(-22,-30); ctx.lineTo(22,-30); ctx.lineTo(22,0); ctx.lineTo(36,0); ctx.lineTo(0,34); ctx.lineTo(-36,0); ctx.lineTo(-22,0); ctx.closePath();
+      ctx.fill(); ctx.stroke(); ctx.restore(); }); }
   const L = LATER; LATER = null; for (const f of L) f();
   drawFx(dt);
 }
@@ -1388,7 +1588,7 @@ cv.addEventListener('pointermove', e => {
   if (pinch && ptrs.size === 2){ const [a,b] = [...ptrs.values()]; setZoom(pinch.z * Math.hypot(a.x-b.x,a.y-b.y)/pinch.d); return; }
   if (drag){ const dx = e.clientX-drag.sx, dy = e.clientY-drag.sy;
     if (Math.hypot(dx,dy) > 8){ drag.moved = true; cv.classList.add('dragging'); }
-    if (drag.moved){ cam.x = drag.cx - dx/cam.z; cam.y = drag.cy - dy/cam.z; clampCam(); } }
+    if (drag.moved){ camGo = null; cam.x = drag.cx - dx/cam.z; cam.y = drag.cy - dy/cam.z; clampCam(); } }
   else if (e.pointerType === 'mouse' && world){
     const wx = (e.clientX - W/2)/cam.z + cam.x, wy = (e.clientY - H/2)/cam.z + cam.y;
     const h = pickObject(wx, wy); hoverI = h && !h.tile ? h.i : -1;
@@ -1438,12 +1638,12 @@ function updateTimer(){
 }
 function updateQuest(){
   const q = document.getElementById('quest');
-  if (!world || world.home){
-    q.innerHTML = `<h4>탐험 캠프</h4><div class="row">밭에 심고, 건물에서 만들어요!</div><div class="row hint">지도에서 탐험할 지역을 골라요</div>`; return;
-  }
+  q.classList.toggle('hidden', !world || world.home);
+  if (!world || world.home) return;
   const R = REGIONS[world.key], st = world.region;
   const total = world.tiles.length, open = world.tiles.filter(t=>t.rev).length;
   q.innerHTML = `<h4>${R.name}</h4>
+    <div class="row"><img src="${src('npc_husky')}" style="border-radius:50%"> 미션 <b>${st.qdone ? '완료!' : (st.qi||0)+1 + '/' + (STORY[world.key] ? STORY[world.key].quests.length : 3)}</b></div>
     <div class="row"><img src="${src('rune')}"> 룬 석판 <b>${Math.min(st.runes,CONFIG.runesPerRegion)}/${CONFIG.runesPerRegion}</b></div>
     <div class="row"><img src="${src('cloud')}"> 탐험 ${Math.round(open/total*100)}% <span class="pbar"><i style="width:${open/total*100}%"></i></span></div>`;
 }
@@ -1569,6 +1769,140 @@ function openFieldBuy(fid){
     <p>${!first ? '앞의 밭부터 차례로 개간해요.' : S.level < lv ? `레벨 ${lv}이 되면 개간할 수 있어요.` : '풀을 뽑고 땅을 일궈 새 밭을 만들어요.'}</p>
     <div class="row-btns"><button class="gbtn gold" id="buyField" ${first && S.level >= lv && S.coins >= price ? '' : 'disabled'}><img src="${src('i_coin')}" style="width:20px;vertical-align:middle"> ${price} 개간하기</button></div></div>`);
   document.getElementById('buyField').onclick = () => { S.coins -= price; S.fieldsOpen++; sfx('level'); gainXP(10); toast('새 밭이 생겼어요!'); updateHUD(); save(); closeModal(); };
+}
+
+
+/* ══════════ 이야기 미션 ══════════ */
+const objVal = (key, st, o) => o.t === 'clear' ? (S.stats.clearedBy[o.o]||0) : o.t === 'get' ? (S.stats.got[o.i]||0)
+  : o.t === 'fix' ? ((st.fixed||{})[o.s] ? 1 : 0) : Math.min(st.runes, CONFIG.runesPerRegion);
+const objNeed = o => o.t === 'fix' ? 1 : o.n;
+function ensureQuest(key){
+  const st = S.regions[key], story = STORY[key]; if (!st || !story) return null;
+  if (st.qi == null){ st.qi = 0; st.qb = story.quests[0].objs.map(o => objVal(key, st, o)); }
+  return st;
+}
+function curQuest(key){ const st = ensureQuest(key); if (!st || st.qdone) return null; return STORY[key].quests[st.qi]; }
+function objProg(key, o, k){
+  const st = S.regions[key], v = objVal(key, st, o);
+  const base = (o.t === 'clear' || o.t === 'get') ? (st.qb[k]||0) : 0;
+  return Math.max(0, Math.min(objNeed(o), v - base));
+}
+const questReady = key => { const q = curQuest(key); return !!q && q.objs.every((o,k) => objProg(key, o, k) >= objNeed(o)); };
+let readyTold = {};
+function checkQuestReady(){
+  for (const key of Object.keys(STORY)) if (S.regions[key] && questReady(key) && !readyTold[key+S.regions[key].qi]){
+    readyTold[key+S.regions[key].qi] = 1; toast('미션 완료! 왼쪽 미션 단추에서 보상을 받아요'); sfx('level'); }
+  renderQuestBtns();
+}
+function objText(o, key){
+  if (o.t === 'clear') return `${OBJS[o.o].name}${josa(OBJS[o.o].name,'을/를')} 치우세요`;
+  if (o.t === 'get')   return `${ITEMS[o.i].name}${josa(ITEMS[o.i].name,'을/를')} 모으세요`;
+  if (o.t === 'fix')   return `${STORY[key].repairs[o.s].name}${josa(STORY[key].repairs[o.s].name,'을/를')} 고치세요`;
+  return '룬 석판을 찾으세요';
+}
+function objIcon(o, key){ return o.t === 'clear' ? OBJS[o.o].img : o.t === 'get' ? ITEMS[o.i].img : o.t === 'fix' ? 'fix_' + STORY[key].repairs[o.s].kind : 'rune'; }
+function josa(w, pair){ const c = w.charCodeAt(w.length-1) - 0xAC00; const [a,b] = pair.split('/'); return c >= 0 && c <= 11171 && c % 28 ? a : b; }
+function rewardHtml(rw){
+  return [rw.xp && `<span><img src="${src('i_energy')}" style="filter:hue-rotate(200deg)">★${rw.xp}</span>`, rw.coins && `<span><img src="${src('i_coin')}">${rw.coins}</span>`,
+    rw.gems && `<span><img src="${src('i_gem')}">${rw.gems}</span>`, rw.dynamite && `<span><img src="${src('i_dynamite')}">${rw.dynamite}</span>`].filter(Boolean).join('');
+}
+// 원작 '후속 조치' 화면 구성: 제목 / 초상화 + 말풍선 / 리워드 / 목표 줄(✓ 또는 진행·돋보기)
+function openQuest(key){
+  const st = ensureQuest(key), story = STORY[key]; if (!st) return;
+  if (st.qdone){ toast('이 지역의 미션을 모두 끝냈어요!'); return; }
+  const q = story.quests[st.qi], npc = NPCS[q.npc], ready = questReady(key);
+  document.body.classList.add('pv-open');
+  root.innerHTML = `<div class="qv">
+    <div class="qv-top"><h2>${q.title}</h2><small>${REGIONS[key].name} · 미션 ${st.qi+1}/${story.quests.length}</small></div>
+    <button class="pv-x" data-close aria-label="닫기">✕</button>
+    <div class="qv-talk"><div class="portrait" style="background-image:url(${src(npc.img)})"></div>
+      <div class="bubble"><b>${npc.name}</b><p>${q.text}</p></div></div>
+    <div class="qv-reward"><em>리워드:</em>${rewardHtml(q.reward)}</div>
+    <div class="qv-objs">${q.objs.map((o,k) => { const pr = objProg(key, o, k), need = objNeed(o), done = pr >= need;
+      return `<div class="qobj"><img src="${src(objIcon(o, key))}" alt=""><span>${objText(o, key)}</span>
+        ${need > 1 && !done ? `<b class="cnt">${pr}/${need}</b>` : ''}
+        ${done ? '<i class="chk">✓</i>' : `<button class="seek" data-seek="${k}" aria-label="찾아보기">🔍</button>`}</div>`; }).join('')}</div>
+    ${ready ? `<button class="qv-ok" id="qClaim">보상 받기!</button>` : ''}
+  </div>`;
+  root.querySelectorAll('[data-close]').forEach(b => b.onclick = closeModal);
+  root.querySelectorAll('[data-seek]').forEach(b => b.onclick = () => { const o = q.objs[+b.dataset.seek]; closeModal(); seekObj(key, o); });
+  const c = document.getElementById('qClaim'); if (c) c.onclick = () => claimQuest(key);
+}
+function claimQuest(key){
+  const st = S.regions[key], story = STORY[key], q = story.quests[st.qi]; if (!questReady(key)) return;
+  const rw = q.reward;
+  if (rw.coins) S.coins += rw.coins; if (rw.gems) S.gems += rw.gems; if (rw.dynamite) addItem('dynamite', rw.dynamite);
+  sfx('coin'); toast(`미션 완료! 「${q.title}」`);
+  st.qi++;
+  if (st.qi >= story.quests.length){ st.qdone = 1; closeModal(); if (rw.xp) gainXP(rw.xp); save(); renderQuestBtns();
+    if (world.key === key) regionComplete(); else toast(`${REGIONS[key].name} 탐험 완료!`); return; }
+  st.qb = story.quests[st.qi].objs.map(o => objVal(key, st, o));
+  if (rw.xp) gainXP(rw.xp);
+  save(); renderQuestBtns(); setTimeout(() => openQuest(key), 250);   // 다음 미션 이야기 바로 보여 주기
+}
+
+/* 수리 지점: 원작 '구멍' 화면 구성(초상화 / 스테이지 / 리워드 / 재료 카드 + 보기 / 확인!) */
+function openRepair(sIdx){
+  const key = world.key, st = S.regions[key], rp = STORY[key].repairs[sIdx], npc = NPCS.carpenter;
+  if ((st.fixed||{})[sIdx]){ toast('이미 고쳤어요!'); return; }
+  const ok = has(rp.need);
+  document.body.classList.add('pv-open');
+  root.innerHTML = `<div class="qv rv">
+    <div class="qv-top"><h2>${rp.name}</h2></div>
+    <button class="pv-x" data-close aria-label="닫기">✕</button>
+    <div class="rv-head"><div class="portrait big" style="background-image:url(${src(npc.img)})"></div>
+      <div><div class="stage">🔨 스테이지 1/1</div><div class="qv-reward"><em>리워드:</em><span><img src="${src('i_energy')}" style="filter:hue-rotate(200deg)">★25</span></div></div></div>
+    <div class="rv-cards">${Object.entries(rp.need).map(([i,n]) => { const have = S.inv[i]||0, done = have >= n;
+      return `<div class="rcard"><h4>${ITEMS[i].name}</h4><img src="${src(ITEMS[i].img)}" alt=""><b class="${done?'':'lack'}">${Math.min(have,n)}/${n}</b>
+        ${done ? '<i class="chk">✓</i>' : `<button class="gbtn blue" data-look="${i}">보기</button>`}</div>`; }).join('')}</div>
+    <button class="qv-ok" id="rDo" ${ok ? '' : 'disabled'}>확인!</button>
+  </div>`;
+  root.querySelectorAll('[data-close]').forEach(b => b.onclick = closeModal);
+  root.querySelectorAll('[data-look]').forEach(b => b.onclick = () => { closeModal(); seekObj(key, {t:'get', i:b.dataset.look}); });
+  document.getElementById('rDo').onclick = () => {
+    if (!has(rp.need)) return; for (const [i,n] of Object.entries(rp.need)) S.inv[i] -= n;
+    st.fixed = st.fixed || {}; st.fixed[sIdx] = 1;
+    const ti = world.spots[sIdx], x = ti % world.N, y = (ti / world.N)|0;
+    world.tiles[ti].o = 'done_' + rp.kind; burst(x, y, '#ffd23a', 30); sfx('level'); floatText(x, y, `${rp.name} 완성!`, '#ffe36a');
+    const cells = revealAround(world, x, y, 3.2); if (cells.length){ renderFog(); fogPuffs(cells); } computeReach();
+    closeModal(); gainXP(25); checkQuestReady(); updateQuest(); save(); };
+}
+
+/* 돋보기·보기: 해당 목표가 있는 곳으로 화면을 옮기고 화살표 표시 */
+let camGo = null, HL = null;
+function focusTile(i){ const N = world.N, p = iso(i%N, (i/N)|0); camGo = {x:p.x, y:p.y - 40}; HL = {i, until:performance.now() + 4000}; }
+function nearestTile(pred){ let best = -1, bd = 1e9; const N = world.N;
+  world.tiles.forEach((t,i) => { if (!t.rev || !pred(t)) return; const d = Math.hypot(i%N - player.x, (i/N|0) - player.y); if (d < bd){ bd = d; best = i; } });
+  return best; }
+function seekObj(key, o){
+  const here = world && !world.home && world.key === key;
+  if (o.t === 'get'){
+    const prod = Object.keys(PROD).find(k => PROD[k].some(r => r.id === o.i));
+    const crop = CROPS[o.i];
+    if (here){ const types = Object.keys(OBJS).filter(k => OBJS[k].drops && OBJS[k].drops[o.i]);
+      const i = types.length ? nearestTile(t => types.includes(t.o)) : -1;
+      if (i >= 0){ focusTile(i); toast(`${OBJS[world.tiles[i].o].name}에서 ${ITEMS[o.i].name}${josa(ITEMS[o.i].name,'을/를')} 얻어요`); return; } }
+    if (prod){ if (world.home) openProd(prod); else toast(`${ITEMS[o.i].name}${josa(ITEMS[o.i].name,'은/는')} 캠프의 ${PROD_NAME[prod]}에서 만들어요`); return; }
+    if (crop){ if (world.home){ const [x,y] = FIELD_POS[0]; focusTile(y*world.N+x); } toast(`${ITEMS[o.i].name}${josa(ITEMS[o.i].name,'은/는')} 캠프 밭에서 길러요`); return; }
+    toast(here ? '구름을 더 걷어 내면 찾을 수 있어요' : `${REGIONS[key].name}에서 찾아보세요`); return;
+  }
+  if (!here){ toast(`지도에서 ${REGIONS[key].name}(으)로 가서 찾아보세요`); return; }
+  if (o.t === 'clear'){ const i = nearestTile(t => t.o === o.o); if (i >= 0) focusTile(i); else toast('아직 구름 속에 있어요. 길을 따라 구름을 걷어 보세요'); return; }
+  if (o.t === 'fix'){ const i = world.spots[o.s]; focusTile(i); if (!world.tiles[i].rev) toast('흙길을 따라 구름을 걷으면 나타나요'); return; }
+  toast('룬 석판은 구름 속 어딘가에 숨어 있어요. 흙길 끝을 살펴보세요!');
+}
+
+/* 왼쪽 미션 단추(원작의 왼쪽 퀘스트 아이콘) */
+function renderQuestBtns(){
+  const box = document.getElementById('qbtns'); if (!box || !S) return;
+  let keys = [];
+  if (world && !world.home && STORY[world.key]) keys = [world.key];
+  else keys = Object.keys(STORY).filter(k => S.regions[k] && !S.regions[k].qdone).slice(0, 3);
+  box.innerHTML = keys.map(k => { const q = curQuest(k); if (!q) return '';
+    const done = q.objs.filter((o,i) => objProg(k, o, i) >= objNeed(o)).length;
+    return `<button class="qbtn" data-q="${k}" title="${q.title}"><span class="portrait" style="background-image:url(${src(NPCS[q.npc].img)})"></span>
+      <small>${done}/${q.objs.length}</small>${questReady(k) ? '<em>!</em>' : ''}</button>`; }).join('');
+  box.querySelectorAll('[data-q]').forEach(b => b.onclick = () => openQuest(b.dataset.q));
 }
 
 /* 시장(계산대): 물건 팔기 */
@@ -1773,9 +2107,9 @@ function openMap(ch){
     <svg class="paths" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="${pathD}" stroke="#9c7443" stroke-width="3" vector-effect="non-scaling-stroke" stroke-dasharray="10 8" fill="none" opacity=".7"/></svg>
     ${M.deco.map(([im,x,y,w]) => `<img class="deco" src="${src(im)}" style="left:${x}%;top:${y}%;width:${w}%">`).join('')}
     ${locs.map(([k,img,name,lv]) => { const st = S.regions[k], locked = S.level < lv, here = S.where === k;
-      const sub = k==='home' ? '요리 · 제작 · 주문' : locked ? `레벨 ${lv}에 열려요` : st ? `룬 ${Math.min(st.runes,CONFIG.runesPerRegion)}/${CONFIG.runesPerRegion}${st.clears?` · 완료 ${st.clears}회`:''}` : '새로운 탐험!';
+      const sub = k==='home' ? '농장 · 생산 · 주문' : locked ? `레벨 ${lv}에 열려요` : st ? (st.qdone ? `완료!${st.clears>1?` (${st.clears}회)`:''}` : `미션 ${(st.qi||0)+1}/3`) : '새로운 탐험!';
       return `<button class="loc ${locked?'locked':''} ${here?'here':''}" data-go="${k}" style="left:${pos[k][0]}%;top:${pos[k][1]}%">
-        <div class="medal" style="background-image:url(${src(img)})">${locked?`<div class="lock"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="12" rx="3" fill="#3a3a3a"/><path d="M8 10V7a4 4 0 018 0v3" stroke="#3a3a3a" stroke-width="2.6" fill="none"/><circle cx="12" cy="16" r="2" fill="#ffd23a"/></svg></div>`:''}</div>
+        <div class="medal" style="background-image:url(${src(img)})">${st && (st.qdone || st.clears) ? `<svg class="done" viewBox="0 0 40 40"><path d="M5 21l10 10L36 8" stroke="#1d6b10" stroke-width="10" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 21l10 10L36 8" stroke="#6ee04a" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>` : ''}${locked?`<div class="lock"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="12" rx="3" fill="#3a3a3a"/><path d="M8 10V7a4 4 0 018 0v3" stroke="#3a3a3a" stroke-width="2.6" fill="none"/><circle cx="12" cy="16" r="2" fill="#ffd23a"/></svg></div>`:''}</div>
         <b>${name}</b><small>${sub}</small>
         ${here?`<svg class="flag" viewBox="0 0 30 40"><line x1="4" y1="4" x2="4" y2="38" stroke="#7a4a20" stroke-width="3"/><path d="M5 5 L28 10 L5 18z" fill="#e0402a"/><circle cx="4" cy="4" r="3" fill="#ffb000"/></svg>`:''}</button>`; }).join('')}
     ${ch===2 && !ch2Open ? `<div class="chlock"><b>레벨 ${CONFIG.chapter2Level}부터 배를 타고 건너갈 수 있어요</b></div>` : ''}
