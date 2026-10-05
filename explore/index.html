@@ -617,7 +617,7 @@ const REGIONS = {
 
 /* ── 등장인물 ── */
 const NPCS = {
-  husky:     {name:'썰매견 눈송이', img:'npc_husky'},
+  husky:     {name:'썰매견 눈송이', img:'husky'},
   farmer:    {name:'보리 할아버지', img:'npc_farmer'},
   carpenter: {name:'목수 단단',     img:'npc_carpenter'},
 };
@@ -787,12 +787,12 @@ const IMG_LIST = ['avatar','berrybush','board','boulder','cabin','chest','cloud'
   'bakery','dairy','kiln','pottery','coop','barn','hen','cow','f_empty','f_sprout','f_wheat','f_corn','claypit','bigrock',
   'i_wheat','i_corn','i_flour','i_egg','i_milk','i_cheese','i_bread','i_cookies','i_brick','i_jar','i_clay','i_dynamite',
   'u_register','u_notebook','u_bag','u_map','u_gift','u_camera','u_shop',
-  'fix_bridge','fix_well','fix_fence','done_bridge','done_well','done_fence','npc_husky','npc_farmer','npc_carpenter',
+  'fix_bridge','fix_well','fix_fence','done_bridge','done_well','done_fence','npc_farmer','npc_carpenter',
   'u_trophy','m_fest','i_medal','lantern','giftbox','dec_fence','dec_flowerbed','dec_bench','dec_lamp','dec_statue','dec_fountain'];
 // 그림이 아직 없을 때 대신 쓸 그림(화면 아이콘용)
 const IMG_FALLBACK = {u_trophy:'rune', m_fest:'m_home', i_medal:'i_coin', lantern:'flowers', giftbox:'chest',
   dec_fence:'done_fence', dec_flowerbed:'flowers', dec_bench:'log', dec_lamp:'spruce', dec_statue:'rune', dec_fountain:'done_well',fix_bridge:'log', fix_well:'claypit', fix_fence:'wall', done_bridge:'fix_bridge', done_well:'fix_well',
-  done_fence:'fix_fence', npc_husky:'husky', npc_farmer:'explorer', npc_carpenter:'avatar',u_register:'i_coin', u_notebook:'board', u_bag:'chest', u_map:'m_canyon', u_gift:'chest', u_camera:'rune',
+  done_fence:'fix_fence', npc_farmer:'explorer', npc_carpenter:'avatar',u_register:'i_coin', u_notebook:'board', u_bag:'chest', u_map:'m_canyon', u_gift:'chest', u_camera:'rune',
   u_shop:'i_energy', claypit:'boulder', bigrock:'boulder', i_corn:'i_wheat', i_flour:'i_wheat', i_egg:'hen', i_milk:'cow',
   i_cheese:'dairy', i_bread:'bakery', i_cookies:'bakery', i_brick:'kiln', i_jar:'pottery', i_clay:'i_sandstone', i_dynamite:'i_coal'};
 const FAILED = new Set();
@@ -1732,7 +1732,7 @@ function updateQuest(){
     <div class="row"><img src="${src('u_trophy')}"> 남은 ${fmtDays(evLeft())}</div><div class="row"><button class="gbtn gold" id="qFest" style="padding:3px 10px;font-size:13px">트로피 보기</button></div>`;
     document.getElementById('qFest').onclick = openEvent; return; }
   q.innerHTML = `<h4>${R.name}</h4>
-    <div class="row"><img src="${src('npc_husky')}" style="border-radius:50%"> 미션 <b>${st.qdone ? '완료!' : (st.qi||0)+1 + '/' + (STORY[world.key] ? STORY[world.key].quests.length : 3)}</b></div>
+    <div class="row"><img src="${src('husky')}" style="border-radius:50%"> 미션 <b>${st.qdone ? '완료!' : (st.qi||0)+1 + '/' + (STORY[world.key] ? STORY[world.key].quests.length : 3)}</b></div>
     <div class="row"><img src="${src('rune')}"> 룬 석판 <b>${Math.min(st.runes,CONFIG.runesPerRegion)}/${CONFIG.runesPerRegion}</b></div>
     <div class="row"><img src="${src('cloud')}"> 탐험 ${Math.round(open/total*100)}% <span class="pbar"><i style="width:${open/total*100}%"></i></span></div>`;
 }
