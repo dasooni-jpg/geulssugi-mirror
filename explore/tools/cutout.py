@@ -5,7 +5,7 @@ from PIL import Image, ImageFilter
 from collections import deque
 
 ICON_MAX = 240
-HOLES = {'dec_moonarch', 'dec_carousel', 'dec_bench', 'dec_pavilion', 'dec_swing', 'dec_lemonade', 'shipwreck'}; HOLE_MIN = 120
+HOLES = {'dec_moonarch', 'dec_carousel', 'dec_bench', 'dec_pavilion', 'dec_swing', 'shipwreck'}; HOLE_MIN = 120
 Q = 80   # WebP 품질(배포 파일이 무료 워커 3MB 한도 안에 들도록)
 def small(dst, im):
     n = os.path.basename(dst)
