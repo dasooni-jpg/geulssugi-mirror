@@ -115,6 +115,9 @@ canvas{display:block}
 .hq .bubble{box-shadow:0 4px 12px rgba(0,0,0,.45),inset 0 2px 0 rgba(255,255,255,.35)}
 .lq .res,.lq .chip,.lq #modal{backdrop-filter:none;-webkit-backdrop-filter:none}
 
+#fpsBox{position:absolute;left:8px;bottom:78px;background:rgba(0,0,0,.6);color:#bff6c0;font:700 10.5px/1 monospace;
+  padding:4px 7px;border-radius:7px;pointer-events:none;z-index:25}
+#fpsBox.hidden{display:none}
 /* ===== 절전 화면 ===== */
 #sleepOv{position:fixed;inset:0;background:#000;z-index:999;display:flex;align-items:center;justify-content:center;
   color:#8fa6b8;text-align:center;user-select:none;-webkit-user-select:none;cursor:pointer}
@@ -269,6 +272,7 @@ input.vol{width:100%;margin-top:6px;accent-color:#ffd257;height:22px;touch-actio
       <button class="fabbtn" id="btnSpeed"><span class="speedlbl">x1</span></button>
       <button class="fabbtn" id="btnCenter">🎯</button>
     </div>
+    <div id="fpsBox" class="hidden"></div>
     <div id="sleepOv" class="hidden"><div class="sbox"><div class="sclock" id="sleepClock">--:--</div>
       <div class="sdate" id="sleepDate"></div><div class="smsg" id="sleepMsg">🌙 뗏목이 쉬는 중</div>
       <div class="shint">화면을 누르면 돌아옴 · 쉬는 동안의 생산은 돌아올 때 계산됨</div></div></div>
@@ -1381,12 +1385,8 @@ function drawSeaLight(W,H,st){
   const day = S.env.time>0.22 && S.env.time<0.8;
   // 뗏목 주변의 밝은 청록 물빛 (얕은 바다 느낌)
   const cw=raftCenter(), c=w2s(cw.x,cw.y), r=Math.max(160,(raftRadius()+140)*CAM.z);
-  const gl=ctx.createRadialGradient(c.x,c.y,r*0.15,c.x,c.y,r);
-  gl.addColorStop(0, st? "rgba(90,150,190,.22)" : day? "rgba(120,240,228,.42)" : "rgba(80,160,200,.2)");
-  gl.addColorStop(.55, st? "rgba(60,120,170,.1)" : "rgba(80,200,215,.14)");
-  gl.addColorStop(1, "rgba(60,160,210,0)");
-  ctx.save(); ctx.fillStyle=gl; ctx.translate(c.x,c.y); ctx.scale(1,0.62); ctx.translate(-c.x,-c.y);
-  ctx.beginPath(); ctx.arc(c.x,c.y,r,0,6.283); ctx.fill(); ctx.restore();
+  const sp=seaGlowSprite(st? "storm" : day? "day" : "night");
+  ctx.drawImage(sp, c.x-r, c.y-r*0.62, r*2, r*1.24);
   // 비스듬한 햇살 띠 (고급 · 맑은 낮)
   if(VIEW.gfx==="high" && day && !st && S.env.weather!=="rain"){
     ctx.save(); ctx.globalCompositeOperation="lighter";
@@ -1399,6 +1399,18 @@ function drawSeaLight(W,H,st){
     }
     ctx.restore();
   }
+}
+/* 성능 : 뗏목 주변 물빛을 상태별로 한 번만 그려 두고 재사용 */
+const SEA_GLOW={};
+function seaGlowSprite(k){
+  if(SEA_GLOW[k]) return SEA_GLOW[k];
+  const c=document.createElement("canvas"); c.width=c.height=256; const g=c.getContext("2d");
+  const gl=g.createRadialGradient(128,128,128*0.15,128,128,128);
+  gl.addColorStop(0, k==="storm"? "rgba(90,150,190,.22)" : k==="day"? "rgba(120,240,228,.42)" : "rgba(80,160,200,.2)");
+  gl.addColorStop(.55, k==="storm"? "rgba(60,120,170,.1)" : "rgba(80,200,215,.14)");
+  gl.addColorStop(1, "rgba(60,160,210,0)");
+  g.fillStyle=gl; g.fillRect(0,0,256,256);
+  return (SEA_GLOW[k]=c);
 }
 /* --- 고급 바다 : 깜빡이는 물비늘 + 짧은 물결 마루 --- */
 function drawSeaSparkle(W,H,st){
@@ -1497,6 +1509,7 @@ function drawWeather(dt){
    ===================================================================== */
 function drawWorld(dt){
   const W=cv.width/DPR, H=cv.height/DPR;
+  LIGHTS=[];
   ctx.save();
   const sh = SHAKE>0.3? SHAKE : 0;
   ctx.translate(W/2 + (sh? rnd(-sh,sh):0), H*0.46 + (sh? rnd(-sh,sh):0));
@@ -1669,8 +1682,32 @@ function drawFoam(t){
 }
 
 /* ---------- 밤 창문 불빛 / 펄럭이는 깃발 ---------- */
+/* 밤 조명 : 그림을 그리는 동안 불빛 위치를 모아 두었다가, 낮/밤 어둠을 덮은 뒤 빛을 더함(lighter) */
+let LIGHTS=[];
+function addLight(x,y,r,col,a){ if(LIGHTS.length<160) LIGHTS.push({x,y,r,col,a:a==null?1:a}); }
+function nightAmt(){
+  const t=S.env.time;
+  let n = t<0.2? 1 : t<0.3? (0.3-t)/0.1 : t>0.9? 1 : t>0.78? (t-0.78)/0.12 : 0;
+  if(S.env.weather==="storm") n=Math.max(n,.45);
+  else if(S.env.weather==="rain") n=Math.max(n,.2);
+  return n;
+}
+function drawNightLights(){
+  const n=nightAmt(); const L=LIGHTS; LIGHTS=[];
+  if(VIEW.gfx==="low" || n<0.04 || !L.length) return;
+  ctx.save(); ctx.globalCompositeOperation="lighter";
+  L.forEach(l=>{
+    const q=w2s(l.x,l.y), r=l.r*CAM.z, fl=1+Math.sin(waveT*3+l.x*0.1)*0.05;
+    ctx.globalAlpha=Math.min(1,0.55*n*l.a*fl);
+    ctx.drawImage(glowSprite(l.col), q.x-r, q.y-r, r*2, r*2);
+    ctx.globalAlpha=Math.min(1,0.5*n*l.a);
+    const c=r*0.16; ctx.drawImage(glowSprite("#fff4d0"), q.x-c, q.y-c, c*2, c*2);
+  });
+  ctx.restore();
+}
 function windowLit(x,y,w,h){
   const night=!isDay();
+  addLight(x+w/2,y+h/2,w*4.2,"#ffc860",0.9);
   ctx.save();
   ctx.fillStyle = night? "#ffd97a" : "#7fd4ff";
   rrect(x,y,w,h,2); ctx.fill();
@@ -1807,6 +1844,7 @@ function artTent(x,y,lv){
   ctx.beginPath(); ctx.moveTo(x-2,y-40); ctx.lineTo(x+18,y+4); ctx.stroke();
   // 입구 어둠
   fillP([[x-2,y-28],[x-16,y+6],[x-2,y+11]],"rgba(60,40,25,.75)");
+  addLight(x-6,y-4,34,"#ffb860",0.7);
   // 기둥/로프
   ctx.strokeStyle=PAL.woodD; ctx.lineWidth=2.6;
   ctx.beginPath(); ctx.moveTo(x-2,y-48); ctx.lineTo(x-2,y+14); ctx.stroke();
@@ -1826,6 +1864,8 @@ function artTent(x,y,lv){
     ctx.strokeStyle="rgba(120,60,10,.5)"; ctx.lineWidth=0.8; strokeLine(x-2,y-28,x-9,y-8);
     // 말뚝
     ctx.fillStyle=PAL.woodD; ctx.fillRect(x-35,y+6,2.4,4); ctx.fillRect(x+31,y+4,2.4,4);
+    // 입구 등불(밤)
+    if(!isDay()){ ctx.fillStyle="#ffd97a"; ctx.beginPath(); ctx.arc(x-6,y-6,2.2,0,6.283); ctx.fill(); }
     // 윤곽
     ctx.strokeStyle="rgba(70,35,8,.45)"; ctx.lineWidth=1;
     poly([[x-2,y-46],[x+30,y+2],[x-2,y+14],[x-32,y+4]]); ctx.stroke();
@@ -1903,6 +1943,10 @@ function artFishdock(x,y,lv){
   // 양동이
   isoBox(x-16,y+6,18,12,14,"#7fd4ff","#3f89b5","#5aa8d8");
   ctx.fillStyle="#ff8fa3"; ctx.beginPath(); ctx.ellipse(x-16,y-8,6,3.4,0,0,6.28); ctx.fill();
+  if(HQ()){ ctx.fillStyle="rgba(255,255,255,.6)"; ctx.beginPath(); ctx.ellipse(x-18,y-9,2,0.9,0,0,6.28); ctx.fill();
+    ctx.fillStyle="#555"; ctx.beginPath(); ctx.arc(x+2,y-6,2.4,0,6.283); ctx.fill();        // 릴
+    ctx.fillStyle="#999"; ctx.beginPath(); ctx.arc(x+2,y-6,1,0,6.283); ctx.fill();
+    ctx.fillStyle="#ff5a4a"; ctx.beginPath(); ctx.arc(x+44,y+6+Math.sin(waveT*3)*1,1.8,0,6.283); ctx.fill(); }   // 찌
   // 그물
   ctx.strokeStyle="rgba(230,240,255,.75)"; ctx.lineWidth=1;
   for(let i=0;i<4;i++){ ctx.beginPath(); ctx.moveTo(x+4+i*5,y-6); ctx.lineTo(x+16+i*5,y+8); ctx.stroke(); }
@@ -2079,12 +2123,22 @@ function artSolar(x,y,lv){
 /* --- 풍력 --- */
 function artWindmill(x,y,lv){
   fillP([[x-26,y+2],[x,y+15],[x+26,y+2],[x,y-11]],"#c2c8cc");
+  if(HQ()){                                  // 세밀 : 가늘어지는 둥근 기둥 + 날개 그늘·윤곽
+    fillP([[x-4,y+6],[x+4,y+6],[x+2,y-54],[x-2,y-54]],"#b9c4cc");
+    fillP([[x+0.5,y+6],[x+4,y+6],[x+2,y-54],[x+0.5,y-54]],"#97a4ae");
+    ctx.strokeStyle="rgba(255,255,255,.6)"; ctx.lineWidth=1; strokeLine(x-2.6,y+4,x-1.4,y-52);
+    ctx.fillStyle="#a7b3bc"; rrect(x-5,y-60,12,7,3); ctx.fill();
+  } else {
   ctx.strokeStyle="#b9c4cc"; ctx.lineWidth=5;
   ctx.beginPath(); ctx.moveTo(x,y+6); ctx.lineTo(x,y-54); ctx.stroke();
+  }
   ctx.save(); ctx.translate(x,y-56); ctx.rotate(waveT*(S.env.weather==="storm"?5:2.2));
   ctx.fillStyle="#e8eef2";
   for(let i=0;i<3;i++){ ctx.save(); ctx.rotate(i*2.094);
-    poly([[0,0],[4,-22],[0,-26],[-4,-22]]); ctx.fill(); ctx.restore(); }
+    poly([[0,0],[4,-22],[0,-26],[-4,-22]]); ctx.fill();
+    if(HQ()){ ctx.fillStyle="#c3ccd3"; poly([[0,0],[4,-22],[0,-26]]); ctx.fill(); ctx.fillStyle="#e8eef2";
+      ctx.strokeStyle="rgba(60,70,80,.45)"; ctx.lineWidth=0.8; poly([[0,0],[4,-22],[0,-26],[-4,-22]]); ctx.stroke(); }
+    ctx.restore(); }
   ctx.restore();
   ctx.fillStyle="#7f8b95"; ctx.beginPath(); ctx.arc(x,y-56,4,0,6.283); ctx.fill();
   powerDot(x+20,y-4,true);
@@ -2131,6 +2185,7 @@ function artCampfire(x,y,lv){
     ctx.fillStyle="rgba(255,255,255,.25)";
     for(let i=0;i<7;i++){ const a=i/7*6.283; ctx.beginPath(); ctx.ellipse(x+Math.cos(a)*17-1,y+Math.sin(a)*9-1,2,1.2,0,0,6.283); ctx.fill(); }
   }
+  addLight(x,y-10,70+lv*10,"#ff9a3a",1.1);
   // 불빛 (밤에 더 밝게)
   ctx.save(); ctx.globalAlpha= isDay()? .16 : .34;
   const gr=60+lv*8;
@@ -2160,6 +2215,7 @@ function artLighthouse(x,y,lv){
   ctx.fillStyle="#3c4a56"; rrect(x-11,y-h-14,22,8,2); ctx.fill();
   ctx.fillStyle="#ffd257"; rrect(x-8,y-h-12,16,6,2); ctx.fill();
   fillP([[x-12,y-h-14],[x+12,y-h-14],[x,y-h-26]],"#ff5a4a");
+  addLight(x,y-h-9,60,"#fff0b0",1.2);
   // 빛줄기(밤)
   if(S.env.time<0.26||S.env.time>0.8){
     ctx.save(); ctx.globalAlpha=.22;
@@ -2229,16 +2285,26 @@ function artDock(x,y,lv){
   // 보트
   ctx.save(); ctx.translate(x+10,y-4+Math.sin(waveT*1.6)*2);
   fillP([[-24,0],[24,0],[16,9],[-16,9]],"#c78f50");
+  if(HQ()){ ctx.strokeStyle="rgba(80,45,15,.4)"; ctx.lineWidth=0.8; strokeLine(-21,3,21,3); strokeLine(-18,6,18,6);
+    ctx.strokeStyle="rgba(60,30,8,.5)"; poly([[-24,0],[24,0],[16,9],[-16,9]]); ctx.stroke(); }
   fillP([[-24,0],[24,0],[20,-4],[-20,-4]],"#e6bb85");
+  if(HQ()){ ctx.strokeStyle="rgba(255,255,255,.5)"; ctx.lineWidth=1; strokeLine(-23,-0.5,23,-0.5); }
   ctx.strokeStyle="#8a5a2e"; ctx.lineWidth=3;
   ctx.beginPath(); ctx.moveTo(0,-4); ctx.lineTo(0,-34); ctx.stroke();
   fillP([[2,-34],[24,-8],[2,-8]],"#ffffff");
   ctx.globalAlpha=.15; fillP([[2,-34],[24,-8],[2,-8]],"#000"); ctx.globalAlpha=1;
+  if(HQ()){ fillP([[2,-34],[8,-8],[2,-8]],"rgba(255,255,255,.5)");
+    ctx.strokeStyle="rgba(120,120,120,.5)"; ctx.lineWidth=0.7; strokeLine(2,-21,16,-17);
+    ctx.strokeStyle="rgba(60,60,60,.4)"; poly([[2,-34],[24,-8],[2,-8]]); ctx.stroke(); }
   ctx.restore();
   // 로프 릴 + 부두 깃발
   flag(x-30,y+4,"#5ec3f0",30);
   ctx.fillStyle="#cfa76b"; ctx.beginPath(); ctx.ellipse(x-26,y-2,8,5,0,0,6.283); ctx.fill();
   ctx.strokeStyle="#a98851"; ctx.lineWidth=1.2; ctx.beginPath(); ctx.ellipse(x-26,y-2,5,3,0,0,6.283); ctx.stroke();
+  // 기둥 등불
+  ctx.fillStyle="#3c3c3c"; ctx.fillRect(x+10,y-7,4,5);
+  ctx.fillStyle= isDay()? "#e8e2c8" : "#ffd97a"; ctx.fillRect(x+10.8,y-6.2,2.4,3.4);
+  addLight(x+12,y-5,40,"#ffc860",0.9);
 }
 /* --- 교역소 --- */
 function artMarket(x,y,lv){
@@ -2259,6 +2325,20 @@ function artMarket(x,y,lv){
   ctx.fillStyle="#ffd257"; ctx.beginPath(); ctx.arc(x+14,y-12,4,0,6.283); ctx.fill();
   flag(x+24,y-22,"#ffd257",16);
   if(lv>=3) drawCrate(x+28,y+6,.6);
+  if(HQ()){                                  // 세밀 : 차양 물결 끝단, 과일 반짝임
+    const stripes2=["#ff5a4a","#ffffff"];
+    for(let i=0;i<6;i++){ ctx.fillStyle=stripes2[i%2]; ctx.beginPath(); ctx.arc(x-14+i*8,y-14,4,0,Math.PI); ctx.fill(); }
+    ctx.strokeStyle="rgba(120,30,20,.4)"; ctx.lineWidth=0.8;
+    poly([[x-24,y-22],[x+24,y-22],[x+30,y-14],[x-18,y-14]]); ctx.stroke();
+    ctx.fillStyle="rgba(255,255,255,.6)";
+    for(let i=0;i<3;i++){ ctx.beginPath(); ctx.arc(x-15.5+i*9,y-13,1,0,6.283); ctx.fill(); }
+  }
+  // 밤 : 줄 전구
+  if(!isDay()){
+    for(let i=0;i<6;i++){ const bx=x-22+i*9, by=y-22+Math.sin(i*1.3)*1.5;
+      ctx.fillStyle=["#ffd257","#ff8fa3","#7fd4ff"][i%3]; ctx.beginPath(); ctx.arc(bx,by,1.6,0,6.283); ctx.fill();
+      if(i%2===0) addLight(bx,by,22,"#ffcf6a",0.6); }
+  }
 }
 /* --- 레이더 --- */
 function artRadar(x,y,lv){
@@ -2266,6 +2346,9 @@ function artRadar(x,y,lv){
   // 철탑
   ctx.strokeStyle="#8fa3b3"; ctx.lineWidth=2.6;
   const h=54;
+  if(HQ()){ ctx.save(); ctx.strokeStyle="#6f7f8c"; ctx.lineWidth=2;      // 세밀 : 뒤쪽 다리(입체감)
+    strokeLine(x-4,y+10,x-1,y-h); strokeLine(x+6,y+10,x+2,y-h); ctx.restore();
+    ctx.fillStyle="#9aa5ae"; ctx.beginPath(); ctx.ellipse(x,y+5,17,6,0,0,6.283); ctx.fill(); }
   ctx.beginPath(); ctx.moveTo(x-14,y+4); ctx.lineTo(x-4,y-h); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(x+14,y+4); ctx.lineTo(x+4,y-h); ctx.stroke();
   for(let i=0;i<5;i++){ const t=i/5;
@@ -2274,7 +2357,10 @@ function artRadar(x,y,lv){
   // 접시
   ctx.save(); ctx.translate(x,y-h-4); ctx.rotate(Math.sin(waveT*0.7)*0.5);
   ctx.fillStyle="#e8eef2"; ctx.beginPath(); ctx.ellipse(0,0,16,11,0,0,6.283); ctx.fill();
+  if(HQ()){ ctx.strokeStyle="rgba(60,70,80,.5)"; ctx.lineWidth=1; ctx.stroke(); }
   ctx.fillStyle="#b6bfc7"; ctx.beginPath(); ctx.ellipse(0,0,11,7,0,0,6.283); ctx.fill();
+  if(HQ()){ ctx.fillStyle="#9aa5ae"; ctx.beginPath(); ctx.ellipse(2,1.5,8,5,0,0,6.283); ctx.fill();
+    ctx.strokeStyle="rgba(255,255,255,.75)"; ctx.lineWidth=1.4; ctx.beginPath(); ctx.ellipse(0,0,14,9.5,0,Math.PI*1.1,Math.PI*1.6); ctx.stroke(); }
   ctx.strokeStyle="#7f8b95"; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0,10); ctx.stroke();
   ctx.restore();
   // 펄스
@@ -2291,6 +2377,9 @@ function artHarpoon(x,y,lv){
   ctx.save(); ctx.translate(x,y-10); ctx.rotate(-0.5+Math.sin(waveT*0.5)*0.25);
   ctx.fillStyle="#6d7d89"; rrect(0,-4,36,8,3); ctx.fill();
   ctx.fillStyle="#b9c4cc"; poly([[36,-3],[48,0],[36,3]]); ctx.fill();
+  if(HQ()){ ctx.fillStyle="rgba(255,255,255,.35)"; ctx.fillRect(2,-3,32,1.4);
+    ctx.fillStyle="#56636d"; ctx.fillRect(12,-4,2.4,8); ctx.fillRect(24,-4,2.4,8);
+    ctx.strokeStyle="rgba(40,50,60,.5)"; ctx.lineWidth=0.8; rrect(0,-4,36,8,3); ctx.stroke(); }
   ctx.fillStyle="#8a5a2e"; rrect(-8,-5,12,10,3); ctx.fill();
   ctx.restore();
   // 작살 묶음
@@ -2343,7 +2432,10 @@ function artGreenhouse(x,y,lv){
   ctx.globalAlpha=.6; ctx.lineWidth=1.2;
   for(let i=-1;i<=1;i++){ ctx.beginPath(); ctx.moveTo(x+i*13,y-2); ctx.quadraticCurveTo(x+i*12,y-40,x,y-48); ctx.stroke(); }
   ctx.globalAlpha=.55; ctx.fillStyle="#fff"; ctx.beginPath(); ctx.ellipse(x-12,y-30,3,9,-0.3,0,6.283); ctx.fill();
+  if(HQ()){ ctx.globalAlpha=.35; ctx.beginPath(); ctx.ellipse(x+10,y-22,1.6,6,-0.2,0,6.283); ctx.fill();
+    ctx.globalAlpha=.9; ctx.fillStyle="#9fb0bd"; ctx.fillRect(x-27,y-3,54,2.4); }
   ctx.restore();
+  if(!isDay()) addLight(x,y-20,46,"#b8ffc8",0.55);
   // 물방울 급수기
   if(Math.sin(waveT*3)>0.2){ ctx.fillStyle="#7fd4ff"; ctx.beginPath(); ctx.arc(x+4,y-34+((waveT*30)%16),1.6,0,6.283); ctx.fill(); }
   powerDot(x+28,y-4);
@@ -2399,8 +2491,11 @@ function artRadio(x,y,lv){
   ctx.beginPath(); ctx.moveTo(x+10,y-70); ctx.lineTo(x-6,y+2); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(x+10,y-70); ctx.lineTo(x+26,y+2); ctx.stroke();
   for(let i=0;i<3;i++){ ctx.beginPath(); ctx.moveTo(x+4,y-50+i*16); ctx.lineTo(x+16,y-50+i*16); ctx.stroke(); }
+  if(HQ()){ ctx.strokeStyle="rgba(255,255,255,.55)"; ctx.lineWidth=1; strokeLine(x+9,y+4,x+9,y-68);
+    ctx.fillStyle="#46525c"; rrect(x+5,y+1,10,5,1.5); ctx.fill(); }
   // 신호등 + 전파
   const on=Math.sin(waveT*4)>0;
+  if(on) addLight(x+10,y-73,30,"#ff5a5a",0.8);
   ctx.fillStyle= on? "#ff5a5a":"#7a2a2a"; ctx.beginPath(); ctx.arc(x+10,y-73,3.2,0,6.283); ctx.fill();
   ctx.save(); ctx.strokeStyle="#bfe8ff"; ctx.lineWidth=2;
   for(let i=0;i<3;i++){ const r=((waveT*0.8+i/3)%1);
@@ -2425,10 +2520,17 @@ function artCannon(x,y,lv){
   ctx.fillStyle="#2b2f33"; rrect(-6-kick,-6,40,12,5); ctx.fill();
   ctx.fillStyle="#454b51"; rrect(30-kick,-7.5,7,15,3); ctx.fill();
   ctx.fillStyle="rgba(255,255,255,.18)"; ctx.fillRect(-2-kick,-4,30,3);
+  if(HQ()){ ctx.fillStyle="#3d4349"; rrect(6-kick,-7,4,14,1.5); ctx.fill(); rrect(18-kick,-6.8,3,13.6,1.5); ctx.fill();
+    ctx.fillStyle="rgba(255,255,255,.35)"; ctx.fillRect(0-kick,-4.2,24,1.2);
+    ctx.fillStyle="#111"; ctx.beginPath(); ctx.ellipse(37-kick,0,1.8,5.4,0,0,6.283); ctx.fill(); }
   ctx.restore();
   // 포탄 더미
   ctx.fillStyle="#2b2f33";
   [[20,6],[26,4],[23,1]].forEach(o=>{ ctx.beginPath(); ctx.arc(x+o[0],y+o[1],3.4,0,6.283); ctx.fill(); });
+  if(HQ()){ ctx.fillStyle="rgba(255,255,255,.4)";
+    [[20,6],[26,4],[23,1]].forEach(o=>{ ctx.beginPath(); ctx.arc(x+o[0]-1.2,y+o[1]-1.2,1,0,6.283); ctx.fill(); });
+    ctx.strokeStyle="rgba(120,95,55,.55)"; ctx.lineWidth=0.8;
+    for(let i=0;i<5;i++){ ctx.beginPath(); ctx.ellipse(x-26+i*9,y+8-i*4,7,4.4,-0.4,0,6.283); ctx.stroke(); strokeLine(x-28+i*9,y+7-i*4,x-24+i*9,y+9-i*4); } }
   if(lv>=4) flag(x-22,y-2,"#2b2f33",20);
 }
 
@@ -3382,7 +3484,7 @@ function removePerson(id){
 
 /* ---------- 화면 보기 설정 : 깔끔 보기 / 건물 이름표 (이 기기에만 저장) ---------- */
 const VIEW_KEY="wildocean_view_v1";
-const VIEW = (()=>{ const d={ clean:true, labels:false, maxPeople:30, autoNet:true, gfx:"high", sleep:true, sleepMin:10 };
+const VIEW = (()=>{ const d={ clean:true, labels:false, maxPeople:30, autoNet:true, gfx:"high", sleep:true, sleepMin:10, autoGfx:true, showFps:false };
   try{ return Object.assign(d, JSON.parse(localStorage.getItem(VIEW_KEY)||"{}")); }catch(e){ return d; } })();
 function saveView(){ try{ localStorage.setItem(VIEW_KEY, JSON.stringify(VIEW)); }catch(e){} }
 function setView(k,v){ VIEW[k]=v; saveView(); syncViewBtn();
@@ -7868,6 +7970,8 @@ function viewSettings(){
     + `<div class="card"><div class="ico">🎨</div><div class="info"><h3>그래픽 품질 <span class="lv">${GFX_NAME[VIEW.gfx]}</span></h3>
         <p>${{high:"세밀한 건물·주민 그림(음영·윤곽·나뭇결·표정), 선명한 해상도, 뗏목 주변 물빛, 햇살, 물비늘, 유리 질감 화면. 주민이 화면에 45명보다 많으면 주민만 기본 그림으로 바뀜.",mid:"기본 그림 + 물빛·물비늘. 해상도를 조금 낮춤.",low:"배터리 절약: 기본 그림, 낮은 해상도, 30fps, 빛 효과 끔."}[VIEW.gfx]}</p>
         <div class="tagrow" style="margin:6px 0 0">${["high","mid","low"].map(g=>`<span class="tag ${VIEW.gfx===g?"on":""}" onclick="setView('gfx','${g}')">${GFX_NAME[g]}</span>`).join("")}</div></div></div>`
+    + tg("autoGfx","🐢","자동 품질 조절","화면이 6초 넘게 느리면(초당 40장 미만) 그래픽 품질을 한 단계 자동으로 낮춤. 올리는 것은 직접 고름.")
+    + tg("showFps","📈","화면 속도(FPS) 표시",`왼쪽 아래에 초당 화면 수와 한 장 그리는 시간을 보여 줌. 실제 기기에서 버벅임을 확인할 때 씀. 지금 ${PERF.fps} fps.`)
     + tg("labels","🏷️","건물 이름표","건물 아래에 이름과 레벨을 글자로 표시함.")
     + tg("autoNet","🕸️","자동 수집","진주 특전 그물과 🥅 자원 그물 건물이 떠다니는 자원을 자동으로 주움."
          + (autoNetRate()>0? ` 지금 1분에 약 ${Math.round(autoNetRate()*60)}개.` : " 아직 그물이 없음."));
@@ -8173,6 +8277,29 @@ function introModal(){
   });
 }
 
+/* ---------- 성능 감시 : 실제 초당 화면 수(FPS)를 재고, 계속 느리면 그래픽 품질을 한 단계 낮춤 ---------- */
+const PERF={ frames:0, t0:0, fps:60, slow:0, started:performance.now(), work:0 };
+function perfTick(t, workMs){
+  PERF.frames++; PERF.work+=workMs;
+  if(!PERF.t0) PERF.t0=t;
+  if(t-PERF.t0 < 1000) return;
+  PERF.fps=Math.round(PERF.frames*1000/(t-PERF.t0));
+  const avgWork=PERF.work/PERF.frames;
+  PERF.frames=0; PERF.work=0; PERF.t0=t;
+  const target = VIEW.gfx==="low"? 26 : 40;                // 절약은 30fps가 목표
+  // 탭이 막 켜진 8초 동안, 절전·엔딩·패널 조작 중에는 판단하지 않음
+  if(VIEW.autoGfx && performance.now()-PERF.started>8000 && !document.hidden && !ENDING){
+    if(PERF.fps<target && avgWork>12) PERF.slow++; else PERF.slow=Math.max(0,PERF.slow-1);
+    if(PERF.slow>=6 && VIEW.gfx!=="low"){
+      VIEW.gfx = VIEW.gfx==="high"? "mid" : "low"; saveView(); applyGfx(); PERF.slow=0; PERF.started=performance.now();
+      toast(`🐢 화면이 느려서 그래픽 품질을 '${GFX_NAME[VIEW.gfx]}'(으)로 낮춤 — 설정에서 바꿀 수 있음`);
+      if(PANEL==="more" && MORE_TAB==="set") moreTab("set");
+    }
+  }
+  const el=$("#fpsBox");
+  if(el){ el.classList.toggle("hidden", !VIEW.showFps);
+    if(VIEW.showFps) el.textContent=`${PERF.fps} fps · ${GFX_NAME[VIEW.gfx]} · ${avgWork.toFixed(1)}ms`; }
+}
 function loop(t){
   if(SLEEP) return;                              // 절전모드 : 루프 자체를 멈춤(깨어나면 다시 시작)
   requestAnimationFrame(loop);
@@ -8198,13 +8325,16 @@ function loop(t){
   updParts(dt);
 
   /* 렌더 */
+  const w0=performance.now();
   drawSea(dt);
   drawWorld(dt);
   drawWeather(dt);
   drawDayTint();
+  drawNightLights();
   drawVignette();
   drawFly();
   updHUD(dt);
+  perfTick(t, performance.now()-w0);
 }
 
 window.addEventListener("load", boot);
