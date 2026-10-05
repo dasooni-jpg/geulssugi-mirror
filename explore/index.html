@@ -556,6 +556,10 @@ const ITEMS = {
   stardust:{name:'별가루',    img:'i_stardust',tab:'res', value:30},
   pearl:   {name:'진주',      img:'i_pearl',   tab:'res', value:40},
   aurora:  {name:'오로라 조각',img:'i_aurora', tab:'res', value:45},
+  necklace:{name:'진주 목걸이', img:'i_necklace', tab:'craft', value:160},
+  pillow:  {name:'구름 베개',   img:'i_pillow',   tab:'craft', value:120},
+  windchime:{name:'오로라 풍경', img:'i_windchime',tab:'craft', value:200},
+  starcandy:{name:'별사탕',     img:'i_starcandy',tab:'food', value:60, eat:40},
   rune:    {name:'룬 석판',  img:'rune',    tab:'treasure'},
   medal:   {name:'축제 메달', img:'i_medal', tab:'treasure'},
 };
@@ -623,6 +627,7 @@ const OBJS = {
   dairy:    {name:'치즈 공방',   img:'dairy',    w:1.85,fp:2, fixed:true, act:'dairy',  label:'치즈 공방',bld:'dairy'},
   kiln:     {name:'벽돌 가마',   img:'kiln',     w:1.8, fp:2, fixed:true, act:'kiln',   label:'벽돌 가마',bld:'kiln'},
   pottery:  {name:'도자기 공방', img:'pottery',  w:1.8, fp:2, fixed:true, act:'pottery',label:'도자기 공방',bld:'pottery'},
+  starshop: {name:'별빛 공방', img:'starshop', w:1.85,fp:2, fixed:true, act:'starshop',label:'별빛 공방',bld:'starshop'},
   workshop: {name:'대나무 공방', img:'workshop', w:1.85,fp:2, fixed:true, act:'workshop',label:'대나무 공방',bld:'workshop'},
   coop:     {name:'닭장',        img:'coop',     w:1.9, fp:2, fixed:true, act:'coop',   label:'닭장',     bld:'coop', animal:'hen'},
   barn:     {name:'외양간',      img:'barn',     w:1.9, fp:2, fixed:true, act:'barn',   label:'외양간',   bld:'barn', animal:'cow'},
@@ -690,7 +695,7 @@ const CH_BASE = {2:10, 3:20, 4:30};   // 장마다 처음 지역의 기본 레�
 for (const r of Object.values(REGIONS)) if (r.ch >= 2) r.lvOff = r.lv - CH_BASE[r.ch];
 function applyChapterLevels(){
   for (const r of Object.values(REGIONS)) if (r.ch >= 2) r.lv = CONFIG['chapter' + r.ch + 'Level'] + r.lvOff;
-  BUILDINGS.workshop.unlock = CONFIG.chapter3Level;
+  BUILDINGS.workshop.unlock = CONFIG.chapter3Level; BUILDINGS.starshop.unlock = CONFIG.chapter4Level;
 }
 const NPCS = {
   husky:     {name:'썰매견 눈송이', img:'npc_husky'},
@@ -823,11 +828,11 @@ const STORY = {
        objs:[{t:'fix', s:0}, {t:'clear', o:'shipwreck', n:4}], reward:{xp:210, gems:6, dynamite:2}},
       {npc:'farmer', title:'해적의 우물', text:'해적들이 쓰던 우물에 비밀이 숨어 있다는구나. 섬 건너편의 룬 석판을 찾아보렴.',
        objs:[{t:'fix', s:1}, {t:'rune', n:3}], reward:{xp:360, coins:620, gems:9}}]},
-  glacier:{repairs:[{kind:'fence', name:'썰매 길 울타리', need:{plank:6, ironbar:3}}, {kind:'bridge', name:'오로라 얼음 다리', need:{aurora:4, crystallamp:2}}],
+  glacier:{repairs:[{kind:'fence', name:'썰매 길 울타리', need:{plank:6, pillow:2}}, {kind:'bridge', name:'오로라 얼음 다리', need:{aurora:4, crystallamp:2}}],
     quests:[
       {npc:'husky', title:'오로라 아래에서', text:'하늘에 초록 커튼이 춤춰요! 빙하 덩어리를 깨서 얼음과 수정을 모아 봐요.',
        objs:[{t:'clear', o:'glacier', n:5}, {t:'get', i:'ice', n:15}], reward:{xp:200, coins:400}},
-      {npc:'carpenter', title:'썰매 길', text:'썰매가 미끄러지지 않게 울타리를 세워요. 오로라 수정도 캐 주세요!',
+      {npc:'carpenter', title:'썰매 길', text:'썰매가 부딪혀도 아프지 않게 구름 베개를 단 울타리를 세워요. 별빛 공방에서 베개를 만들어 오고, 오로라 수정도 캐 주세요!',
        objs:[{t:'fix', s:0}, {t:'get', i:'aurora', n:4}], reward:{xp:230, gems:6, dynamite:2}},
       {npc:'farmer', title:'얼음 다리 너머', text:'오로라 조각과 수정 등불로 얼음 다리를 밝히면 건너갈 수 있단다. 마지막 룬 석판들이 기다리고 있을 게다.',
        objs:[{t:'fix', s:1}, {t:'rune', n:3}], reward:{xp:400, coins:700, gems:10}}]},
@@ -892,6 +897,10 @@ const PROD = {
   dairy:  [{id:'cheese',   need:{milk:3},                min:6, xp:7}],
   kiln:   [{id:'brick',    need:{clay:2,coal:1},         min:4, xp:5}],
   pottery:[{id:'jar',      need:{clay:3},                min:5, xp:6}],
+  starshop:[{id:'pillow',   need:{cotton:5,stardust:1},           min:8,  xp:11},
+            {id:'starcandy',need:{stardust:1,syrup:1},            min:6,  xp:9},
+            {id:'necklace', need:{pearl:2,stardust:1,gold:1},     min:10, xp:14},
+            {id:'windchime',need:{aurora:2,crystal:1,bamboo:2},   min:12, xp:16}],
   workshop:[{id:'basket',  need:{bamboo:4,vine:2},      min:6, xp:8},
            {id:'crystallamp',need:{crystal:2,ironbar:1,bamboo:2}, min:9, xp:12}],
   // 동물: 칸마다 따로(동시에) 생산
@@ -899,7 +908,7 @@ const PROD = {
   barn:   [{id:'milk',     need:{corn:1},                min:5, xp:3}],
 };
 const PROD_NAME = {kitchen:'캠프 부엌', sawmill:'제재소', forge:'대장간', bakery:'빵집', dairy:'치즈 공방',
-  kiln:'벽돌 가마', pottery:'도자기 공방', coop:'닭장', barn:'외양간', workshop:'대나무 공방'};
+  kiln:'벽돌 가마', pottery:'도자기 공방', coop:'닭장', barn:'외양간', workshop:'대나무 공방', starshop:'별빛 공방'};
 const isAnimal = k => k === 'coop' || k === 'barn';
 const animalsOf = k => k === 'coop' ? 2 + (S.bld.coop||1) : 1 + (S.bld.barn||1);
 const capOf = k => isAnimal(k) ? animalsOf(k) : slotsOf(S.bld[k]||1);
@@ -938,6 +947,9 @@ const BUILDINGS = {
            fx:l => `작업 칸 ${slotsOf(l)}개 · 작업 시간 -${Math.round(10*(l-1))}%`},
   pottery:{start:0, unlock:7, build:{plank:4, brick:4, clay:6, coins:220}, cost:l => ({plank:2*l, brick:2*l, coins:160*l}),
            fx:l => `작업 칸 ${slotsOf(l)}개 · 작업 시간 -${Math.round(10*(l-1))}%`},
+  // 4장 전용: 구름 솜·별가루·진주·오로라로 특별한 물건
+  starshop:{start:0, unlock:30, build:{cotton:10, stardust:3, plank:8, coins:600}, cost:l => ({stardust:2*l, plank:5*l, coins:400*l}),
+           fx:l => `작업 칸 ${slotsOf(l)}개 · 작업 시간 -${Math.round(10*(l-1))}%`},
   // 3장 전용: 대나무·덩굴·수정으로 공예품
   workshop:{start:0, unlock:20, build:{bamboo:12, plank:6, vine:4, coins:400}, cost:l => ({bamboo:8*l, plank:4*l, coins:300*l}),
            fx:l => `작업 칸 ${slotsOf(l)}개 · 작업 시간 -${Math.round(10*(l-1))}%`},
@@ -966,9 +978,10 @@ const IMG_LIST = ['avatar','berrybush','board','boulder','cabin','chest','cloud'
   'm_fest_spring','m_fest_summer','m_fest_autumn','m_fest_winter',
   'dec_pavilion','dec_sandcastle','dec_scarecrow','dec_snowman','dec_tulips','dec_swing','dec_parasol','dec_lemonade','dec_haybale','dec_xmastree',
   'cloudpuff','rainbow','fairyshroom','glowfern','shipwreck','clams','glacier','aurorastone','m_sky','m_fairy','m_pirate','m_glacier',
-  'i_cotton','i_stardust','i_pearl','i_aurora'];
+  'i_cotton','i_stardust','i_pearl','i_aurora','starshop','i_necklace','i_pillow','i_windchime','i_starcandy'];
 // 그림이 아직 없을 때 대신 쓸 그림(화면 아이콘용)
-const IMG_FALLBACK = {dec_pavilion:'dec_moonarch', dec_sandcastle:'shells', dec_scarecrow:'pumpkins', dec_snowman:'icerock', dec_tulips:'dec_flowerbed',
+const IMG_FALLBACK = {starshop:'kiln', i_necklace:'i_pearl', i_pillow:'i_cotton', i_windchime:'i_aurora', i_starcandy:'i_stardust',
+  dec_pavilion:'dec_moonarch', dec_sandcastle:'shells', dec_scarecrow:'pumpkins', dec_snowman:'icerock', dec_tulips:'dec_flowerbed',
   dec_swing:'dec_bench', dec_parasol:'palm', dec_lemonade:'giftbox', dec_haybale:'pumpkins', dec_xmastree:'spruce',
   cloudpuff:'cloud', rainbow:'cherry', fairyshroom:'mushrooms', glowfern:'reeds', shipwreck:'driftwood', clams:'shells', glacier:'icerock', aurorastone:'crystal',
   m_sky:'m_canyon', m_fairy:'m_swamp', m_pirate:'m_beach', m_glacier:'m_snow', i_cotton:'i_reed', i_stardust:'i_gold', i_pearl:'i_shell', i_aurora:'i_crystal',
@@ -1191,7 +1204,7 @@ OBJS.tent_camp = {img:'tent', w:1.3, fixed:true};
 const HOME_N = 18;
 const HOME_POS = {cabin:[2,2], kitchen:[5,2], bakery:[8,2], dairy:[11,2], sawmill:[14,2],
   coop:[2,5], barn:[2,8], tent:[2,11], pottery:[2,14],
-  forge:[14,5], kiln:[14,8], board:[14,11], workshop:[14,14]};
+  forge:[14,5], kiln:[14,8], board:[14,11], workshop:[14,14], starshop:[11,14]};
 const FIELD_POS = [[6,6],[9,6],[6,9],[9,9],[6,12],[9,12]];
 const HOME_START = {x:8, y:8};
 const fpOf = o => (OBJS[o] && OBJS[o].fp) || 1;
