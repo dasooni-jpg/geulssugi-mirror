@@ -239,7 +239,7 @@ body.pv-open .hud, body.pv-open .events, body.pv-open .quest, body.pv-open .dock
 .troph.can{border-color:#ffb800;box-shadow:0 0 0 3px rgba(255,200,0,.35)}.troph.got{opacity:.7}
 .troph .tn{font-size:18px;color:#7a4a28}
 .placebar{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 12px);transform:translateX(-50%);z-index:30;display:none;align-items:center;gap:8px;
-  background:rgba(30,24,18,.9);color:#fff;border-radius:16px;padding:8px 14px;font-size:15px;max-width:calc(100vw - 24px)}
+  background:rgba(30,24,18,.9);color:#fff;border-radius:16px;padding:8px 14px;font-size:15px;max-width:calc(100vw - 24px);flex-wrap:wrap;justify-content:center}
 .placebar img{width:34px;height:34px;object-fit:contain}
 body.placing .placebar{display:flex}
 body.placing .hud, body.placing .events, body.placing .qbtns, body.placing .quest{display:none}
@@ -334,6 +334,11 @@ body.pv-open #toast{top:auto;bottom:calc(env(safe-area-inset-bottom) + 260px)}
 .chbtn{width:46px;height:46px;border-radius:50%;background:linear-gradient(#f5d9a6,#dcae6a);border:2px solid #9a6a33;
   font-size:22px;color:#5a3510;display:grid;place-items:center}
 .chbtn:disabled{opacity:.35}
+.scroll.ch3{background:
+    radial-gradient(ellipse at 30% 40%,rgba(90,190,120,.22),transparent 55%),
+    radial-gradient(ellipse at 80% 35%,rgba(230,130,40,.22),transparent 55%),
+    repeating-radial-gradient(circle at 60% 50%,rgba(150,110,60,.06) 0 3px,transparent 3px 14px),
+    linear-gradient(#f3e7cc,#e6cfa2)}
 .scroll.ch2{background:
     radial-gradient(ellipse at 50% 60%,rgba(80,170,210,.28),transparent 65%),
     repeating-radial-gradient(circle at 40% 50%,rgba(150,110,60,.06) 0 3px,transparent 3px 14px),
@@ -481,6 +486,7 @@ const CONFIG = {
   mapSize: 22,
   prodSpeed: 1,           // 요리·제작 시간 배율(0.5면 두 배 빠름)
   chapter2Level: 10,      // 2장 지도가 열리는 레벨
+  chapter3Level: 20,      // 3장 지도가 열리는 레벨
   buildingMaxLevel: 5,
   giftHours: 20,          // 일일 선물 간격(시간)
   dynamiteGems: 3,        // 다이너마이트 1개 보석 가격
@@ -527,6 +533,13 @@ const ITEMS = {
   brick:   {name:'벽돌',     img:'i_brick', tab:'craft', value:28},
   jar:     {name:'항아리',   img:'i_jar',   tab:'craft', value:36},
   dynamite:{name:'다이너마이트',img:'i_dynamite', tab:'craft', value:20},
+  // 3장
+  bamboo:  {name:'대나무',   img:'i_bamboo', tab:'res',  value:8},
+  crystal: {name:'푸른 수정', img:'i_crystal', tab:'res', value:28},
+  vine:    {name:'덩굴',     img:'i_vine',   tab:'res',  value:7},
+  pumpkin: {name:'호박',     img:'i_pumpkin', tab:'food', value:10, eat:5},
+  syrup:   {name:'단풍 시럽', img:'i_syrup',  tab:'craft', value:24},
+  pumpkinpie:{name:'호박 파이',img:'i_pumpkinpie', tab:'food', eat:50},
   rune:    {name:'룬 석판',  img:'rune',    tab:'treasure'},
   medal:   {name:'축제 메달', img:'i_medal', tab:'treasure'},
 };
@@ -562,6 +575,15 @@ const OBJS = {
   giftbox:  {name:'축제 선물 상자',img:'giftbox', cost:6, drops:{medal:5},      w:.75, fx:'#ff6aa8'},
   claypit:  {name:'점토 웅덩이', img:'claypit',  cost:3, drops:{clay:3},        w:.85, fx:'#b9773e'},
   bigrock:  {name:'거대한 바위', img:'bigrock',  cost:2, drops:{stone:8,ore:1}, w:1.0, fx:'#8d8d86', tool:'dynamite'},
+  // 3장 장애물
+  bamboo:   {name:'대나무 덤불', img:'bamboo',   cost:4, drops:{bamboo:3},       w:.78, fx:'#7ab83a'},
+  cherry:   {name:'벚나무',      img:'cherry',   cost:6, drops:{wood:2,flower:2},w:.98, fx:'#ffb0c8'},
+  crystal:  {name:'푸른 수정 무더기',img:'crystal',cost:8, drops:{crystal:2},     w:.85, fx:'#5ad0ff'},
+  stalagmite:{name:'종유석',     img:'stalagmite',cost:5,drops:{stone:3,coal:1}, w:.72, fx:'#a89a8a'},
+  vines:    {name:'정글 덩굴 나무',img:'vines',  cost:6, drops:{vine:3,wood:1},  w:.92, fx:'#3f8a2a'},
+  ruin:     {name:'무너진 유적 기둥',img:'ruin', cost:8, drops:{stone:3,gold:1}, w:.85, fx:'#c8b890'},
+  maple:    {name:'단풍나무',    img:'maple',    cost:6, drops:{wood:2,syrup:1}, w:.98, fx:'#e8642a'},
+  pumpkins: {name:'호박 덩굴',   img:'pumpkins', cost:3, drops:{pumpkin:3},      w:.85, fx:'#ff8a1a'},
   chest:    {name:'보물 상자',   img:'chest',    cost:3, drops:{},              w:.7,  fx:'#ffcf3a', chest:true},
   rune:     {name:'룬 석판',     img:'rune',     cost:10,drops:{rune:1},        w:.66, fx:'#ffcf3a', rune:true},
   // 캠프 전용(치울 수 없음)
@@ -586,6 +608,8 @@ const OBJS = {
   done_bridge:{img:'done_bridge', w:1.15, fixed:true},
   done_well:  {img:'done_well',   w:1.0,  fixed:true},
   done_fence: {img:'done_fence',  w:1.1,  fixed:true},
+  fix_stage: {name:'무너진 축제 무대', img:'fix_stage', w:1.2, fixed:true, act:'repair', repair:true},
+  done_stage:{img:'done_stage',  w:1.2,  fixed:true},
   husky:    {name:'썰매견 눈송이',img:'husky',   w:.72, fixed:true, act:'pet'},
   deco_spruce:{img:'spruce',w:.8,fixed:true}, deco_oak:{img:'oak',w:.98,fixed:true}, deco_redwood:{img:'redwood',w:.62,fixed:true},
   deco_flowers:{img:'flowers',w:.72,fixed:true}, deco_bush:{img:'berrybush',w:.72,fixed:true},
@@ -613,13 +637,23 @@ const REGIONS = {
             mix:{cactus:16,sandstone:16,goldrock:8,boulder:8,driftwood:6,twigpile:8,wall:6,orerock:6,claypit:4,bigrock:5}},
   volcano: {ch:2, name:'잠든 화산 기슭', img:'m_volcano', lv:17, tex:'t_ash', tint:'rgba(0,0,0,0)',
             mix:{obsidian:16,burnttree:16,firecrystal:8,coalrock:10,boulder:8,goldrock:4,orerock:6,bigrock:6}},
+  // 3장. 북쪽 산맥 너머
+  bamboo:  {ch:3, name:'대나무 물빛 숲', img:'m_bamboo', lv:20, tex:'t_grass', tint:'rgba(90,190,120,.12)',
+            mix:{bamboo:18,cherry:12,reeds:8,flowers:10,twigpile:8,boulder:8,log:6,claypit:6,bigrock:3}},
+  cave:    {ch:3, name:'푸른 수정 동굴', img:'m_cave',   lv:22, tex:'t_cave', tint:'rgba(40,60,140,.16)',
+            mix:{crystal:14,stalagmite:18,coalrock:10,orerock:10,boulder:10,mushrooms:8,goldrock:4,bigrock:5}},
+  jungle:  {ch:3, name:'잃어버린 정글 유적', img:'m_jungle', lv:24, tex:'t_swamp', tint:'rgba(40,120,40,.10)',
+            mix:{vines:18,ruin:14,palm:8,mushrooms:6,reeds:8,berrybush:8,log:6,goldrock:4,claypit:6,bigrock:4}},
+  maple:   {ch:3, name:'황금 단풍 산',   img:'m_maple',  lv:27, tex:'t_autumn', tint:'rgba(230,140,40,.10)',
+            mix:{maple:18,pumpkins:12,oak:8,berrybush:8,twigpile:10,boulder:8,log:8,wall:4,bigrock:4}},
 };
 
 /* ── 등장인물 ── */
 const NPCS = {
-  husky:     {name:'썰매견 눈송이', img:'husky'},
+  husky:     {name:'썰매견 눈송이', img:'npc_husky'},
   farmer:    {name:'보리 할아버지', img:'npc_farmer'},
   carpenter: {name:'목수 단단',     img:'npc_carpenter'},
+  owl:       {name:'축제 부엉이 달무리', img:'npc_owl'},
 };
 /* ── 지역 이야기 미션: 수리 지점 2곳 + 미션 3단계(마지막은 룬 석판) ──
    목표 종류: clear(그 장애물 n개 치우기) · get(그 자원 n개 얻기) · fix(수리 지점 고치기) · rune(룬 석판 모으기) */
@@ -688,6 +722,48 @@ const STORY = {
        objs:[{t:'fix', s:0}, {t:'clear', o:'firecrystal', n:3}], reward:{xp:120, gems:4, dynamite:2}},
       {npc:'farmer', title:'화산 관측소', text:'관측소 울타리를 세우면 화산을 안전하게 지켜볼 수 있단다. 마지막 룬 석판들이 여기 있을 게다.',
        objs:[{t:'fix', s:1}, {t:'rune', n:3}], reward:{xp:200, coins:400, gems:6}}]},
+  // 3장
+  bamboo:{repairs:[{kind:'bridge', name:'대나무 징검다리', need:{bamboo:8, plank:4}}, {kind:'well', name:'물레방아 우물', need:{stone:12, bamboo:6}}],
+    quests:[
+      {npc:'husky', title:'바스락 대나무 숲', text:'대나무가 하늘까지 닿겠어요! 대나무 덤불을 헤치고 튼튼한 대나무를 모아 봐요.',
+       objs:[{t:'clear', o:'bamboo', n:5}, {t:'get', i:'bamboo', n:12}], reward:{xp:120, coins:240}},
+      {npc:'carpenter', title:'물 위의 징검다리', text:'개울 위에 대나무로 징검다리를 놓을 거예요. 대나무랑 판자를 넉넉히 가져와요!',
+       objs:[{t:'fix', s:0}, {t:'clear', o:'cherry', n:4}], reward:{xp:140, gems:4, dynamite:2}},
+      {npc:'farmer', title:'물레방아가 돌면', text:'물레방아 우물이 다시 돌면 숲이 노래를 부른단다. 벚꽃 아래 룬 석판을 찾아보렴.',
+       objs:[{t:'fix', s:1}, {t:'rune', n:3}], reward:{xp:220, coins:420, gems:6}}]},
+  cave:{repairs:[{kind:'fence', name:'동굴 입구 울타리', need:{plank:6, ironbar:2}}, {kind:'bridge', name:'수정 낭떠러지 다리', need:{plank:8, crystal:4}}],
+    quests:[
+      {npc:'husky', title:'반짝이는 어둠', text:'동굴 안이 푸르게 빛나요! 종유석을 치우며 길을 내고, 수정 조각도 모아 봐요.',
+       objs:[{t:'clear', o:'stalagmite', n:5}, {t:'get', i:'crystal', n:4}], reward:{xp:130, coins:260}},
+      {npc:'carpenter', title:'안전한 동굴 입구', text:'동굴 입구에 울타리를 세워야 박쥐들이 놀라지 않아요. 수정 무더기도 조심조심 캐 주세요.',
+       objs:[{t:'fix', s:0}, {t:'clear', o:'crystal', n:3}], reward:{xp:150, gems:4, dynamite:2}},
+      {npc:'farmer', title:'낭떠러지 너머', text:'수정으로 빛나는 다리를 놓으면 낭떠러지 건너편으로 갈 수 있단다. 동굴 깊은 곳의 룬 석판을 찾으렴.',
+       objs:[{t:'fix', s:1}, {t:'rune', n:3}], reward:{xp:240, coins:450, gems:6}}]},
+  jungle:{repairs:[{kind:'bridge', name:'덩굴 흔들다리', need:{vine:10, plank:4}}, {kind:'well', name:'유적 샘물', need:{brick:4, stone:12}}],
+    quests:[
+      {npc:'husky', title:'덩굴 정글 탐험', text:'끈적끈적 덩굴이 가득해요! 덩굴 나무를 치우면 질긴 덩굴을 얻을 수 있어요.',
+       objs:[{t:'clear', o:'vines', n:5}, {t:'get', i:'vine', n:12}], reward:{xp:140, coins:280}},
+      {npc:'carpenter', title:'흔들흔들 다리', text:'늪 위에 덩굴로 흔들다리를 엮을 거예요. 무너진 유적 기둥도 치워 주세요!',
+       objs:[{t:'fix', s:0}, {t:'clear', o:'ruin', n:3}], reward:{xp:160, gems:4, dynamite:2}},
+      {npc:'farmer', title:'잃어버린 샘물', text:'옛 유적의 샘물을 되살리면 정글이 길을 열어 줄 게다. 유적 깊숙한 룬 석판을 찾아보렴.',
+       objs:[{t:'fix', s:1}, {t:'rune', n:3}], reward:{xp:260, coins:480, gems:7}}]},
+  maple:{repairs:[{kind:'fence', name:'단풍 농장 울타리', need:{plank:6, wood:10}}, {kind:'bridge', name:'단풍 계곡 다리', need:{plank:8, brick:4}}],
+    quests:[
+      {npc:'husky', title:'바스락 낙엽 길', text:'온 산이 황금빛이에요! 호박 덩굴을 치우고 커다란 호박을 모아 봐요.',
+       objs:[{t:'clear', o:'pumpkins', n:5}, {t:'get', i:'pumpkin', n:12}], reward:{xp:150, coins:300}},
+      {npc:'carpenter', title:'호박 농장 울타리', text:'호박 농장 울타리가 쓰러졌어요. 단풍나무에서 달콤한 시럽도 받아 와요!',
+       objs:[{t:'fix', s:0}, {t:'get', i:'syrup', n:4}], reward:{xp:170, gems:5, dynamite:2}},
+      {npc:'farmer', title:'단풍 계곡 건너기', text:'계곡에 다리를 놓으면 산꼭대기까지 갈 수 있단다. 마지막 룬 석판들이 단풍 속에 숨어 있을 게다.',
+       objs:[{t:'fix', s:1}, {t:'rune', n:3}], reward:{xp:300, coins:520, gems:8}}]},
+  // 축제 섬(회차마다 새로 시작)
+  fest:{repairs:[{kind:'stage', name:'달빛 축제 무대', need:{plank:4, flower:8}}],
+    quests:[
+      {npc:'owl', title:'축제 준비', text:'부엉! 달빛 축제에 온 걸 환영해요. 등불 더미를 치우면 반짝이는 축제 메달이 나와요!',
+       objs:[{t:'clear', o:'lantern', n:6}, {t:'get', i:'medal', n:15}], reward:{xp:40, coins:100}},
+      {npc:'owl', title:'무대를 세워요', text:'축제 무대가 무너졌어요. 판자와 들꽃으로 예쁘게 고쳐 주면 선물을 줄게요. 선물 상자도 열어 봐요!',
+       objs:[{t:'fix', s:0}, {t:'clear', o:'giftbox', n:2}], reward:{xp:60, gems:3, decor:'moonarch'}},
+      {npc:'owl', title:'달빛 퍼레이드', text:'무대가 반짝반짝! 메달을 더 모으면 퍼레이드가 시작돼요. 특별한 회전목마를 선물할게요!',
+       objs:[{t:'get', i:'medal', n:40}, {t:'clear', o:'lantern', n:10}], reward:{xp:100, gems:5, decor:'carousel'}}]},
 };
 
 /* ── 축제 트로피 단계(메달 수 → 보상) ── */
@@ -707,6 +783,9 @@ const DECOR = {
   lamp:     {name:'가로등',     img:'dec_lamp',      w:.55, price:{coins:200}},
   statue:   {name:'다람쥐 동상', img:'dec_statue',    w:.85, price:{gems:12}},
   fountain: {name:'분수',       img:'dec_fountain',  w:1.15,price:{gems:20}},
+  // 축제 한정(상점에 없음, 축제 미션 보상)
+  moonarch: {name:'달빛 등불 아치', img:'dec_moonarch', w:1.1, fest:true},
+  carousel: {name:'축제 회전목마', img:'dec_carousel', w:1.25, fest:true},
 };
 for (const [k,d] of Object.entries(DECOR)) OBJS['dec_'+k] = {name:d.name, img:d.img, w:d.w, fixed:true, act:'decor', decor:k};
 
@@ -715,7 +794,8 @@ const PROD = {
   kitchen:[{id:'porridge', need:{berry:4,twig:1},        min:2, xp:3},
            {id:'pie',      need:{berry:6,wood:1,coal:1}, min:5, xp:6},
            {id:'soup',     need:{mushroom:4,ice:1},      min:4, xp:6},
-           {id:'pudding',  need:{coconut:3,berry:3},     min:6, xp:8}],
+           {id:'pudding',  need:{coconut:3,berry:3},     min:6, xp:8},
+           {id:'pumpkinpie',need:{pumpkin:3,flour:1,syrup:1}, min:7, xp:10}],
   sawmill:[{id:'plank',    need:{wood:3},                min:1, xp:2}],
   forge:  [{id:'ironbar',  need:{ore:2,coal:1},          min:3, xp:5},
            {id:'dynamite', need:{coal:2,twig:3},         min:4, xp:4}],
@@ -788,9 +868,15 @@ const IMG_LIST = ['avatar','berrybush','board','boulder','cabin','chest','cloud'
   'i_wheat','i_corn','i_flour','i_egg','i_milk','i_cheese','i_bread','i_cookies','i_brick','i_jar','i_clay','i_dynamite',
   'u_register','u_notebook','u_bag','u_map','u_gift','u_camera','u_shop',
   'fix_bridge','fix_well','fix_fence','done_bridge','done_well','done_fence','npc_farmer','npc_carpenter',
-  'u_trophy','m_fest','i_medal','lantern','giftbox','dec_fence','dec_flowerbed','dec_bench','dec_lamp','dec_statue','dec_fountain'];
+  'u_trophy','m_fest','i_medal','lantern','giftbox','dec_fence','dec_flowerbed','dec_bench','dec_lamp','dec_statue','dec_fountain',
+  'bamboo','cherry','crystal','stalagmite','vines','ruin','maple','pumpkins','m_bamboo','m_cave','m_jungle','m_maple','t_cave','t_autumn',
+  'i_bamboo','i_crystal','i_vine','i_pumpkin','i_syrup','i_pumpkinpie','npc_owl','fix_stage','done_stage','dec_moonarch','dec_carousel','npc_husky'];
 // 그림이 아직 없을 때 대신 쓸 그림(화면 아이콘용)
-const IMG_FALLBACK = {u_trophy:'rune', m_fest:'m_home', i_medal:'i_coin', lantern:'flowers', giftbox:'chest',
+const IMG_FALLBACK = {bamboo:'reeds', cherry:'oak', crystal:'icerock', stalagmite:'boulder', vines:'redwood', ruin:'wall', maple:'oak', pumpkins:'berrybush',
+  m_bamboo:'m_canyon', m_cave:'m_snow', m_jungle:'m_swamp', m_maple:'m_windmill', t_cave:'t_ash', t_autumn:'t_meadow',
+  i_bamboo:'i_reed', i_crystal:'i_ice', i_vine:'i_reed', i_pumpkin:'i_coconut', i_syrup:'i_jar', i_pumpkinpie:'i_pie',
+  npc_owl:'npc_farmer', npc_husky:'husky', fix_stage:'fix_fence', done_stage:'done_fence', dec_moonarch:'lantern', dec_carousel:'giftbox',
+  u_trophy:'rune', m_fest:'m_home', i_medal:'i_coin', lantern:'flowers', giftbox:'chest',
   dec_fence:'done_fence', dec_flowerbed:'flowers', dec_bench:'log', dec_lamp:'spruce', dec_statue:'rune', dec_fountain:'done_well',fix_bridge:'log', fix_well:'claypit', fix_fence:'wall', done_bridge:'fix_bridge', done_well:'fix_well',
   done_fence:'fix_fence', npc_farmer:'explorer', npc_carpenter:'avatar',u_register:'i_coin', u_notebook:'board', u_bag:'chest', u_map:'m_canyon', u_gift:'chest', u_camera:'rune',
   u_shop:'i_energy', claypit:'boulder', bigrock:'boulder', i_corn:'i_wheat', i_flour:'i_wheat', i_egg:'hen', i_milk:'cow',
@@ -925,6 +1011,19 @@ const MAPS = {
   volcano: {river:{kind:'lava', pts:[[0,14],[6,13],[11,11],[16,9],[21,9]]}, gate:0, spots:[[11,11],[16,4]],
             path:[[11,19],[11,16],[11,12],[11,11],[12,8],[15,5],[16,5]], runes:[[4,4],[9,1],[19,6]],
             chests:[[16,15],[4,17],[18,12],[6,8],[13,2]], rocks:[[8,15],[14,13],[3,10]]},
+  // 3장
+  bamboo:  {river:{kind:'water', pts:[[0,12],[5,13],[10,11],[15,10],[21,11]]}, gate:0, spots:[[10,11],[14,5]],
+            path:[[11,19],[10,15],[10,12],[10,11],[11,8],[14,6]], runes:[[3,4],[18,3],[7,8]],
+            chests:[[16,16],[3,17],[18,13],[2,7],[11,2]], rocks:[[7,15],[16,6]]},
+  cave:    {river:{kind:'chasm', pts:[[0,10],[6,11],[11,13],[16,12],[21,10]]}, gate:1, spots:[[5,16],[11,13]],
+            path:[[11,19],[8,18],[6,17],[9,15],[11,14],[11,13],[11,10],[14,6]], runes:[[4,4],[17,5],[10,2]],
+            chests:[[16,17],[3,15],[19,14],[6,7],[15,2]], rocks:[[14,16],[3,7]]},
+  jungle:  {river:{kind:'swamp', pts:[[0,15],[4,14],[9,13],[13,11],[17,9],[21,8]]}, gate:0, spots:[[13,11],[5,4]],
+            path:[[11,19],[12,16],[13,13],[13,11],[11,8],[6,5],[5,5]], runes:[[2,3],[16,2],[17,6]],
+            chests:[[17,16],[4,18],[20,11],[9,3],[2,9]], rocks:[[7,16],[13,5]]},
+  maple:   {river:{kind:'water', pts:[[0,9],[6,10],[12,12],[17,11],[21,13]]}, gate:1, spots:[[16,17],[12,12]],
+            path:[[11,19],[14,18],[16,18],[14,15],[12,13],[12,12],[12,9],[9,5],[9,4]], runes:[[3,3],[18,5],[8,1]],
+            chests:[[5,16],[19,16],[2,6],[16,3],[6,7]], rocks:[[8,15],[4,5]]},
 };
 const RIVER_COL = {water:['#e6d3a0','#4aa8d8','#8fd0f0'], ice:['#e4f2fb','#9fd4ef','#d8f0ff'], swamp:['#6b6a3a','#556b32','#7f9a4a'],
   chasm:['#c48a52','#3b2a1e','#5a3e28'], lava:['#3a2a26','#e8541e','#ffb02e']};
@@ -995,7 +1094,7 @@ function buildHome(){
   for (const [k,[x,y]] of Object.entries(HOME_POS)) placeObj(w, x, y, k);
   FIELD_POS.forEach(([x,y], n) => placeObj(w, x, y, 'field', {fid:n}));
   tiles[12*N+12].o = 'husky';
-  for (const [k,x,y] of S.decor) if (tiles[y*N+x] && !tiles[y*N+x].o && DECOR[k]) tiles[y*N+x].o = 'dec_' + k;
+  for (const [k,x,y,f] of S.decor) if (tiles[y*N+x] && !tiles[y*N+x].o && DECOR[k]){ tiles[y*N+x].o = 'dec_' + k; tiles[y*N+x].flip = !!f; }
   const r = rng(77);
   for (let y=0;y<N;y++) for (let x=0;x<N;x++){
     const edge = x<1 || y<1 || x>N-2 || y>N-2;
@@ -1232,6 +1331,7 @@ function sfx(kind){
 
 /* ══════════ 장면 전환 ══════════ */
 function enter(key){
+  if (editMode) endEdit(); if (placing) endPlacing();
   queue = []; fx.length = 0;
   world = key === 'home' ? buildHome() : buildRegion(key);
   S.where = key;
@@ -1261,6 +1361,7 @@ function pickObject(wx, wy){
 function onTap(sx, sy){
   const wx = (sx - W/2)/cam.z + cam.x, wy = (sy - H/2)/cam.z + cam.y;
   if (placing){ const g = unIso(wx, wy), x = Math.round(g.x), y = Math.round(g.y); placeDecor(x, y); return; }
+  if (editMode){ editTap(wx, wy); return; }
   const hit = pickObject(wx, wy); if (!hit) return;
   const w = world, t = w.tiles[hit.i], x = hit.i % w.N, y = (hit.i / w.N)|0;
   if (!t.rev){ toast('구름 너머는 아직 알 수 없어요'); return; }
@@ -1329,7 +1430,7 @@ function finishWork(){
   queue.shift(); player.work = 0; player.target = null; stat('cleared'); S.stats.clearedBy[t.o] = (S.stats.clearedBy[t.o]||0) + 1;
   burst(x, y, d.fx, 18); sfx(d.tool ? 'boom' : 'pop');
   let lines = [];
-  for (const [k,n] of Object.entries(d.drops)){ if (k === 'medal'){ evCheck(); S.event.medals += n; S.seen.medal = 1; } else addItem(k, n);
+  for (const [k,n] of Object.entries(d.drops)){ if (k === 'medal'){ evCheck(); S.event.medals += n; S.seen.medal = 1; S.stats.got.medal = (S.stats.got.medal||0) + n; } else addItem(k, n);
     flyToBag(x, y, k==='flower'?'flowers':ITEMS[k].img, n); lines.push(`+${n} ${ITEMS[k].name}`); }
   if (d.chest){
     const r = Math.random(), coins = 40 + (Math.random()*80|0);
@@ -1471,7 +1572,7 @@ function draw(dt){
   }
   items.push({d:player.x+player.y+.5, pl:true});
   items.sort((a,b)=>a.d-b.d);
-  if (placing && w.home) for (let y=1;y<N-1;y++) for (let x=1;x<N-1;x++) if (canPlace(x,y)){ const p = iso(x,y);
+  if ((placing || carry) && w.home) for (let y=1;y<N-1;y++) for (let x=1;x<N-1;x++) if (canPlace(x,y)){ const p = iso(x,y);
     ctx.beginPath(); ctx.moveTo(p.x, p.y-TH/2+4); ctx.lineTo(p.x+TW/2-8, p.y); ctx.lineTo(p.x, p.y+TH/2-4); ctx.lineTo(p.x-TW/2+8, p.y); ctx.closePath();
     ctx.fillStyle = 'rgba(110,224,74,.28)'; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke(); }
   const qIdx = new Map(queue.map((q,n)=>[q.i,n]));
@@ -1491,7 +1592,12 @@ function draw(dt){
     if (d.fixed && it.o === 'husky'){ r = {...r, y:r.y + Math.sin(T*2)*1.5}; }
     const hov = hoverI === it.i && !d.fixed, ghost = d.bld && !S.bld[d.bld];
     if (hov || ghost){ ctx.save(); if (hov) ctx.filter = 'brightness(1.18)'; if (ghost){ ctx.filter = 'grayscale(1) brightness(1.1)'; ctx.globalAlpha = .55; } }
+    const flip = w.tiles[it.i].flip;
+    if (flip){ ctx.save(); ctx.translate(2*p.x, 0); ctx.scale(-1, 1); }
+    if (editMode && d.decor){ ctx.save(); ctx.globalAlpha = .45 + .2*Math.sin(T*4); ctx.fillStyle = '#ffe36a';
+      ctx.beginPath(); ctx.ellipse(p.x, p.y, TW*.42, TH*.4, 0, 0, 7); ctx.fill(); ctx.restore(); }
     ctx.drawImage(im, r.x + ox + r.w*(1-sc)/2, r.y + r.h*(1-sc), r.w*sc, r.h*sc);
+    if (flip) ctx.restore();
     if (hov || ghost) ctx.restore();
     if (it.o.startsWith('done_') && FAILED.has(it.o)){ // 고친 뒤 그림이 아직 없으면 초록 체크 표시
       ctx.fillStyle = '#3fae2a'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(p.x + r.w*.3, r.y + 20, 18, 0, 7); ctx.fill(); ctx.stroke();
@@ -1732,7 +1838,7 @@ function updateQuest(){
     <div class="row"><img src="${src('u_trophy')}"> 남은 ${fmtDays(evLeft())}</div><div class="row"><button class="gbtn gold" id="qFest" style="padding:3px 10px;font-size:13px">트로피 보기</button></div>`;
     document.getElementById('qFest').onclick = openEvent; return; }
   q.innerHTML = `<h4>${R.name}</h4>
-    <div class="row"><img src="${src('husky')}" style="border-radius:50%"> 미션 <b>${st.qdone ? '완료!' : (st.qi||0)+1 + '/' + (STORY[world.key] ? STORY[world.key].quests.length : 3)}</b></div>
+    <div class="row"><img src="${src('npc_husky')}" style="border-radius:50%"> 미션 <b>${st.qdone ? '완료!' : (st.qi||0)+1 + '/' + (STORY[world.key] ? STORY[world.key].quests.length : 3)}</b></div>
     <div class="row"><img src="${src('rune')}"> 룬 석판 <b>${Math.min(st.runes,CONFIG.runesPerRegion)}/${CONFIG.runesPerRegion}</b></div>
     <div class="row"><img src="${src('cloud')}"> 탐험 ${Math.round(open/total*100)}% <span class="pbar"><i style="width:${open/total*100}%"></i></span></div>`;
 }
@@ -1893,7 +1999,8 @@ function objIcon(o, key){ return o.t === 'clear' ? OBJS[o.o].img : o.t === 'get'
 function josa(w, pair){ const c = w.charCodeAt(w.length-1) - 0xAC00; const [a,b] = pair.split('/'); return c >= 0 && c <= 11171 && c % 28 ? a : b; }
 function rewardHtml(rw){
   return [rw.xp && `<span><img src="${src('i_energy')}" style="filter:hue-rotate(200deg)">★${rw.xp}</span>`, rw.coins && `<span><img src="${src('i_coin')}">${rw.coins}</span>`,
-    rw.gems && `<span><img src="${src('i_gem')}">${rw.gems}</span>`, rw.dynamite && `<span><img src="${src('i_dynamite')}">${rw.dynamite}</span>`].filter(Boolean).join('');
+    rw.gems && `<span><img src="${src('i_gem')}">${rw.gems}</span>`, rw.dynamite && `<span><img src="${src('i_dynamite')}">${rw.dynamite}</span>`,
+    rw.decor && `<span><img src="${src(DECOR[rw.decor].img)}">${DECOR[rw.decor].name}</span>`].filter(Boolean).join('');
 }
 // 원작 '후속 조치' 화면 구성: 제목 / 초상화 + 말풍선 / 리워드 / 목표 줄(✓ 또는 진행·돋보기)
 function openQuest(key){
@@ -1921,10 +2028,11 @@ function claimQuest(key){
   const st = S.regions[key], story = STORY[key], q = story.quests[st.qi]; if (!questReady(key)) return;
   const rw = q.reward;
   if (rw.coins) S.coins += rw.coins; if (rw.gems) S.gems += rw.gems; if (rw.dynamite) addItem('dynamite', rw.dynamite);
+  if (rw.decor) S.decorInv[rw.decor] = (S.decorInv[rw.decor]||0) + 1;
   sfx('coin'); toast(`미션 완료! 「${q.title}」`);
   st.qi++;
   if (st.qi >= story.quests.length){ st.qdone = 1; closeModal(); if (rw.xp) gainXP(rw.xp); save(); renderQuestBtns();
-    if (world.key === key) regionComplete(); else toast(`${REGIONS[key].name} 탐험 완료!`); return; }
+    if (key === 'fest') festComplete(rw); else if (world.key === key) regionComplete(); else toast(`${REGIONS[key].name} 탐험 완료!`); return; }
   st.qb = story.quests[st.qi].objs.map(o => objVal(key, st, o));
   if (rw.xp) gainXP(rw.xp);
   save(); renderQuestBtns(); setTimeout(() => openQuest(key), 250);   // 다음 미션 이야기 바로 보여 주기
@@ -2005,6 +2113,7 @@ function evCheck(){   // 새 회차가 되면 기록·섬 초기화
   if (S.event.w !== w){ S.event = {w, medals:0, claimed:[]}; delete S.regions.fest; save(); }
 }
 function fmtDays(ms){ const h = Math.floor(ms/3600e3), d = Math.floor(h/24); return d ? `${d}일 ${h%24}시간` : `${h}시간 ${Math.floor(ms/60000)%60}분`; }
+const FEST_STAGE = [11, 8];
 function buildFestival(){
   evCheck();
   const R = REGIONS.fest, wk = S.event.w;
@@ -2015,10 +2124,23 @@ function buildFestival(){
     tiles.push({o: d > 1.6 && r() < 0.86 ? pickW(R.mix, r) : null, rev:false, seed:r()}); }
   tiles[19*N+9].o = 'tent_camp';
   const w = {key:'fest', N, tiles, start, tex:R.tex, tint:R.tint, region:st, home:false, spots:[]};
+  // 출발점 → 축제 무대로 가는 흙길(무대는 섬 한가운데)
+  const light = ['lantern','flowers', null, null, null, null, null];
+  for (let y=start.y-2; y>=FEST_STAGE[1]+1; y--){ const t = tiles[y*N+start.x]; t.path = true; t.o = light[Math.floor(r()*light.length)]; }
+  const si = FEST_STAGE[1]*N + FEST_STAGE[0]; tiles[si].o = (st.fixed||{})[0] ? 'done_stage' : 'fix_stage'; tiles[si].spot = 0; w.spots[0] = si;
   for (const i of st.cleared) if (!OBJS[tiles[i].o] || !OBJS[tiles[i].o].fixed) tiles[i].o = null;
   revealAround(w, start.x, start.y, 3.2);
   for (const i of st.cleared) revealAround(w, i % N, (i / N)|0, 2.3);
   return w;
+}
+function festComplete(rw){
+  sfx('level'); updateHUD();
+  showModal('달빛 퍼레이드!', `<div class="celebrate"><img src="${src('npc_owl')}" style="width:120px;border-radius:50%">
+    <p>축제 미션을 모두 끝냈어요! 이번 축제의 특별 장식품을 받았어요.</p>
+    <div class="qv-reward" style="justify-content:center">${rewardHtml(rw)}</div>
+    <p class="hint">장식품은 꾸미기 → 보관함에서 캠프에 놓을 수 있어요. 메달을 더 모아 트로피도 받아 보세요!</p>
+    <div class="row-btns"><button class="gbtn" data-close>좋아요!</button><button class="gbtn blue" id="goDecor">꾸미러 가기</button></div></div>`);
+  document.getElementById('goDecor').onclick = () => { decorTab = 'inv'; openDecor(); };
 }
 function trophyRewardHtml(r){ return [r.gems && `<span><img src="${src('i_gem')}">${r.gems}</span>`, r.coins && `<span><img src="${src('i_coin')}">${r.coins}</span>`,
   r.dynamite && `<span><img src="${src('i_dynamite')}">${r.dynamite}</span>`, r.decor && `<span><img src="${src(DECOR[r.decor].img)}">${DECOR[r.decor].name}</span>`].filter(Boolean).join(''); }
@@ -2052,15 +2174,18 @@ function openDecor(){
     <button class="tab ${decorTab==='inv'?'on':''}" data-dt="inv" title="보관함"><img src="${src('u_bag')}"></button></div>`;
   const list = Object.entries(DECOR);
   const body = decorTab === 'shop'
-    ? `<div class="grid">${list.map(([k,d]) => { const [cur, n] = Object.entries(d.price)[0];
+    ? `<div class="grid">${list.filter(([k,d]) => d.fest).map(([k,d]) => `<div class="cell fest"><img src="${src(d.img)}"><small>${d.name}</small>
+          <button class="gbtn" disabled>🌙 축제 보상</button></div>`).join('')}${list.filter(([k,d]) => d.price).map(([k,d]) => { const [cur, n] = Object.entries(d.price)[0];
         return `<div class="cell"><img src="${src(d.img)}"><small>${d.name}</small>
           <button class="gbtn ${cur==='gems'?'blue':'gold'}" data-buy="${k}" ${(cur==='gems'?S.gems:S.coins) >= n ? '' : 'disabled'}>
           <img src="${src(cur==='gems'?'i_gem':'i_coin')}" style="width:18px;height:18px;vertical-align:middle"> ${n}</button></div>`; }).join('')}</div>
-       <p class="hint" style="margin-top:12px">장식품을 사서 캠프 빈자리에 놓아요. 놓을 때마다 경험치 +5. 동상·분수는 축제 트로피 보상으로도 받아요.</p>`
+       <p class="hint" style="margin-top:12px">장식품을 사서 캠프 빈자리에 놓아요. 놓을 때마다 경험치 +5. 🌙 표시는 달빛 축제 미션으로만 받을 수 있어요. 동상·분수는 축제 트로피 보상으로도 받아요.</p>`
     : (list.some(([k]) => S.decorInv[k]) ? `<div class="grid">${list.filter(([k]) => S.decorInv[k]).map(([k,d]) =>
         `<div class="cell"><img src="${src(d.img)}"><b>${S.decorInv[k]}</b><small>${d.name}</small><button class="gbtn" data-place="${k}">놓기</button></div>`).join('')}</div>`
        : `<div class="empty">보관 중인 장식품이 없어요. 상점에서 사 보세요!</div>`);
-  showModal('캠프 꾸미기', body, {tabs:tabHtml});
+  const edit = `<div class="row-btns" style="margin-top:10px"><button class="gbtn blue" id="decEdit" ${S.decor.length ? '' : 'disabled'}>✋ 배치 바꾸기 (놓은 장식품 ${S.decor.length}개)</button></div>`;
+  showModal('캠프 꾸미기', body + edit, {tabs:tabHtml});
+  document.getElementById('decEdit').onclick = startEdit;
   root.querySelectorAll('[data-dt]').forEach(b => b.onclick = () => { decorTab = b.dataset.dt; openDecor(); });
   root.querySelectorAll('[data-buy]').forEach(b => b.onclick = () => { const d = DECOR[b.dataset.buy], [cur, n] = Object.entries(d.price)[0];
     if ((cur==='gems'?S.gems:S.coins) < n) return; if (cur === 'gems') S.gems -= n; else S.coins -= n;
@@ -2081,11 +2206,51 @@ function placeDecor(x, y){
   burst(x, y, '#ffd23a', 14); sfx('pop'); gainXP(5); save();
   if (S.decorInv[k]) startPlacing(k); else { endPlacing(); toast(`${DECOR[k].name}을(를) 놓았어요!`); }
 }
+/* 배치 바꾸기 모드: 장식품을 눌러 들어 올리고 → 초록 칸을 눌러 내려놓기 */
+let editMode = false, carry = null;   // carry = {k, x, y, f} 들어 올린 장식품과 원래 자리
+function startEdit(){
+  closeModal(); if (!world.home) enter('home');
+  editMode = true; carry = null; document.body.classList.add('placing'); editBar();
+}
+function editBar(){
+  const bar = document.getElementById('placeBar');
+  bar.innerHTML = carry
+    ? `<img src="${src(DECOR[carry.k].img)}" style="${carry.f ? 'transform:scaleX(-1)' : ''}"> <b>${DECOR[carry.k].name}</b> 내려놓을 초록 칸을 누르세요
+       <button class="gbtn" id="edFlip">↔ 뒤집기</button><button class="gbtn gold" id="edKeep">보관함</button><button class="gbtn red" id="edCancel">취소</button>`
+    : `✋ 옮길 장식품을 누르세요 <button class="gbtn gold" id="edAll">모두 보관함</button><button class="gbtn red" id="edEnd">끝내기</button>`;
+  const on = (id, f) => { const b = document.getElementById(id); if (b) b.onclick = f; };
+  on('edFlip', () => { carry.f = !carry.f; editBar(); });
+  on('edKeep', () => { S.decorInv[carry.k] = (S.decorInv[carry.k]||0) + 1; carry = null; save(); toast('보관함에 넣었어요'); editBar(); });
+  on('edCancel', () => { dropCarry(carry.x, carry.y); });
+  on('edEnd', endEdit);
+  on('edAll', () => { if (!S.decor.length) return;
+    for (const [k,x,y] of S.decor){ S.decorInv[k] = (S.decorInv[k]||0) + 1; const t = world.tiles[y*world.N+x]; if (t.o === 'dec_' + k){ t.o = null; t.flip = false; } }
+    S.decor = []; computeReach(); save(); toast('장식품을 모두 보관함에 넣었어요'); endEdit(); });
+}
+function dropCarry(x, y){
+  const t = world.tiles[y*world.N+x]; t.o = 'dec_' + carry.k; t.flip = !!carry.f;
+  S.decor.push([carry.k, x, y, carry.f ? 1 : 0]); carry = null; computeReach(); save(); editBar();
+}
+function editTap(wx, wy){
+  if (carry){ const g = unIso(wx, wy), x = Math.round(g.x), y = Math.round(g.y);
+    if (!canPlace(x, y) && !(x === carry.x && y === carry.y && !world.tiles[y*world.N+x].o)){ sfx('no'); toast('초록색 빈칸에만 놓을 수 있어요'); return; }
+    burst(x, y, '#ffd23a', 12); sfx('pop'); dropCarry(x, y); return; }
+  const hit = pickObject(wx, wy); if (!hit) return;
+  const t = world.tiles[hit.i], d = OBJS[t.o]; if (!d || !d.decor){ toast('장식품만 옮길 수 있어요'); return; }
+  const N = world.N, x = hit.i % N, y = (hit.i / N)|0;
+  S.decor = S.decor.filter(([k2,x2,y2]) => !(x2 === x && y2 === y));
+  carry = {k:d.decor, x, y, f:!!t.flip}; t.o = null; t.flip = false; computeReach(); sfx('pop'); editBar();
+}
+function endEdit(){ if (carry) dropCarry(carry.x, carry.y); editMode = false; carry = null; document.body.classList.remove('placing'); save(); }
 function openDecorItem(i){
   const N = world.N, x = i % N, y = (i / N)|0, k = OBJS[world.tiles[i].o].decor, d = DECOR[k];
   showModal(d.name, `<div class="celebrate"><img src="${src(d.img)}" style="height:120px"><p>캠프를 꾸며 주는 장식품이에요.</p>
-    <div class="row-btns"><button class="gbtn" id="decMove">옮기기</button><button class="gbtn gold" id="decKeep">보관함에 넣기</button></div></div>`);
-  const take = () => { S.decor = S.decor.filter(([k2,x2,y2]) => !(x2 === x && y2 === y)); world.tiles[i].o = null; S.decorInv[k] = (S.decorInv[k]||0) + 1; computeReach(); save(); };
+    <div class="row-btns"><button class="gbtn" id="decMove">옮기기</button><button class="gbtn blue" id="decFlip">↔ 뒤집기</button><button class="gbtn gold" id="decKeep">보관함에 넣기</button></div>
+    <div class="row-btns"><button class="gbtn" id="decEdit2">✋ 여러 개 배치 바꾸기</button></div></div>`);
+  document.getElementById('decFlip').onclick = () => { const t = world.tiles[i]; t.flip = !t.flip;
+    const e = S.decor.find(([k2,x2,y2]) => x2 === x && y2 === y); if (e) e[3] = t.flip ? 1 : 0; save(); sfx('pop'); closeModal(); };
+  document.getElementById('decEdit2').onclick = startEdit;
+  const take = () => { S.decor = S.decor.filter(([k2,x2,y2]) => !(x2 === x && y2 === y)); world.tiles[i].o = null; world.tiles[i].flip = false; S.decorInv[k] = (S.decorInv[k]||0) + 1; computeReach(); save(); };
   document.getElementById('decKeep').onclick = () => { take(); closeModal(); toast('보관함에 넣었어요'); };
   document.getElementById('decMove').onclick = () => { take(); startPlacing(k); };
 }
@@ -2277,18 +2442,24 @@ const MAP_CH = {
      pos:{home:[11,74], beach:[30,40], swamp:[50,70], desert:[66,30], volcano:[87,38]},
      mob:{home:[28,87], beach:[70,64], swamp:[30,52], desert:[70,34], volcano:[32,17]},
      deco:[['palm',4,20,6],['shells',40,84,6],['cactus',80,10,5],['mushrooms',58,44,6],['obsidian',93,10,5],['cloud',44,6,11]]},
+  3:{title:'3장. 북쪽 산맥 너머', order:['home','bamboo','cave','jungle','maple'],
+     pos:{home:[11,72], bamboo:[31,38], cave:[51,68], jungle:[67,30], maple:[87,36]},
+     mob:{home:[28,87], bamboo:[70,64], cave:[30,52], jungle:[70,34], maple:[32,17]},
+     deco:[['bamboo',4,18,6],['cherry',40,82,7],['stalagmite',60,44,5],['vines',80,6,6],['pumpkins',93,12,5],['cloud',44,6,11]]},
 };
+const CH_LV = ch => ch === 2 ? CONFIG.chapter2Level : ch === 3 ? CONFIG.chapter3Level : 1;
+const CH_MAX = 3;
 function openMap(ch){
   ch = ch || S.mapCh || 1; S.mapCh = ch;
   const M = MAP_CH[ch], pos = innerWidth <= 700 ? M.mob : M.pos;
-  const ch2Open = S.level >= CONFIG.chapter2Level;
+  const chOpen = S.level >= CH_LV(ch);
   const locs = [['home','m_home','탐험 캠프',1], ...Object.entries(REGIONS).filter(([k,r]) => r.ch === ch).map(([k,r]) => [k, r.img, r.name, r.lv])];
   const pathD = 'M' + M.order.map(k => `${pos[k][0]} ${pos[k][1]}`).join(' L');
-  root.innerHTML = `<div class="worldmap"><div class="scroll ${ch===2?'ch2':''}">
+  root.innerHTML = `<div class="worldmap"><div class="scroll ${ch>1?'ch'+ch:''}">
     <button class="close" data-close style="right:-30px;top:-14px">×</button>
     <h2>${M.title}</h2>
-    <div class="chnav l"><button class="chbtn" data-ch="1" ${ch===1?'disabled':''} aria-label="1장">◀</button></div>
-    <div class="chnav r"><button class="chbtn" data-ch="2" ${ch===2?'disabled':''} aria-label="2장">▶</button></div>
+    <div class="chnav l"><button class="chbtn" data-ch="${ch-1}" ${ch<=1?'disabled':''} aria-label="이전 장">◀</button></div>
+    <div class="chnav r"><button class="chbtn" data-ch="${ch+1}" ${ch>=CH_MAX?'disabled':''} aria-label="다음 장">▶</button></div>
     <svg class="paths" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="${pathD}" stroke="#9c7443" stroke-width="3" vector-effect="non-scaling-stroke" stroke-dasharray="10 8" fill="none" opacity=".7"/></svg>
     ${M.deco.map(([im,x,y,w]) => `<img class="deco" src="${src(im)}" style="left:${x}%;top:${y}%;width:${w}%">`).join('')}
     ${locs.map(([k,img,name,lv]) => { const st = S.regions[k], locked = S.level < lv, here = S.where === k;
@@ -2298,7 +2469,7 @@ function openMap(ch){
         <b>${name}</b><small>${sub}</small>
         ${here?`<svg class="flag" viewBox="0 0 30 40"><line x1="4" y1="4" x2="4" y2="38" stroke="#7a4a20" stroke-width="3"/><path d="M5 5 L28 10 L5 18z" fill="#e0402a"/><circle cx="4" cy="4" r="3" fill="#ffb000"/></svg>`:''}</button>`; }).join('')}
     <button class="evloc" data-fest><div class="medal" style="background-image:url(${src('m_fest')})"></div><b>달빛 축제</b><small>⏰ ${fmtDays(evLeft())}</small></button>
-    ${ch===2 && !ch2Open ? `<div class="chlock"><b>레벨 ${CONFIG.chapter2Level}부터 배를 타고 건너갈 수 있어요</b></div>` : ''}
+    ${!chOpen ? `<div class="chlock"><b>레벨 ${CH_LV(ch)}부터 ${ch === 2 ? '배를 타고 건너갈' : '산맥을 넘어갈'} 수 있어요</b></div>` : ''}
   </div></div>`;
   root.querySelectorAll('[data-close]').forEach(b => b.onclick = closeModal);
   root.querySelectorAll('[data-ch]').forEach(b => b.onclick = () => openMap(+b.dataset.ch));
