@@ -69,7 +69,7 @@ canvas#game.dragging{cursor:grabbing}
 .money .track i{display:none}
 
 /* ── 지역 진행 카드 ── */
-.quest{position:fixed;left:calc(env(safe-area-inset-left) + 12px);top:calc(env(safe-area-inset-top) + 86px);
+.quest{position:fixed;left:calc(env(safe-area-inset-left) + 12px);top:calc(env(safe-area-inset-top) + 172px);
   background:rgba(255,244,224,.94);border:3px solid var(--wood-l);border-radius:14px;padding:8px 12px;
   box-shadow:0 3px 0 rgba(0,0,0,.2);font-size:14px;min-width:160px}
 .quest h4{margin:0 0 4px;font-size:15px;color:var(--wood-d)}
@@ -94,11 +94,105 @@ canvas#game.dragging{cursor:grabbing}
 .bagpulse{animation:bagpulse .35s}
 @keyframes bagpulse{50%{transform:scale(1.18)}}
 
+/* ── 이벤트 줄(왼쪽 위) ── */
+.events{position:fixed;left:calc(env(safe-area-inset-left) + 12px);top:calc(env(safe-area-inset-top) + 82px);display:flex;gap:6px;
+  background:rgba(40,40,52,.55);border-radius:16px;padding:6px 8px}
+.ev{width:64px;display:flex;flex-direction:column;align-items:center;position:relative}
+.ev img{width:52px;height:46px;object-fit:contain;filter:drop-shadow(0 2px 0 rgba(0,0,0,.3))}
+.ev span{font-size:11px;color:#fff;background:rgba(30,30,40,.85);border-radius:8px;padding:0 6px;margin-top:-4px;white-space:nowrap}
+.ev .dot{position:absolute;top:-2px;right:2px;background:#ffd23a;color:#6b3b00;width:20px;height:20px;border-radius:50%;
+  font-size:13px;font-weight:900;display:grid;place-items:center;border:2px solid #fff;font-style:normal}
+.btn-round .plusb{position:absolute;right:2px;bottom:22px;width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#9ef07a,#3fae2a);
+  color:#fff;font-weight:900;font-size:20px;display:grid;place-items:center;border:2px solid #fff;font-style:normal;line-height:1}
+.xpbar i{background:linear-gradient(#d07bff,#9b3fe0) !important}
+
+/* ── 생산 화면(원작 구성: 제목·화살표 / 작업 칸 / 즉시 완성 / 재료 카드 / 제품 카드) ── */
+.pv{position:fixed;inset:0;z-index:40;pointer-events:none;
+  background:radial-gradient(ellipse 30% 34% at 50% 52%, rgba(10,14,30,0) 0%, rgba(10,14,30,0) 55%, rgba(10,14,30,.72) 100%);
+  animation:fadein .2s}
+.pv > *{pointer-events:auto}
+body.pv-open .hud, body.pv-open .events, body.pv-open .quest, body.pv-open .dock, body.pv-open .gear{display:none}
+@keyframes fadein{from{opacity:0}}
+.pv-top{position:absolute;top:calc(env(safe-area-inset-top) + 14px);left:0;right:0;display:flex;justify-content:center;align-items:center;gap:26px}
+.pv-top h2{margin:0;font-size:clamp(28px,4vw,44px);color:#ffd84a;-webkit-text-stroke:1.5px #6a3300;paint-order:stroke fill;
+  text-shadow:0 3px 0 #6a3300,0 0 18px rgba(0,0,0,.6);min-width:6em;text-align:center;font-weight:900}
+.pv-arrow{width:44px;height:52px;font-size:0;position:relative}
+.pv-arrow:before{content:"";position:absolute;inset:6px;background:linear-gradient(#ffd23a,#f5a400);clip-path:polygon(100% 0,100% 100%,0 50%);filter:drop-shadow(0 2px 0 #7a3f00)}
+.pv-arrow.r:before{clip-path:polygon(0 0,0 100%,100% 50%)}
+.pv-x{position:absolute;top:calc(env(safe-area-inset-top) + 14px);right:calc(env(safe-area-inset-right) + 18px);font-size:44px;color:#fff;font-weight:900;text-shadow:0 2px 0 #000}
+.pv-cap{position:absolute;top:calc(env(safe-area-inset-top) + 70px);left:50%;transform:translateX(-50%);background:rgba(20,20,30,.8);color:#fff;
+  border-radius:16px;padding:3px 16px 3px 4px;display:flex;align-items:center;gap:8px;font-size:18px}
+.pv-cap img{width:30px;height:30px;border-radius:50%;background:#fff;object-fit:contain}
+.pv-slots{position:absolute;top:calc(env(safe-area-inset-top) + 112px);left:50%;transform:translateX(-50%);display:flex;gap:10px}
+.pslot{width:96px;height:96px;border-radius:16px;background:rgba(40,28,18,.85);border:3px solid #f0a64a;display:grid;place-items:center;position:relative}
+.pslot img{width:72px;height:72px;object-fit:contain}
+.pslot.wait img{opacity:.75}
+.pslot.empty{border-style:dashed;border-color:#c49a62;background:rgba(40,28,18,.5)}
+.pslot.ready{border-color:#7fe04a;box-shadow:0 0 0 3px rgba(127,224,74,.5)}
+.pslot b{position:absolute;bottom:4px;left:0;right:0;text-align:center;color:#fff;font-size:15px;text-shadow:0 1px 2px #000}
+.pslot .ok{position:absolute;top:-8px;right:-8px;width:26px;height:26px;border-radius:50%;background:#3fae2a;color:#fff;display:grid;place-items:center;border:2px solid #fff;font-size:15px}
+.pv-speed{position:absolute;top:calc(env(safe-area-inset-top) + 218px);background:linear-gradient(#6fc8ff,#1c7fe0);border:3px solid #0d4fa0;
+  border-radius:16px;color:#fff;font-size:22px;padding:4px 18px;display:flex;align-items:center;gap:8px;box-shadow:0 3px 0 #0a3d7a}
+.pv-speed img{width:30px;height:30px}
+.pv-need{position:absolute;left:calc(env(safe-area-inset-left) + 4%);bottom:calc(env(safe-area-inset-bottom) + 120px);display:flex;gap:10px}
+.ncard{width:118px;height:132px;border-radius:18px;background:#fff1d6;border:4px solid #3a2414;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  box-shadow:0 4px 0 rgba(0,0,0,.35)}
+.ncard img{width:82px;height:82px;object-fit:contain}
+.ncard b{font-size:22px;color:#5a3510;align-self:flex-end;margin-right:12px}
+.ncard b.lack{color:#d33}
+.pv-info{position:absolute;right:calc(env(safe-area-inset-right) + 4%);bottom:calc(env(safe-area-inset-bottom) + 120px);width:min(400px,44vw);
+  background:rgba(25,20,18,.86);border-radius:22px;padding:14px;display:flex;gap:14px;align-items:center;color:#fff}
+.pv-info .pimg{width:120px;height:120px;border-radius:16px;background:#fff1d6;display:grid;place-items:center;flex:none}
+.pv-info .pimg img{width:92px;height:92px;object-fit:contain}
+.pv-info h3{margin:0 0 6px;font-size:26px}
+.pv-info .tm{font-size:20px;color:#ffe08a;border-top:2px dotted rgba(255,255,255,.35);padding-top:8px;margin-top:8px}
+.pv-info .own{position:absolute;top:-16px;right:20px;background:linear-gradient(#ffb34d,#e07a12);border-radius:12px;padding:2px 12px;font-size:18px;border:2px solid #7a3f00}
+.pv-info .gbtn{margin-top:10px;font-size:18px}
+.pv-recipes{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom) + 14px);display:flex;gap:10px;
+  background:rgba(25,20,18,.7);border-radius:20px;padding:8px 12px;max-width:calc(100vw - 24px);overflow-x:auto}
+.rtile{width:78px;height:78px;border-radius:16px;background:#fff1d6;border:3px solid #c49a62;display:grid;place-items:center;flex:none;position:relative}
+.rtile img{width:60px;height:60px;object-fit:contain}
+.rtile.on{border-color:#ffd23a;box-shadow:0 0 0 3px #ffd23a}
+.rtile.no img{filter:grayscale(.6) opacity(.7)}
+.pv-foot{position:absolute;left:calc(env(safe-area-inset-left) + 14px);bottom:calc(env(safe-area-inset-bottom) + 14px);display:flex;gap:8px}
+@media (max-width:700px){
+  .events{top:calc(env(safe-area-inset-top) + 150px)}
+  .ev{width:52px}.ev img{width:42px;height:38px}
+  .pv-slots{top:calc(env(safe-area-inset-top) + 108px);gap:6px}.pslot{width:70px;height:70px}.pslot img{width:50px;height:50px}
+  .pv-speed{top:calc(env(safe-area-inset-top) + 188px)}
+  .pv-need{left:12px;bottom:calc(env(safe-area-inset-bottom) + 300px)}.ncard{width:84px;height:96px}.ncard img{width:56px;height:56px}.ncard b{font-size:16px}
+  .pv-info{left:12px;right:12px;width:auto;bottom:calc(env(safe-area-inset-bottom) + 112px)}
+  .pv-info .pimg{width:84px;height:84px}.pv-info .pimg img{width:64px;height:64px}.pv-info h3{font-size:20px}
+  .pv-foot{bottom:calc(env(safe-area-inset-bottom) + 412px)}
+  .pv-x{top:calc(env(safe-area-inset-top) + 66px);font-size:34px}
+  .pv-top{gap:10px}
+  .dock{gap:2px}.dock.left{left:6px}.dock.right{right:6px}
+  .btn-round{width:58px;height:66px}.btn-round img{width:50px;height:46px}.btn-round span{font-size:12px;padding:1px 6px}
+  .btn-round .plusb{width:22px;height:22px;font-size:16px;bottom:18px}
+}
+
+/* 시장·과제·도감 */
+.mk-row{display:flex;align-items:center;gap:10px;background:#fff;border:2px solid var(--paper-d);border-radius:14px;padding:8px 12px}
+.mk-row img{width:48px;height:48px;object-fit:contain}
+.mk-row .nm{flex:1;font-size:16px}.mk-row .nm small{display:block;color:#a07650;font-size:13px}
+.mk-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
+.task{display:flex;gap:12px;align-items:center;background:#fff;border:2px solid var(--paper-d);border-radius:14px;padding:10px 14px}
+.task.done{border-color:#7fd34a;background:#f1fbe8}
+.task img{width:52px;height:52px;object-fit:contain}
+.task{flex-wrap:wrap}.task .tx{flex:1 1 140px}.task .tx b{font-size:16px}
+.tbar{height:12px;border-radius:6px;background:#eadbc2;overflow:hidden;margin-top:6px}
+.tbar i{display:block;height:100%;background:linear-gradient(90deg,#8fd14f,#3fae2a)}
+.album{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:10px}
+.album div{background:#fff;border-radius:12px;padding:6px;text-align:center;font-size:12px;border:2px solid var(--paper-d)}
+.album img{width:56px;height:56px;object-fit:contain}
+.album .no img{filter:brightness(0) opacity(.25)}
+
 /* ── 알림 토스트 ── */
 #toast{position:fixed;left:50%;top:22%;transform:translate(-50%,0);background:rgba(40,28,18,.88);color:#fff;
   padding:10px 18px;border-radius:14px;font-size:16px;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;
   white-space:nowrap;z-index:50}
 #toast.show{opacity:1;transform:translate(-50%,-6px)}
+body.pv-open #toast{top:auto;bottom:calc(env(safe-area-inset-bottom) + 260px)}
 
 /* ── 팝업(창) ── */
 .modal-bg{position:fixed;inset:0;background:rgba(20,24,40,.55);display:grid;place-items:center;z-index:40;padding:16px}
@@ -225,7 +319,7 @@ canvas#game.dragging{cursor:grabbing}
   .gear{top:calc(env(safe-area-inset-top) + 158px)}
   .energy{position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top) + 104px);flex:none}
   #energyTrack{width:190px}
-  .quest{top:calc(env(safe-area-inset-top) + 158px)}
+  .quest{top:calc(env(safe-area-inset-top) + 222px)}
   .money .track{min-width:84px}
   .frame h3{font-size:18px}
   .scroll{border-left-width:12px;border-right-width:12px;aspect-ratio:auto;height:min(92vh,calc((100vw - 20px)*1.3))}
@@ -261,17 +355,23 @@ canvas#game.dragging{cursor:grabbing}
   </div>
 </div>
 
+<div class="events" id="events">
+  <button class="ev" id="evAlbum"><img data-img="u_camera" alt=""><span id="evAlbumT">도감</span></button>
+  <button class="ev" id="evShop"><img data-img="u_shop" alt=""><span>상점</span></button>
+  <button class="ev" id="evGift"><img data-img="u_gift" alt=""><span id="evGiftT">선물</span><em class="dot hidden" id="giftDot">!</em></button>
+</div>
 <div class="quest" id="quest"></div>
 <button class="gear" id="gearBtn" aria-label="설정"><svg viewBox="0 0 24 24"><path d="M19.4 13a7.7 7.7 0 000-2l2.1-1.6-2-3.5-2.5 1a7.6 7.6 0 00-1.7-1L14.9 3h-4l-.4 2.9a7.6 7.6 0 00-1.7 1l-2.5-1-2 3.5L6.4 11a7.7 7.7 0 000 2l-2.1 1.6 2 3.5 2.5-1c.5.4 1.1.7 1.7 1l.4 2.9h4l.4-2.9c.6-.3 1.2-.6 1.7-1l2.5 1 2-3.5zM12.9 15.5a3.5 3.5 0 110-7 3.5 3.5 0 010 7z"/></svg></button>
 
 <div class="dock left">
-  <button class="btn-round" id="bagBtn"><img data-img="chest" alt=""><span>창고</span></button>
-  <button class="btn-round" id="orderBtn"><img data-img="board" alt=""><span>주문판</span><em class="badge hidden" id="orderBadge"></em></button>
-  <button class="btn-round" id="cookBtn"><img data-img="kitchen" alt=""><span>요리</span></button>
+  <button class="btn-round" id="marketBtn"><img data-img="u_register" alt=""><span>시장</span></button>
+  <button class="btn-round" id="taskBtn"><img data-img="u_notebook" alt=""><span>과제</span><em class="badge hidden" id="taskBadge"></em></button>
+  <button class="btn-round" id="orderBtn"><img data-img="board" alt=""><span>주문</span><em class="badge hidden" id="orderBadge"></em></button>
 </div>
 <div class="dock right">
-  <button class="btn-round" id="homeBtn"><img data-img="tent" alt=""><span>캠프</span></button>
-  <button class="btn-round" id="mapBtn"><img data-img="m_canyon" alt="" style="border-radius:50%"><span>지도</span></button>
+  <button class="btn-round" id="dynBtn"><img data-img="i_dynamite" alt=""><span id="dynText">0</span><em class="plusb">+</em></button>
+  <button class="btn-round" id="bagBtn"><img data-img="u_bag" alt=""><span>창고</span></button>
+  <button class="btn-round" id="mapBtn"><img data-img="u_map" alt=""><span>지도</span></button>
 </div>
 
 <div id="toast"></div>
@@ -304,6 +404,9 @@ const CONFIG = {
   prodSpeed: 1,           // 요리·제작 시간 배율(0.5면 두 배 빠름)
   chapter2Level: 10,      // 2장 지도가 열리는 레벨
   buildingMaxLevel: 5,
+  giftHours: 20,          // 일일 선물 간격(시간)
+  dynamiteGems: 3,        // 다이너마이트 1개 보석 가격
+  speedUpMinPerGem: 3,    // 즉시 완성: 보석 1개당 줄여 주는 시간(분)
 };
 const SAVE_KEY = 'daram-explore-v1';
 
@@ -331,8 +434,22 @@ const ITEMS = {
   pie:     {name:'베리 파이',img:'i_pie',   tab:'food', eat:32},
   soup:    {name:'버섯 수프',img:'i_soup',  tab:'food', eat:26},
   pudding: {name:'코코넛 푸딩',img:'i_pudding', tab:'food', eat:45},
+  // 농장
+  wheat:   {name:'밀',       img:'i_wheat', tab:'farm', value:3},
+  corn:    {name:'옥수수',   img:'i_corn',  tab:'farm', value:5},
+  egg:     {name:'달걀',     img:'i_egg',   tab:'farm', value:8},
+  milk:    {name:'우유',     img:'i_milk',  tab:'farm', value:12},
+  flour:   {name:'밀가루',   img:'i_flour', tab:'craft', value:12},
+  cheese:  {name:'치즈',     img:'i_cheese',tab:'food', value:40, eat:12},
+  bread:   {name:'빵',       img:'i_bread', tab:'food', value:34, eat:20},
+  cookies: {name:'쿠키',     img:'i_cookies',tab:'food', value:30, eat:16},
+  clay:    {name:'점토',     img:'i_clay',  tab:'res',  value:6},
+  brick:   {name:'벽돌',     img:'i_brick', tab:'craft', value:28},
+  jar:     {name:'항아리',   img:'i_jar',   tab:'craft', value:36},
+  dynamite:{name:'다이너마이트',img:'i_dynamite', tab:'craft', value:20},
   rune:    {name:'룬 석판',  img:'rune',    tab:'treasure'},
 };
+const sellPrice = k => { const d = ITEMS[k]; return d.tab === 'treasure' ? 0 : (d.value || (d.eat ? d.eat*2 : 0)); };
 
 /* ── 장애물 종류: cost=에너지, drops=얻는 자원, w=타일 대비 폭 ── */
 const OBJS = {
@@ -360,15 +477,25 @@ const OBJS = {
   obsidian: {name:'흑요석 바위', img:'obsidian', cost:8, drops:{obsidian:2},    w:.88, fx:'#ff6a2a'},
   burnttree:{name:'불탄 나무',   img:'burnttree',cost:5, drops:{coal:2,wood:1}, w:.8,  fx:'#555'},
   firecrystal:{name:'불꽃 수정', img:'firecrystal',cost:9,drops:{fire:2},       w:.85, fx:'#ff5a2a'},
+  claypit:  {name:'점토 웅덩이', img:'claypit',  cost:3, drops:{clay:3},        w:.85, fx:'#b9773e'},
+  bigrock:  {name:'거대한 바위', img:'bigrock',  cost:2, drops:{stone:8,ore:1}, w:1.0, fx:'#8d8d86', tool:'dynamite'},
   chest:    {name:'보물 상자',   img:'chest',    cost:3, drops:{},              w:.7,  fx:'#ffcf3a', chest:true},
   rune:     {name:'룬 석판',     img:'rune',     cost:10,drops:{rune:1},        w:.66, fx:'#ffcf3a', rune:true},
   // 캠프 전용(치울 수 없음)
-  cabin:    {name:'통나무집',    img:'cabin',    w:1.7, fixed:true, act:'cabin',  label:'통나무집', bld:'cabin'},
-  kitchen:  {name:'캠프 부엌',   img:'kitchen',  w:1.5, fixed:true, act:'kitchen',label:'부엌',     bld:'kitchen'},
-  board:    {name:'주문판',      img:'board',    w:1.05,fixed:true, act:'order',  label:'주문판',   bld:'board'},
-  tent:     {name:'탐험 텐트',   img:'tent',     w:1.45,fixed:true, act:'tent',   label:'텐트',     bld:'tent'},
-  sawmill:  {name:'제재소',      img:'sawmill',  w:1.5, fixed:true, act:'sawmill',label:'제재소',   bld:'sawmill'},
-  forge:    {name:'대장간',      img:'forge',    w:1.4, fixed:true, act:'forge',  label:'대장간',   bld:'forge'},
+  cabin:    {name:'통나무집',    img:'cabin',    w:1.9, fp:2, fixed:true, act:'cabin',  label:'통나무집', bld:'cabin'},
+  kitchen:  {name:'캠프 부엌',   img:'kitchen',  w:1.8, fp:2, fixed:true, act:'kitchen',label:'부엌',     bld:'kitchen'},
+  board:    {name:'주문판',      img:'board',    w:1.05,      fixed:true, act:'order',  label:'주문판',   bld:'board'},
+  tent:     {name:'탐험 텐트',   img:'tent',     w:1.7, fp:2, fixed:true, act:'tent',   label:'텐트',     bld:'tent'},
+  sawmill:  {name:'제재소',      img:'sawmill',  w:1.9, fp:2, fixed:true, act:'sawmill',label:'제재소',   bld:'sawmill'},
+  forge:    {name:'대장간',      img:'forge',    w:1.8, fp:2, fixed:true, act:'forge',  label:'대장간',   bld:'forge'},
+  bakery:   {name:'빵집',        img:'bakery',   w:1.9, fp:2, fixed:true, act:'bakery', label:'빵집',     bld:'bakery'},
+  dairy:    {name:'치즈 공방',   img:'dairy',    w:1.85,fp:2, fixed:true, act:'dairy',  label:'치즈 공방',bld:'dairy'},
+  kiln:     {name:'벽돌 가마',   img:'kiln',     w:1.8, fp:2, fixed:true, act:'kiln',   label:'벽돌 가마',bld:'kiln'},
+  pottery:  {name:'도자기 공방', img:'pottery',  w:1.8, fp:2, fixed:true, act:'pottery',label:'도자기 공방',bld:'pottery'},
+  coop:     {name:'닭장',        img:'coop',     w:1.9, fp:2, fixed:true, act:'coop',   label:'닭장',     bld:'coop', animal:'hen'},
+  barn:     {name:'외양간',      img:'barn',     w:1.9, fp:2, fixed:true, act:'barn',   label:'외양간',   bld:'barn', animal:'cow'},
+  field:    {name:'밭',          img:'f_empty',  w:1.95,fp:2, fixed:true, act:'field',  flat:true},
+  _blk:     {fixed:true, hidden:true},
   husky:    {name:'썰매견 눈송이',img:'husky',   w:.72, fixed:true, act:'pet'},
   deco_spruce:{img:'spruce',w:.8,fixed:true}, deco_oak:{img:'oak',w:.98,fixed:true}, deco_redwood:{img:'redwood',w:.62,fixed:true},
   deco_flowers:{img:'flowers',w:.72,fixed:true}, deco_bush:{img:'berrybush',w:.72,fixed:true},
@@ -377,22 +504,22 @@ const OBJS = {
 /* ── 탐험 지역 ── */
 const REGIONS = {
   canyon:  {ch:1, name:'이끼 폭포 계곡', img:'m_canyon',  lv:1, tex:'t_grass', tint:'rgba(120,170,40,.10)',
-            mix:{redwood:10,spruce:12,log:10,twigpile:14,berrybush:10,boulder:10,flowers:10,wall:6,oak:6}},
+            mix:{redwood:10,spruce:12,log:10,twigpile:14,berrybush:10,boulder:10,flowers:10,wall:6,oak:6,claypit:6,bigrock:2}},
   nest:    {ch:1, name:'거인 나무 둥지', img:'m_nest',    lv:3, tex:'t_grass', tint:'rgba(200,160,40,.12)',
-            mix:{oak:16,berrybush:16,flowers:14,twigpile:12,log:10,spruce:6,boulder:8,wall:6,redwood:4}},
+            mix:{oak:16,berrybush:16,flowers:14,twigpile:12,log:10,spruce:6,boulder:8,wall:6,redwood:4,claypit:8,bigrock:2}},
   windmill:{ch:1, name:'라벤더 풍차 언덕', img:'m_windmill', lv:5, tex:'t_meadow', tint:'rgba(0,0,0,0)',
-            mix:{boulder:14,wall:14,coalrock:12,flowers:14,twigpile:8,berrybush:8,oak:8,log:6,orerock:4}},
+            mix:{boulder:14,wall:14,coalrock:12,flowers:14,twigpile:8,berrybush:8,oak:8,log:6,orerock:4,claypit:6,bigrock:4}},
   snow:    {ch:1, name:'서리 얼음 고개', img:'m_snow',    lv:8, tex:'t_snow', tint:'rgba(0,0,0,0)',
-            mix:{icerock:18,spruce:16,orerock:12,coalrock:8,boulder:10,log:6,twigpile:6,wall:4}},
+            mix:{icerock:18,spruce:16,orerock:12,coalrock:8,boulder:10,log:6,twigpile:6,wall:4,bigrock:5}},
   // 2장. 바다 건너 섬들
   beach:   {ch:2, name:'산호 해변 만',   img:'m_beach',   lv:10, tex:'t_sand', tint:'rgba(0,0,0,0)',
-            mix:{palm:16,driftwood:14,shells:14,sandstone:8,berrybush:4,boulder:6,log:6,reeds:4}},
+            mix:{palm:16,driftwood:14,shells:14,sandstone:8,berrybush:4,boulder:6,log:6,reeds:4,claypit:6,bigrock:3}},
   swamp:   {ch:2, name:'반딧불 버섯 늪', img:'m_swamp',   lv:12, tex:'t_swamp', tint:'rgba(0,0,0,0)',
-            mix:{mushrooms:16,reeds:16,log:10,spruce:8,oak:6,twigpile:10,berrybush:6,coalrock:4,wall:4}},
+            mix:{mushrooms:16,reeds:16,log:10,spruce:8,oak:6,twigpile:10,berrybush:6,coalrock:4,wall:4,claypit:10,bigrock:3}},
   desert:  {ch:2, name:'붉은 모래 협곡', img:'m_desert',  lv:14, tex:'t_sand', tint:'rgba(230,120,40,.12)',
-            mix:{cactus:16,sandstone:16,goldrock:8,boulder:8,driftwood:6,twigpile:8,wall:6,orerock:6}},
+            mix:{cactus:16,sandstone:16,goldrock:8,boulder:8,driftwood:6,twigpile:8,wall:6,orerock:6,claypit:4,bigrock:5}},
   volcano: {ch:2, name:'잠든 화산 기슭', img:'m_volcano', lv:17, tex:'t_ash', tint:'rgba(0,0,0,0)',
-            mix:{obsidian:16,burnttree:16,firecrystal:8,coalrock:10,boulder:8,goldrock:4,orerock:6}},
+            mix:{obsidian:16,burnttree:16,firecrystal:8,coalrock:10,boulder:8,goldrock:4,orerock:6,bigrock:6}},
 };
 
 /* ── 생산 건물 제조법(분 단위, CONFIG.prodSpeed 배율 적용) ── */
@@ -402,8 +529,31 @@ const PROD = {
            {id:'soup',     need:{mushroom:4,ice:1},      min:4, xp:6},
            {id:'pudding',  need:{coconut:3,berry:3},     min:6, xp:8}],
   sawmill:[{id:'plank',    need:{wood:3},                min:1, xp:2}],
-  forge:  [{id:'ironbar',  need:{ore:2,coal:1},          min:3, xp:5}],
+  forge:  [{id:'ironbar',  need:{ore:2,coal:1},          min:3, xp:5},
+           {id:'dynamite', need:{coal:2,twig:3},         min:4, xp:4}],
+  bakery: [{id:'flour',    need:{wheat:3},               min:3, xp:3},
+           {id:'bread',    need:{flour:2,egg:1},         min:5, xp:6},
+           {id:'cookies',  need:{flour:1,egg:2,berry:2}, min:6, xp:7}],
+  dairy:  [{id:'cheese',   need:{milk:3},                min:6, xp:7}],
+  kiln:   [{id:'brick',    need:{clay:2,coal:1},         min:4, xp:5}],
+  pottery:[{id:'jar',      need:{clay:3},                min:5, xp:6}],
+  // 동물: 칸마다 따로(동시에) 생산
+  coop:   [{id:'egg',      need:{wheat:1},               min:3, xp:2}],
+  barn:   [{id:'milk',     need:{corn:1},                min:5, xp:3}],
 };
+const PROD_NAME = {kitchen:'캠프 부엌', sawmill:'제재소', forge:'대장간', bakery:'빵집', dairy:'치즈 공방',
+  kiln:'벽돌 가마', pottery:'도자기 공방', coop:'닭장', barn:'외양간'};
+const isAnimal = k => k === 'coop' || k === 'barn';
+const animalsOf = k => k === 'coop' ? 2 + (S.bld.coop||1) : 1 + (S.bld.barn||1);
+const capOf = k => isAnimal(k) ? animalsOf(k) : slotsOf(S.bld[k]||1);
+
+/* ── 밭 작물 ── */
+const CROPS = {
+  wheat:{name:'밀',     min:2, yield:3, lv:1, cost:0,  img:'f_wheat', tint:'#e8c04a'},
+  corn: {name:'옥수수', min:5, yield:3, lv:3, cost:10, img:'f_corn',  tint:'#e2b733'},
+};
+const FIELD_PRICE = [0, 0, 150, 300, 600, 1000];   // 밭 번호별 개간 비용(코인)
+const FIELD_LV    = [1, 1, 3, 5, 7, 9];
 
 /* ── 캠프 건물: 건설 조건·업그레이드 비용(현재 레벨 l → l+1)·효과 ── */
 const BUILDINGS = {
@@ -419,8 +569,20 @@ const BUILDINGS = {
            fx:l => `작업 칸 ${slotsOf(l)}개 · 작업 시간 -${Math.round(10*(l-1))}%`},
   forge:  {start:0, unlock:4, build:{plank:4, stone:10, coal:3, coins:120}, cost:l => ({plank:3*l, stone:8*l, coal:3*l, coins:150*l}),
            fx:l => `작업 칸 ${slotsOf(l)}개 · 작업 시간 -${Math.round(10*(l-1))}%`},
+  coop:   {start:0, unlock:2, build:{wood:8, twig:6, coins:60}, cost:l => ({plank:2*l, wheat:5*l, coins:90*l}),
+           fx:l => `닭 ${2+l}마리 · 달걀 시간 -${Math.round(10*(l-1))}%`},
+  bakery: {start:0, unlock:3, build:{wood:12, stone:8, coins:100}, cost:l => ({plank:2*l, ...(l>=2?{brick:l}:{stone:6}), coins:120*l}),
+           fx:l => `굽는 칸 ${slotsOf(l)}개 · 굽는 시간 -${Math.round(10*(l-1))}%`},
+  barn:   {start:0, unlock:4, build:{plank:4, wood:10, coins:150}, cost:l => ({plank:3*l, corn:5*l, coins:120*l}),
+           fx:l => `소 ${1+l}마리 · 우유 시간 -${Math.round(10*(l-1))}%`},
+  dairy:  {start:0, unlock:5, build:{plank:5, stone:10, coins:180}, cost:l => ({plank:2*l, brick:l, coins:150*l}),
+           fx:l => `작업 칸 ${slotsOf(l)}개 · 작업 시간 -${Math.round(10*(l-1))}%`},
+  kiln:   {start:0, unlock:6, build:{stone:16, coal:4, clay:6, coins:200}, cost:l => ({stone:10*l, coal:3*l, coins:150*l}),
+           fx:l => `작업 칸 ${slotsOf(l)}개 · 작업 시간 -${Math.round(10*(l-1))}%`},
+  pottery:{start:0, unlock:7, build:{plank:4, brick:4, clay:6, coins:220}, cost:l => ({plank:2*l, brick:2*l, coins:160*l}),
+           fx:l => `작업 칸 ${slotsOf(l)}개 · 작업 시간 -${Math.round(10*(l-1))}%`},
 };
-const slotsOf = l => 1 + Math.floor(l/2);
+const slotsOf = l => 2 + l;   // 작업 칸: Lv1 3칸 ~ Lv5 7칸
 const napEnergy = l => CONFIG.napEnergy + 10*(l-1);
 const napHoursOf = l => CONFIG.napHours * (1 - 0.1*(l-1));
 const upgradeNeedLevel = l => 2*l;   // l → l+1 업그레이드에 필요한 탐험가 레벨
@@ -433,32 +595,51 @@ const IMG_LIST = ['avatar','berrybush','board','boulder','cabin','chest','cloud'
   'spruce','t_grass','t_meadow','t_snow','tent','twigpile','wall',
   'palm','driftwood','shells','sandstone','mushrooms','reeds','cactus','goldrock','obsidian','burnttree','firecrystal',
   'i_coconut','i_shell','i_mushroom','i_reed','i_sandstone','i_gold','i_obsidian','i_plank','i_ironbar','i_soup','i_pudding',
-  'm_beach','m_swamp','m_desert','m_volcano','t_sand','t_swamp','t_ash','sawmill','forge'];
+  'm_beach','m_swamp','m_desert','m_volcano','t_sand','t_swamp','t_ash','sawmill','forge',
+  'bakery','dairy','kiln','pottery','coop','barn','hen','cow','f_empty','f_sprout','f_wheat','f_corn','claypit','bigrock',
+  'i_wheat','i_corn','i_flour','i_egg','i_milk','i_cheese','i_bread','i_cookies','i_brick','i_jar','i_clay','i_dynamite',
+  'u_register','u_notebook','u_bag','u_map','u_gift','u_camera','u_shop'];
+// 그림이 아직 없을 때 대신 쓸 그림(화면 아이콘용)
+const IMG_FALLBACK = {u_register:'i_coin', u_notebook:'board', u_bag:'chest', u_map:'m_canyon', u_gift:'chest', u_camera:'rune',
+  u_shop:'i_energy', claypit:'boulder', bigrock:'boulder', i_corn:'i_wheat', i_flour:'i_wheat', i_egg:'hen', i_milk:'cow',
+  i_cheese:'dairy', i_bread:'bakery', i_cookies:'bakery', i_brick:'kiln', i_jar:'pottery', i_clay:'i_sandstone', i_dynamite:'i_coal'};
+const FAILED = new Set();
 function loadImages(){
   let done = 0;
   return Promise.all(IMG_LIST.map(n => new Promise(res => {
     const im = new Image();
     im.onerror = () => {   // 그림이 없으면 회색 자리표시로 대체(게임은 계속 동작)
       const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
-      g.fillStyle = '#b9a58a'; g.beginPath(); g.arc(32,32,28,0,7); g.fill(); IMG[n] = c; fin(); };
+      g.fillStyle = '#b9a58a'; g.beginPath(); g.arc(32,32,28,0,7); g.fill(); IMG[n] = c; FAILED.add(n); fin(); };
     const fin = () => { done++; document.getElementById('lbar').style.width = (done/IMG_LIST.length*100)+'%'; res(); };
     im.onload = fin; im.src = src(n); IMG[n] = im;
-  })));
+  }))).then(() => {   // 없는 그림은 비슷한 그림으로 대신
+    for (const n of FAILED) if (IMG_FALLBACK[n] && !FAILED.has(IMG_FALLBACK[n])) IMG[n] = IMG[IMG_FALLBACK[n]];
+    applyDomImages();
+  });
 }
 // 그림 주소: 한 파일 빌드(IMG_DATA가 있을 때)는 파일 안의 그림, 아니면 img/ 폴더
-const src = n => (window.IMG_DATA && IMG_DATA[n]) || 'img/' + n + '.webp';
-document.querySelectorAll('[data-img]').forEach(e => e.src = src(e.dataset.img));
-document.querySelectorAll('[data-bg]').forEach(e => e.style.backgroundImage = `url(${src(e.dataset.bg)})`);
+const src = n => { if (FAILED.has(n) && IMG_FALLBACK[n]) n = IMG_FALLBACK[n];
+  return (window.IMG_DATA && IMG_DATA[n]) || 'img/' + n + '.webp'; };
+function applyDomImages(){
+  document.querySelectorAll('[data-img]').forEach(e => e.src = src(e.dataset.img));
+  document.querySelectorAll('[data-bg]').forEach(e => e.style.backgroundImage = `url(${src(e.dataset.bg)})`);
+}
+applyDomImages();
 
 /* ══════════ 저장 데이터 ══════════ */
 let S;
 function freshState(){
   return {v:1, energy:CONFIG.energyBase, energyTs:Date.now(), xp:0, level:1, coins:150, gems:10,
     inv:{}, seen:{wood:1,twig:1,berry:1,stone:1,flower:1}, regions:{}, orders:[], nextOrderId:1,
-    where:'home', napTs:0, sound:true, cfg:{}, bld:{}, prod:{}, mapCh:1};
+    where:'home', napTs:0, sound:true, cfg:{}, bld:{}, prod:{}, mapCh:1,
+    fields:[], fieldsOpen:2, tasks:[], stats:{}, giftTs:0, nextTaskId:1};
 }
 function migrate(){   // 예전 저장본에 새 항목 채우기
   S.bld = S.bld || {}; S.prod = S.prod || {}; S.mapCh = S.mapCh || 1;
+  S.fields = S.fields || []; S.fieldsOpen = S.fieldsOpen || 2; S.tasks = S.tasks || []; S.stats = S.stats || {};
+  S.giftTs = S.giftTs || 0; S.nextTaskId = S.nextTaskId || 1;
+  for (const k of ['got','made','harvest']) S.stats[k] = S.stats[k] || {};
   for (const [k,b] of Object.entries(BUILDINGS)) if (S.bld[k] == null) S.bld[k] = b.start;
   for (const k of Object.keys(PROD)) S.prod[k] = S.prod[k] || [];
 }
@@ -487,7 +668,8 @@ function tickEnergy(){
   if (n > 0){ S.energy = Math.min(mx, S.energy + n); S.energyTs += n*regenMs(); if (S.energy >= mx) S.energyTs = now; save(); }
 }
 function addEnergy(n){ S.energy = Math.max(0, S.energy + n); if (n > 0 && S.energy >= maxEnergy()) S.energyTs = Date.now(); updateHUD(); save(); }
-function addItem(k, n){ S.inv[k] = (S.inv[k]||0) + n; if (n > 0) S.seen[k] = 1; save(); }
+function addItem(k, n){ S.inv[k] = (S.inv[k]||0) + n; if (n > 0){ S.seen[k] = 1; S.stats.got[k] = (S.stats.got[k]||0) + n; } save(); }
+const stat = (k, n=1) => { S.stats[k] = (S.stats[k]||0) + n; };
 const has = (need) => Object.entries(need).every(([k,n]) => (S.inv[k]||0) >= n);
 
 function gainXP(n){
@@ -548,21 +730,36 @@ function buildRegion(key){
 }
 OBJS.tent_camp = {img:'tent', w:1.3, fixed:true};
 
-const HOME_POS = {cabin:[4,3], kitchen:[9,3], board:[2,7], tent:[5,9], sawmill:[9,7], forge:[8,10]};
+/* ── 캠프 배치: 큰 건물은 2×2칸(fp:2), 좌표는 왼쪽 위 칸 ── */
+const HOME_N = 18;
+const HOME_POS = {cabin:[2,2], kitchen:[5,2], bakery:[8,2], dairy:[11,2], sawmill:[14,2],
+  coop:[2,5], barn:[2,8], tent:[2,11], pottery:[2,14],
+  forge:[14,5], kiln:[14,8], board:[14,11]};
+const FIELD_POS = [[6,6],[9,6],[6,9],[9,9],[6,12],[9,12]];
+const HOME_START = {x:8, y:8};
+const fpOf = o => (OBJS[o] && OBJS[o].fp) || 1;
+function placeObj(w, x, y, o, extra){
+  const N = w.N, i = y*N+x, f = fpOf(o);
+  w.tiles[i].o = o; Object.assign(w.tiles[i], extra||{});
+  for (let dy=0;dy<f;dy++) for (let dx=0;dx<f;dx++) if (dx||dy){ const t = w.tiles[(y+dy)*N+x+dx]; t.o = '_blk'; t.ref = i; }
+}
+// 2×2 물체의 화면 중심(앞쪽 모서리 기준)
+const objCenter = (o, x, y) => fpOf(o) === 2 ? iso(x+.5, y+.5) : iso(x, y);
+const objPos = k => { const [x,y] = HOME_POS[k]; return fpOf(k) === 2 ? [x+.5, y+.5] : [x, y]; };
 function buildHome(){
-  const N = 13, tiles = [];
+  const N = HOME_N, tiles = [];
   for (let i=0;i<N*N;i++) tiles.push({o:null, rev:true, seed:Math.random()});
-  const put = (x,y,o) => tiles[y*N+x].o = o;
-  for (const [k,[x,y]] of Object.entries(HOME_POS)) put(x,y,k);
-  put(4,6,'husky');
+  const w = {key:'home', N, tiles, start:{...HOME_START}, tex:'t_grass', tint:'rgba(120,190,60,.12)', region:null, home:true};
+  for (const [k,[x,y]] of Object.entries(HOME_POS)) placeObj(w, x, y, k);
+  FIELD_POS.forEach(([x,y], n) => placeObj(w, x, y, 'field', {fid:n}));
+  tiles[12*N+12].o = 'husky';
   const r = rng(77);
   for (let y=0;y<N;y++) for (let x=0;x<N;x++){
-    const edge = x<2 || y<2 || x>N-3 || y>N-3;
-    if (edge && !tiles[y*N+x].o && r() < .62) put(x,y, ['deco_spruce','deco_oak','deco_redwood','deco_spruce'][Math.floor(r()*4)]);
-    else if (!edge && !tiles[y*N+x].o && r() < .08) put(x,y, r()<.6 ? 'deco_flowers':'deco_bush');
+    const edge = x<1 || y<1 || x>N-2 || y>N-2;
+    if (edge && !tiles[y*N+x].o && r() < .75) tiles[y*N+x].o = ['deco_spruce','deco_oak','deco_redwood','deco_spruce'][Math.floor(r()*4)];
+    else if (!edge && !tiles[y*N+x].o && r() < .05 && x > 11 && y > 13) tiles[y*N+x].o = r()<.6 ? 'deco_flowers':'deco_bush';
   }
-  for (let y=5;y<=7;y++) for (let x=5;x<=7;x++) if (tiles[y*N+x].o && tiles[y*N+x].o.startsWith('deco')) tiles[y*N+x].o = null;
-  return {key:'home', N, tiles, start:{x:6, y:6}, tex:'t_grass', tint:'rgba(120,190,60,.12)', region:null, home:true};
+  return w;
 }
 
 function revealAround(w, cx, cy, rad){
@@ -655,9 +852,14 @@ function renderGround(){
   c.restore();
   if (w.home){ // 캠프 돌길: 가운데에서 건물마다 이어지는 징검돌
     const rr = rng(5);
-    for (const [bx,by] of Object.values(HOME_POS)){
-      const len = Math.hypot(bx-6, by-6), n = Math.floor(len/0.55);
-      for (let k=1;k<n-1;k++){ const t = k/n, p = iso(6+(bx-6)*t, 6+(by-6)*t);
+    const S0 = HOME_START;
+    // 밭 사이 십자 흙길
+    for (let k=0;k<HOME_N;k++) for (const [x,y] of [[8,k],[k,8],[5,k],[k,5],[13,k],[k,11],[k,14]]){
+      if (x<1||y<1||x>HOME_N-2||y>HOME_N-2) continue; const p = iso(x,y);
+      diamond(c, p.x, p.y, -6); c.fillStyle = 'rgba(150,110,60,.22)'; c.fill(); }
+    for (const k of Object.keys(HOME_POS)){ const [bx,by] = objPos(k);
+      const len = Math.hypot(bx-S0.x, by-S0.y), n = Math.floor(len/0.6);
+      for (let k2=1;k2<n-1;k2++){ const t = k2/n, p = iso(S0.x+(bx-S0.x)*t, S0.y+(by-S0.y)*t);
         c.beginPath(); c.ellipse(p.x+(rr()-.5)*26, p.y+(rr()-.5)*12, 12+rr()*6, 6+rr()*3, 0, 0, 7);
         c.fillStyle = `rgba(${170+rr()*30|0},${165+rr()*25|0},${150+rr()*20|0},.95)`; c.fill();
         c.strokeStyle='rgba(80,70,50,.35)'; c.lineWidth=1.5; c.stroke(); }
@@ -691,9 +893,18 @@ function renderFog(){
 
 /* ══════════ 오브젝트 스프라이트 크기 ══════════ */
 function spriteRect(o, x, y, extra=0){
-  const d = OBJS[o], im = IMG[d.img], p = iso(x,y);
+  const d = OBJS[o], im = IMG[imgOf(o, x, y)], p = objCenter(o, x, y), big = fpOf(o) === 2;
   const w = TW*d.w, h = w * im.height / im.width;
-  return {x:p.x - w/2, y:p.y + TH*0.28 - h + extra, w, h};
+  if (d.flat) return {x:p.x - w/2, y:p.y - h/2 - 6, w, h};
+  return {x:p.x - w/2, y:p.y + TH*(big ? .82 : .28) - h + extra, w, h};
+}
+// 상태에 따라 바뀌는 그림(밭)
+function imgOf(o, x, y){
+  if (o !== 'field' || !world) return OBJS[o].img;
+  const f = fieldAt(x, y); if (!f) return 'f_empty';
+  if (f.locked) return 'f_empty';
+  if (!f.crop) return 'f_empty';
+  return f.end <= Date.now() ? CROPS[f.crop].img : 'f_sprout';
 }
 
 /* ══════════ 플레이어 ══════════ */
@@ -721,8 +932,9 @@ function findPath(w, fx, fy, goalSet){
   return null;
 }
 function standSpots(i){
-  const w = world, N = w.N, x = i%N, y = (i/N)|0, set = new Set();
-  for (const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){ const nx=x+dx, ny=y+dy; if (reach.has(ny*N+nx)) set.add(ny*N+nx); }
+  const w = world, N = w.N, x0 = i%N, y0 = (i/N)|0, set = new Set(), f = fpOf(w.tiles[i].o);
+  for (let fy=0;fy<f;fy++) for (let fx2=0;fx2<f;fx2++){ const x = x0+fx2, y = y0+fy;
+    for (const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){ const nx=x+dx, ny=y+dy; if (nx>=0&&ny>=0&&nx<N&&ny<N&&reach.has(ny*N+nx)) set.add(ny*N+nx); } }
   return set;
 }
 
@@ -749,7 +961,7 @@ function sfx(kind){
   const t = AC.currentTime, o = AC.createOscillator(), g = AC.createGain();
   o.connect(g); g.connect(AC.destination);
   const set = {chop:['triangle',180,90,.12,.18], pop:['sine',520,880,.1,.12], coin:['square',880,1320,.08,.12],
-               level:['sine',523,1046,.5,.2], no:['sawtooth',160,110,.18,.08], step:['sine',300,260,.05,.03]}[kind] || ['sine',440,440,.1,.1];
+               level:['sine',523,1046,.5,.2], boom:['sawtooth',120,40,.35,.25], no:['sawtooth',160,110,.18,.08], step:['sine',300,260,.05,.03]}[kind] || ['sine',440,440,.1,.1];
   o.type = set[0]; o.frequency.setValueAtTime(set[1], t); o.frequency.exponentialRampToValueAtTime(set[2], t+set[3]);
   g.gain.setValueAtTime(set[4], t); g.gain.exponentialRampToValueAtTime(0.001, t+set[3]+.05);
   o.start(t); o.stop(t+set[3]+.08);
@@ -762,11 +974,9 @@ function enter(key){
   S.where = key;
   player.x = world.start.x; player.y = world.start.y; player.path = []; player.work = 0; player.target = null;
   renderGround(); renderFog(); computeReach();
-  const p = iso(player.x, player.y); cam.x = p.x; cam.y = p.y - (world.home ? 20 : 60); cam.z = Math.max(cam.zMin || .35, Math.min(1, world.home ? (W < 700 ? W/900 : Math.min(H/1000, W/1500)) : (W < 700 ? W/680 : W/1100)));
+  const p = iso(player.x, player.y); cam.x = p.x; cam.y = p.y - (world.home ? 20 : 60);  cam.z = Math.max(cam.zMin || .35, Math.min(1, world.home ? (W < 700 ? W/900 : Math.min(H/1000, W/1500)) : (W < 700 ? W/680 : W/1100)));
   // 저장된 작업 줄 복구(에너지는 이미 사용됨)
   if (world.region && world.region.queue){ for (const i of world.region.queue){ const t = world.tiles[i]; if (t && t.o) queue.push({i, cost:OBJS[t.o].cost}); } }
-  document.getElementById('homeBtn').classList.toggle('hidden', world.home);
-  document.getElementById('mapBtn').querySelector('img').src = src(world.home ? 'm_canyon' : REGIONS[key].img);
   updateQuest(); updateHUD(); save();
 }
 
@@ -774,13 +984,13 @@ function enter(key){
 function pickObject(wx, wy){
   const w = world, N = w.N, hits = [];
   for (let y=0;y<N;y++) for (let x=0;x<N;x++){
-    const t = w.tiles[y*N+x]; if (!t.o || !t.rev) continue;
+    const t = w.tiles[y*N+x]; if (!t.o || !t.rev || t.o === '_blk') continue;
     const r = spriteRect(t.o, x, y);
     const mx = r.w*.14, my = r.h*.08;
-    if (wx > r.x+mx && wx < r.x+r.w-mx && wy > r.y+my && wy < r.y+r.h) hits.push({i:y*N+x, d:x+y});
+    if (wx > r.x+mx && wx < r.x+r.w-mx && wy > r.y+my && wy < r.y+r.h) hits.push({i:y*N+x, d:x+y+(fpOf(t.o)-1)*2});
   }
   if (!hits.length){ const g = unIso(wx, wy); const x = Math.round(g.x), y = Math.round(g.y);
-    if (x>=0&&y>=0&&x<N&&y<N) return {i:y*N+x, tile:true}; return null; }
+    if (x>=0&&y>=0&&x<N&&y<N){ const t = w.tiles[y*N+x]; return t.o === '_blk' ? {i:t.ref} : {i:y*N+x, tile:true}; } return null; }
   hits.sort((a,b)=>b.d-a.d); return hits[0];
 }
 function onTap(sx, sy){
@@ -794,18 +1004,22 @@ function onTap(sx, sy){
   }
   const d = OBJS[t.o];
   if (d.fixed){
-    if (d.act){ const spots = standSpots(hit.i); const p = spots.size ? findPath(w, Math.round(player.x), Math.round(player.y), spots) : null;
-      if (p && p.length){ player.path = p; player.after = d.act; player.face = x > player.x ? 1 : -1; } else doAct(d.act); }
+    if (d.act){ const spots = standSpots(hit.i); const p = spots.size && !queue.length ? findPath(w, Math.round(player.x), Math.round(player.y), spots) : null;
+      if (p && p.length){ player.path = p; player.face = x > player.x ? 1 : -1; }
+      doAct(d.act, hit.i); }
     return;
   }
   if (queue.some(q => q.i === hit.i)){ toast('이미 작업 순서에 있어요'); return; }
   if (!standSpots(hit.i).size){ sfx('no'); toast('가까운 곳부터 차례로 치워야 해요'); return; }
+  if (d.tool && (S.inv[d.tool]||0) < 1){ sfx('no'); openDynamite(true); return; }
   if (S.energy < d.cost){ sfx('no'); openShop(true); return; }
-  addEnergy(-d.cost); gainXP(d.cost * CONFIG.xpPerEnergy);
+  if (d.tool){ S.inv[d.tool]--; toast(`${ITEMS[d.tool].name} 1개 사용!`); }
+  addEnergy(-d.cost); gainXP(d.cost * CONFIG.xpPerEnergy); stat('energy', d.cost);
   queue.push({i:hit.i, cost:d.cost}); sfx('pop'); save();
 }
-function doAct(a){
-  if (a === 'cabin' || a === 'tent') openBuilding(a);
+function doAct(a, i){
+  if (a === 'field') fieldTap(world.tiles[i].fid);
+  else if (a === 'cabin' || a === 'tent') openBuilding(a);
   else if (PROD[a]) prodTap(a);
   else if (a === 'order') openOrders();
   else if (a === 'pet'){ const t = world.tiles.findIndex(t=>t.o==='husky'); burst(t%world.N, (t/world.N)|0, '#ff7aa8', 10); floatText(t%world.N,(t/world.N)|0,'♥','#ff5a8a'); sfx('pop'); }
@@ -818,7 +1032,7 @@ function updatePlayer(dt){
     const [tx,ty] = player.path[0], dx = tx-player.x, dy = ty-player.y, dist = Math.hypot(dx,dy), sp = 4.2*dt;
     if (Math.abs(dx - dy) > 0.01) player.face = (dx - dy) > 0 ? 1 : -1;
     if (dist <= sp){ player.x = tx; player.y = ty; player.path.shift();
-      if (!player.path.length && player.after){ const a = player.after; player.after = null; doAct(a); } }
+    }
     else { player.x += dx/dist*sp; player.y += dy/dist*sp; }
     return;
   }
@@ -844,8 +1058,8 @@ function updatePlayer(dt){
 }
 function finishWork(){
   const w = world, i = player.target, t = w.tiles[i], d = OBJS[t.o], x = i % w.N, y = (i / w.N)|0;
-  queue.shift(); player.work = 0; player.target = null;
-  burst(x, y, d.fx, 18); sfx('pop');
+  queue.shift(); player.work = 0; player.target = null; stat('cleared');
+  burst(x, y, d.fx, 18); sfx(d.tool ? 'boom' : 'pop');
   let lines = [];
   for (const [k,n] of Object.entries(d.drops)){ addItem(k, n); flyToBag(x, y, k==='flower'?'flowers':ITEMS[k].img, n); lines.push(`+${n} ${ITEMS[k].name}`); }
   if (d.chest){
@@ -888,28 +1102,43 @@ function nap(){
   if (left > 0){ const m = Math.ceil(left/60000); toast(`아직 졸리지 않아요 · ${Math.floor(m/60)}시간 ${m%60}분 뒤 낮잠 가능`); return false; }
   const e = napEnergy(S.bld.tent);
   S.napTs = Date.now(); addEnergy(e); sfx('level');
-  if (world.home){ const t = world.tiles.findIndex(t=>t.o==='tent'); floatText(t%world.N, (t/world.N)|0, `낮잠 zZ +${e} 에너지`, '#bfe9ff'); }
+  if (world.home){ const [x,y] = objPos('tent'); floatText(x, y, `낮잠 zZ +${e} 에너지`, '#bfe9ff'); }
   return true;
 }
 
 /* ══════════ 생산(요리·제재·대장간) ══════════ */
 const prodMs = (k, r) => r.min * 60000 * Math.max(0.05, CONFIG.prodSpeed) * (1 - 0.1*((S.bld[k]||1)-1));
 const jobsDone = k => (S.prod[k]||[]).filter(j => j.end <= Date.now());
-function startJob(k, id){
+function startJob(k, id, quiet){
   const r = PROD[k].find(r => r.id === id), jobs = S.prod[k];
-  if (!r || !has(r.need) || jobs.length >= slotsOf(S.bld[k])) return false;
+  if (!r || !has(r.need) || jobs.length >= capOf(k)) return false;
   for (const [i,n] of Object.entries(r.need)) S.inv[i] -= n;
   const lastEnd = jobs.length ? Math.max(...jobs.map(j=>j.end)) : 0;
-  const start = Math.max(Date.now(), lastEnd);          // 한 줄로 차례차례 만들어짐
+  const start = isAnimal(k) ? Date.now() : Math.max(Date.now(), lastEnd);   // 건물은 한 줄로 차례차례, 동물은 동시에
   jobs.push({id, end:start + prodMs(k, r)});
-  sfx('pop'); save(); return true;
+  if (!quiet) sfx('pop'); save(); return true;
+}
+// 즉시 완성: 진행 중인 첫 작업을 보석으로 끝냄
+function speedCost(k){
+  const now = Date.now(), run = (S.prod[k]||[]).filter(j => j.end > now).sort((a,b)=>a.end-b.end)[0];
+  if (!run) return null;
+  const ahead = isAnimal(k) ? run.end - now : run.end - now;
+  return {job:run, left:ahead, gems:Math.max(1, Math.ceil(ahead / (CONFIG.speedUpMinPerGem*60000)))};
+}
+function speedUp(k){
+  const c = speedCost(k); if (!c) return;
+  if (S.gems < c.gems){ sfx('no'); toast('보석이 부족해요'); return; }
+  S.gems -= c.gems;
+  if (isAnimal(k)) c.job.end = Date.now();
+  else for (const j of S.prod[k]) if (j.end >= c.job.end) j.end -= c.left;   // 뒤에 기다리던 것도 당겨짐
+  sfx('coin'); updateHUD(); save();
 }
 function collect(k){
   const done = jobsDone(k); if (!done.length) return 0;
   S.prod[k] = S.prod[k].filter(j => !done.includes(j));
   let xp = 0;
-  for (const j of done){ addItem(j.id, 1); xp += PROD[k].find(r=>r.id===j.id).xp; }
-  if (world.home){ const [x,y] = HOME_POS[k]; for (const j of done) flyToBag(x, y, ITEMS[j.id].img, 1);
+  for (const j of done){ addItem(j.id, 1); xp += PROD[k].find(r=>r.id===j.id).xp; S.stats.made[j.id] = (S.stats.made[j.id]||0) + 1; }
+  if (world.home){ const [x,y] = objPos(k); for (const j of done) flyToBag(x, y, ITEMS[j.id].img, 1);
     floatText(x, y, done.map(j=>'+1 '+ITEMS[j.id].name).join('  '), '#fff'); }
   sfx('coin'); gainXP(xp); updateHUD(); save();
   return done.length;
@@ -918,6 +1147,28 @@ function prodTap(k){
   if (!S.bld[k]) { openBuilding(k); return; }
   if (collect(k)) return;
   openProd(k);
+}
+
+/* ══════════ 밭 ══════════ */
+function fieldState(fid){ const f = S.fields[fid] || (S.fields[fid] = {crop:null, end:0}); f.locked = fid >= S.fieldsOpen; return f; }
+function fieldAt(x, y){ const t = world.tiles[y*world.N + x]; return t && t.fid != null ? fieldState(t.fid) : null; }
+function fieldTap(fid){
+  const f = fieldState(fid), [fx0, fy0] = FIELD_POS[fid], cx = fx0+.5, cy = fy0+.5;
+  if (f.locked){ openFieldBuy(fid); return; }
+  if (!f.crop){ openPlant(fid); return; }
+  if (f.end > Date.now()){ openFieldWait(fid); return; }
+  const c = CROPS[f.crop];   // 수확
+  addItem(f.crop, c.yield); S.stats.harvest[f.crop] = (S.stats.harvest[f.crop]||0) + c.yield;
+  flyToBag(cx, cy, ITEMS[f.crop].img, c.yield); floatText(cx, cy, `+${c.yield} ${ITEMS[f.crop].name}`);
+  burst(cx, cy, c.tint, 16); sfx('coin'); gainXP(c.yield);
+  f.crop = null; f.end = 0; save();
+}
+function plant(fid, crop, quiet){
+  const f = fieldState(fid), c = CROPS[crop];
+  if (f.locked || f.crop || S.level < c.lv || S.coins < c.cost) return false;
+  S.coins -= c.cost; f.crop = crop; f.end = Date.now() + c.min*60000*Math.max(.05, CONFIG.prodSpeed);
+  if (!quiet){ const [x,y] = FIELD_POS[fid]; burst(x+.5, y+.5, '#7a5a2a', 10); sfx('pop'); }
+  updateHUD(); save(); return true;
 }
 
 /* ══════════ 그리기 ══════════ */
@@ -929,6 +1180,7 @@ function frame(now){
 }
 function draw(dt){
   const w = world, N = w.N, T = performance.now()/1000;
+  LATER = [];
   ctx.setTransform(DPR,0,0,DPR,0,0);
   const sky = ctx.createLinearGradient(0,0,0,H); sky.addColorStop(0,'#aad8f2'); sky.addColorStop(1,'#e6f2fb');
   ctx.fillStyle = sky; ctx.fillRect(0,0,W,H);
@@ -940,20 +1192,23 @@ function draw(dt){
   const vx0 = cam.x - W/2/cam.z - TW*1.5, vx1 = cam.x + W/2/cam.z + TW*1.5, vy0 = cam.y - H/2/cam.z - TH*6, vy1 = cam.y + H/2/cam.z + TH*3;
   const items = [];
   for (let y=0;y<N;y++) for (let x=0;x<N;x++){
-    const t = w.tiles[y*N+x]; if (!t.o || !t.rev) continue;
+    const t = w.tiles[y*N+x]; if (!t.o || !t.rev || t.o === '_blk') continue;
     const p = iso(x,y); if (p.x < vx0 || p.x > vx1 || p.y < vy0 || p.y > vy1) continue;
-    items.push({d:x+y+.001*x, x, y, i:y*N+x, o:t.o});
+    const big = fpOf(t.o) === 2, flat = OBJS[t.o].flat;
+    items.push({d:flat ? -1 + .001*(x+y) : x+y+(big?2:0)+.001*x, x, y, i:y*N+x, o:t.o});
   }
   items.push({d:player.x+player.y+.5, pl:true});
   items.sort((a,b)=>a.d-b.d);
   const qIdx = new Map(queue.map((q,n)=>[q.i,n]));
   for (const it of items){
     if (it.pl){ drawPlayer(T); continue; }
-    const d = OBJS[it.o], im = IMG[d.img];
+    const d = OBJS[it.o], big = fpOf(it.o) === 2;
+    if (it.o === 'field'){ drawField(it, T); continue; }
+    const im = IMG[imgOf(it.o, it.x, it.y)];
     let r = spriteRect(it.o, it.x, it.y);
-    const p = iso(it.x, it.y);
+    const p = objCenter(it.o, it.x, it.y);
     // 그림자
-    ctx.fillStyle = 'rgba(30,40,10,.22)'; ctx.beginPath(); ctx.ellipse(p.x, p.y+TH*.12, r.w*.42, TH*.26, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = 'rgba(30,40,10,.22)'; ctx.beginPath(); ctx.ellipse(p.x, p.y+TH*(big?.45:.12), r.w*.42, TH*(big?.5:.26), 0, 0, 7); ctx.fill();
     let ox = 0, sc = 1;
     if (player.work && player.target === it.i){ ox = Math.sin(T*40)*3; sc = 1 - Math.min(.25, player.workT/player.work*.25); }
     if (d.rune || d.chest){ ctx.save(); ctx.globalAlpha = .35 + .25*Math.sin(T*3); ctx.fillStyle = '#ffe36a';
@@ -963,18 +1218,25 @@ function draw(dt){
     if (hov || ghost){ ctx.save(); if (hov) ctx.filter = 'brightness(1.18)'; if (ghost){ ctx.filter = 'grayscale(1) brightness(1.1)'; ctx.globalAlpha = .55; } }
     ctx.drawImage(im, r.x + ox + r.w*(1-sc)/2, r.y + r.h*(1-sc), r.w*sc, r.h*sc);
     if (hov || ghost) ctx.restore();
+    if (d.animal && !ghost) drawAnimals(it, d.animal, T);
     if (d.label && world.home){
       const lv = S.bld[d.bld];
-      drawLabel(p.x, r.y - 6, ghost ? `${d.label} · 짓기` : `${d.label} Lv${lv}`);
-      if (PROD[d.bld] && lv){ const done = jobsDone(d.bld);
-        if (done.length) drawReady(p.x, r.y - 44, ITEMS[done[0].id].img, done.length, T);
-        else if (S.prod[d.bld].length) drawBusy(p.x, r.y - 44, T); }
-      if (d.bld === 'tent' && napLeft() <= 0) drawReady(p.x, r.y - 44, 'i_energy', 0, T);
+      const B = BUILDINGS[d.bld];
+      if (ghost) later(drawLabel, p.x, r.y + r.h*.45, S.level >= (B.unlock||1) ? `${d.label} 짓기` : `${d.label} · Lv${B.unlock}`);
+      if (PROD[d.bld] && lv){ const done = jobsDone(d.bld), cap = capOf(d.bld);
+        if (done.length) later(drawReady, p.x, r.y + r.h*.3, ITEMS[done[0].id].img, done.length, T, done.length >= cap);
+        else if (S.prod[d.bld].length) later(drawBusy, p.x, r.y + r.h*.3, T); }
+      if (d.bld === 'tent' && napLeft() <= 0) later(drawReady, p.x, r.y + r.h*.3, 'i_energy', 0, T);
     }
-    if (qIdx.has(it.i)) drawCostBubble(p.x, r.y + r.h*.35, d.cost, qIdx.get(it.i)+1, true);
-    else if (hov) drawCostBubble(p.x, r.y + r.h*.35, d.cost, 0, S.energy >= d.cost && standSpots(it.i).size > 0);
+    if (d.tool && !qIdx.has(it.i)){ // 다이너마이트가 필요한 바위 표시
+      ctx.save(); ctx.globalAlpha = .85 + .15*Math.sin(T*4); ctx.fillStyle = '#fff6df';
+      ctx.beginPath(); ctx.arc(p.x + r.w*.32, r.y + 18, 22, 0, 7); ctx.fill(); ctx.strokeStyle = '#e5452d'; ctx.lineWidth = 3; ctx.stroke();
+      ctx.drawImage(IMG.i_dynamite, p.x + r.w*.32 - 16, r.y + 2, 32, 32); ctx.restore(); }
+    if (qIdx.has(it.i)) later(drawCostBubble, p.x, r.y + r.h*.35, d.cost, qIdx.get(it.i)+1, true);
+    else if (hov) later(drawCostBubble, p.x, r.y + r.h*.35, d.cost, 0, S.energy >= d.cost && standSpots(it.i).size > 0);
   }
   ctx.drawImage(fogC, b.x, b.y, b.w, b.h);
+  const L = LATER; LATER = null; for (const f of L) f();
   drawFx(dt);
 }
 function drawPlayer(T){
@@ -1008,16 +1270,70 @@ function drawCostBubble(x, y, cost, num, ok){
     ctx.fillStyle = '#7a3f00'; ctx.font = '800 17px sans-serif'; ctx.fillText(num, w/2-6, -h-2); }
   ctx.restore();
 }
-function drawReady(x, y, img, n, T){
-  const b = Math.sin(T*4)*4;
+// 완성품 말풍선(원작처럼 크림색 둥근 사각형, 가득 차면 MAX)
+function drawReady(x, y, img, n, T, max){
+  const b = Math.sin(T*4)*4, w = 76, h = max ? 86 : 70;
   ctx.save(); ctx.translate(x, y + b);
-  ctx.fillStyle = '#fff'; ctx.strokeStyle = '#3fae2a'; ctx.lineWidth = 4;
-  ctx.beginPath(); ctx.arc(0, -30, 30, 0, 7); ctx.fill(); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(-8,-3); ctx.lineTo(0,10); ctx.lineTo(8,-3); ctx.fill();
-  ctx.drawImage(IMG[img], -22, -52, 44, 44);
-  if (n > 1){ ctx.fillStyle = '#e5452d'; ctx.beginPath(); ctx.arc(24, -54, 13, 0, 7); ctx.fill();
-    ctx.fillStyle = '#fff'; ctx.font = '800 16px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(n, 24, -53); }
+  ctx.shadowColor = 'rgba(0,0,0,.25)'; ctx.shadowOffsetY = 4; ctx.shadowBlur = 6;
+  ctx.fillStyle = '#fff6df'; roundRect(-w/2, -h-10, w, h, 18); ctx.fill();
+  ctx.shadowColor = 'transparent';
+  ctx.beginPath(); ctx.moveTo(-10,-11); ctx.lineTo(0,2); ctx.lineTo(10,-11); ctx.fill();
+  ctx.drawImage(IMG[img], -28, -h-4, 56, 56);
+  if (max){ ctx.font = '900 22px "Jua","Apple SD Gothic Neo",sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.lineWidth = 4; ctx.strokeStyle = '#fff'; ctx.strokeText('MAX', 0, -22); ctx.fillStyle = '#8a3b12'; ctx.fillText('MAX', 0, -22); }
+  else if (n > 1){ ctx.fillStyle = '#e5452d'; ctx.beginPath(); ctx.arc(30, -h-6, 14, 0, 7); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = '800 16px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(n, 30, -h-5); }
   ctx.restore();
+}
+// 동물(닭·소)을 건물 앞마당에
+function drawAnimals(it, kind, T){
+  const n = isAnimal(it.o) ? animalsOf(it.o) : 0, im = IMG[kind];
+  if (FAILED.has(kind)) return;
+  for (let k=0;k<n;k++){
+    const ax = it.x + 2.15 + (k%3)*.42, ay = it.y + .2 + Math.floor(k/3)*.55 + (k%3)*.18;
+    const p = iso(ax, ay), hgt = kind === 'cow' ? 58 : 34, wd = hgt * im.width / im.height;
+    const bob = Math.abs(Math.sin(T*2 + k*1.7)) * (kind === 'cow' ? 1 : 3);
+    ctx.fillStyle = 'rgba(30,40,10,.25)'; ctx.beginPath(); ctx.ellipse(p.x, p.y, wd*.35, 6, 0, 0, 7); ctx.fill();
+    ctx.save(); ctx.translate(p.x, p.y - bob); if ((k + Math.floor(T/3)) % 2) ctx.scale(-1, 1);
+    ctx.drawImage(im, -wd/2, -hgt, wd, hgt); ctx.restore();
+  }
+}
+// 밭: 그림이 있으면 그림, 없으면 직접 그림
+function drawField(it, T){
+  const f = fieldAt(it.x, it.y), c = objCenter('field', it.x, it.y);
+  const key = imgOf('field', it.x, it.y), im = IMG[key];
+  if (!FAILED.has(key)){
+    const r = spriteRect('field', it.x, it.y);
+    if (f.locked){ ctx.save(); ctx.filter = 'grayscale(.8) brightness(.9)'; ctx.globalAlpha = .7; }
+    ctx.drawImage(im, r.x, r.y, r.w, r.h);
+    if (f.locked) ctx.restore();
+  } else {
+    // 흙 마름모 + 이랑
+    ctx.save(); ctx.translate(c.x, c.y);
+    ctx.beginPath(); ctx.moveTo(0,-TH+6); ctx.lineTo(TW-10,0); ctx.lineTo(0,TH-6); ctx.lineTo(-TW+10,0); ctx.closePath();
+    ctx.fillStyle = f.locked ? '#9c8a6e' : '#7a5232'; ctx.fill(); ctx.strokeStyle = '#c9a36a'; ctx.lineWidth = 5; ctx.stroke();
+    ctx.strokeStyle = 'rgba(40,20,5,.35)'; ctx.lineWidth = 3;
+    for (let k=-3;k<=3;k++){ ctx.beginPath(); ctx.moveTo(-TW*.42 + k*18 + 40, -TH*.3 + k*9 - 20); ctx.lineTo(k*18 + 40, TH*.42 + k*9 - 20 - TH*.3); ctx.stroke(); }
+    if (f.crop){
+      const ripe = f.end <= Date.now(), col = ripe ? CROPS[f.crop].tint : '#5fbf3a';
+      for (let gx=-3;gx<=3;gx++) for (let gy=-3;gy<=3;gy++){
+        const px = (gx - gy) * 15, py = (gx + gy) * 7.5; if (Math.abs(px)/TW + Math.abs(py)/TH > .82) continue;
+        const hgt = ripe ? (f.crop === 'corn' ? 34 : 22) : 9;
+        ctx.strokeStyle = ripe ? '#7aa83a' : col; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px + Math.sin(T*2+gx)*2, py - hgt); ctx.stroke();
+        if (ripe){ ctx.fillStyle = col; ctx.beginPath(); ctx.ellipse(px + Math.sin(T*2+gx)*2, py - hgt, 4, f.crop === 'corn' ? 8 : 6, 0, 0, 7); ctx.fill(); }
+      }
+    }
+    ctx.restore();
+  }
+  // 상태 표시
+  if (f.locked){ const fid = world.tiles[it.y*world.N+it.x].fid;
+    later(drawLabel, c.x, c.y + 8, S.level >= FIELD_LV[fid] ? `🔒 ${FIELD_PRICE[fid]}코인` : `🔒 Lv${FIELD_LV[fid]}`); }
+  else if (f.crop && f.end > Date.now()){
+    const total = CROPS[f.crop].min*60000*Math.max(.05, CONFIG.prodSpeed), pr = 1 - (f.end - Date.now())/total;
+    ctx.fillStyle = 'rgba(0,0,0,.55)'; roundRect(c.x-40, c.y-TH-14, 80, 14, 7); ctx.fill();
+    ctx.fillStyle = '#7fd34a'; roundRect(c.x-38, c.y-TH-12, 76*Math.max(0,Math.min(1,pr)), 10, 5); ctx.fill();
+  } else if (f.crop) later(drawReady, c.x, c.y - TH*.7, ITEMS[f.crop].img, 0, T);
+  else later(drawLabel, c.x, c.y + 8, '심기');
 }
 function drawBusy(x, y, T){
   ctx.save(); ctx.translate(x, y); ctx.fillStyle = 'rgba(255,255,255,.9)';
@@ -1025,7 +1341,10 @@ function drawBusy(x, y, T){
   ctx.strokeStyle = '#1c98f0'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, -22, 12, T*4, T*4 + 4.2); ctx.stroke();
   ctx.restore();
 }
+let LATER = null;   // 말풍선·라벨은 모아 두었다가 맨 위에 그림
+function later(fn, ...a){ if (LATER) LATER.push(() => fn(...a)); else fn(...a); }
 function drawLabel(x, y, text){
+  if (!text) return;
   ctx.save(); ctx.font = '700 22px "Jua","Apple SD Gothic Neo",sans-serif'; const tw = ctx.measureText(text).width + 26;
   ctx.fillStyle = 'rgba(255,244,224,.96)'; ctx.strokeStyle = '#b8692e'; ctx.lineWidth = 3;
   roundRect(x - tw/2, y - 34, tw, 32, 14); ctx.fill(); ctx.stroke();
@@ -1088,6 +1407,7 @@ function clampCam(){ if (!cacheBox) return; const b = cacheBox;
   cam.x = Math.max(b.x + TW*2, Math.min(b.x + b.w - TW*2, cam.x)); cam.y = Math.max(b.y + TH*3, Math.min(b.y + b.h - TH*3, cam.y)); }
 
 /* ══════════ HUD ══════════ */
+function fmtShort(ms){ const m = Math.ceil(ms/60000), h = Math.floor(m/60); return h ? `${h}시간 ${m%60}분` : `${m}분`; }
 function fmtTime(ms){ const s = Math.ceil(ms/1000), m = Math.floor(s/60); return m ? `${m}분 ${String(s%60).padStart(2,'0')}초` : `${s}초`; }
 function updateHUD(){
   const mx = maxEnergy();
@@ -1101,6 +1421,12 @@ function updateHUD(){
   document.getElementById('gemText').textContent = S.gems.toLocaleString();
   const ready = S.orders.filter(o => has(o.need)).length, bd = document.getElementById('orderBadge');
   bd.textContent = ready; bd.classList.toggle('hidden', !ready);
+  const tdone = S.tasks.filter(t => taskProgress(t) >= t.n).length, tb = document.getElementById('taskBadge');
+  tb.textContent = tdone; tb.classList.toggle('hidden', !tdone);
+  document.getElementById('dynText').textContent = S.inv.dynamite || 0;
+  const gl = giftLeft(); document.getElementById('giftDot').classList.toggle('hidden', gl > 0);
+  document.getElementById('evGiftT').textContent = gl > 0 ? fmtShort(gl) : '받기!';
+  document.getElementById('evAlbumT').textContent = `${Object.keys(ITEMS).filter(k => S.seen[k]).length}/${Object.keys(ITEMS).length}`;
 }
 function updateTimer(){
   tickEnergy();
@@ -1113,7 +1439,7 @@ function updateTimer(){
 function updateQuest(){
   const q = document.getElementById('quest');
   if (!world || world.home){
-    q.innerHTML = `<h4>탐험 캠프</h4><div class="row">건물을 눌러 요리·제작·업그레이드!</div><div class="row hint">지도에서 탐험할 지역을 골라요</div>`; return;
+    q.innerHTML = `<h4>탐험 캠프</h4><div class="row">밭에 심고, 건물에서 만들어요!</div><div class="row hint">지도에서 탐험할 지역을 골라요</div>`; return;
   }
   const R = REGIONS[world.key], st = world.region;
   const total = world.tiles.length, open = world.tiles.filter(t=>t.rev).length;
@@ -1128,17 +1454,18 @@ function toast(msg){ const t = document.getElementById('toast'); t.textContent =
 const root = document.getElementById('modalRoot');
 let modalRefresh = false;   // 타이머로 다시 그릴 때는 튀어나오는 애니메이션 생략
 function showModal(title, body, opts={}){
+  document.body.classList.remove('pv-open');
   root.innerHTML = `<div class="modal-bg"><div class="panel" ${modalRefresh ? 'style="animation:none"' : ''}>${opts.tabs||''}<div class="frame"><button class="close" data-close>×</button>
     ${title ? `<h3>${title}</h3>` : ''}<div class="sheet" id="sheet">${body}</div></div></div></div>`;
   root.querySelector('.modal-bg').addEventListener('pointerdown', e => { if (e.target.classList.contains('modal-bg')) closeModal(); });
   root.querySelectorAll('[data-close]').forEach(b => b.onclick = closeModal);
 }
-function closeModal(){ root.innerHTML = ''; }
+function closeModal(){ root.innerHTML = ''; document.body.classList.remove('pv-open'); }
 
 /* 창고 */
 let bagTab = 'res';
 function openBag(){
-  const tabs = [['res','i_wood','자원'],['food','i_berry','음식'],['craft','i_plank','제작품'],['treasure','rune','보물']];
+  const tabs = [['res','i_wood','자원'],['farm','i_wheat','농장'],['food','i_berry','음식'],['craft','i_plank','제작품'],['treasure','rune','보물']];
   const tabHtml = `<div class="tabs">${tabs.map(([k,i,n]) => `<button class="tab ${k===bagTab?'on':''}" data-tab="${k}" title="${n}"><img src="${src(i)}"></button>`).join('')}</div>`;
   const list = Object.entries(ITEMS).filter(([k,d]) => d.tab === bagTab && (S.inv[k]||0) > 0);
   const body = list.length ? `<div class="grid">${list.map(([k,d]) => `<div class="cell"><img src="${src(d.img)}"><b>${S.inv[k]}</b><small>${d.name}</small>
@@ -1153,38 +1480,184 @@ function openBag(){
 /* 요리·제작 */
 function needHtml(need){ return `<div class="need">${Object.entries(need).map(([k,n]) =>
   `<span class="${(S.inv[k]||0) < n ? 'lack':''}"><img src="${src(ITEMS[k].img)}">${S.inv[k]||0}/${n}</span>`).join('')}</div>`; }
-const PROD_NAME = {kitchen:'캠프 부엌', sawmill:'제재소', forge:'대장간'};
 let prodTimer = 0;
+const pvSel = {};   // 건물별로 고른 제품
+const prodList = () => Object.keys(PROD).filter(k => S.bld[k]);
+// 원작처럼: 건물을 화면 가운데에 비추고, 위에 제목·화살표·작업 칸, 아래에 재료 카드·제품 카드
 function openProd(k){
-  const built = Object.keys(PROD).filter(b => S.bld[b]);
-  const tabHtml = `<div class="tabs">${Object.keys(PROD).map(b => `<button class="tab ${b===k?'on':''}" data-ptab="${b}" title="${PROD_NAME[b]}">
-    <img src="${src(b)}" style="${S.bld[b]?'':'filter:grayscale(1) opacity(.5)'}"></button>`).join('')}</div>`;
   if (!S.bld[k]){ openBuilding(k); return; }
-  const lv = S.bld[k], jobs = S.prod[k].slice().sort((a,b)=>a.end-b.end), cap = slotsOf(lv), now = Date.now();
+  if (world.home && !modalRefresh){ const [x,y] = objPos(k), p = iso(x,y);
+    cam.z = Math.max(cam.zMin||.35, Math.min(1.15, W < 700 ? W/520 : H/700)); cam.x = p.x; cam.y = p.y - TH*1.1; }
+  const recipes = PROD[k], sel = recipes.find(r => r.id === pvSel[k]) || recipes[0]; pvSel[k] = sel.id;
+  const now = Date.now(), cap = capOf(k), jobs = S.prod[k].slice().sort((a,b)=>a.end-b.end), animal = isAnimal(k);
+  const list = prodList(), idx = list.indexOf(k);
   const slots = [];
+  let firstRun = true;
   for (let i=0;i<cap;i++){ const j = jobs[i];
-    if (!j){ slots.push(`<div class="slot empty-slot">빈 칸</div>`); continue; }
-    const r = PROD[k].find(r=>r.id===j.id), total = prodMs(k, r), left = j.end - now;
-    const running = left > 0 && (i === 0 || jobs[i-1].end <= now);
-    slots.push(`<div class="slot ${left<=0?'ready':''}"><img src="${src(ITEMS[j.id].img)}"><small>${left<=0 ? '완성!' : running ? fmtTime(left) : '대기 중'}</small>
-      ${running ? `<i class="sbar"><b style="width:${Math.max(0,100-left/total*100)}%"></b></i>` : ''}</div>`); }
-  const body = `<div class="prodhead"><div class="slots">${slots.join('')}</div>
-      <div class="prodbtns"><button class="gbtn gold" id="collectAll" ${jobsDone(k).length?'':'disabled'}>완성품 받기</button>
-      <button class="gbtn blue" id="upBtn">★ Lv${lv} 업그레이드</button></div></div>
-    <div class="cards">${PROD[k].map(r => { const it = ITEMS[r.id];
-      return `<div class="card"><h5><img src="${src(it.img)}">${it.name} <small class="hint">(가진 것 ${S.inv[r.id]||0})</small></h5>
-        ${needHtml(r.need)}<div class="reward">${it.eat ? `먹으면 <img src="${src('i_energy')}"> +${it.eat}` : `건물 업그레이드 재료`} · ⏱ ${fmtTime(prodMs(k, r))}</div>
-        <button class="gbtn" data-make="${r.id}" ${has(r.need) && jobs.length < cap ? '' : 'disabled'}>${jobs.length >= cap ? '칸이 가득 찼어요' : '만들기'}</button></div>`; }).join('')}</div>
-    <p class="hint" style="margin-top:12px">한 번에 하나씩 차례로 만들어져요. 다 되면 캠프 건물 위에 표시가 떠요. 음식은 창고 → 음식 칸에서 먹어요.</p>`;
-  showModal(PROD_NAME[k] + ` <small style="font-size:15px">Lv${lv}</small>`, body, {tabs:tabHtml});
-  root.querySelectorAll('[data-ptab]').forEach(b => b.onclick = () => openProd(b.dataset.ptab));
-  root.querySelectorAll('[data-make]').forEach(b => b.onclick = () => { if (startJob(k, b.dataset.make)) openProd(k); });
-  document.getElementById('collectAll').onclick = () => { collect(k); openProd(k); };
-  document.getElementById('upBtn').onclick = () => openBuilding(k);
+    if (!j){ slots.push(animal ? `<div class="pslot empty" title="배고파요"><img src="${src(OBJS[k].animal)}" style="opacity:.45"><b>배고파요</b></div>`
+                               : `<div class="pslot empty"></div>`); continue; }
+    const left = j.end - now, img = src(ITEMS[j.id].img);
+    if (left <= 0) slots.push(`<div class="pslot ready" data-collect><img src="${img}"><span class="ok">✓</span></div>`);
+    else if (animal || firstRun){ firstRun = animal ? firstRun : false; slots.push(`<div class="pslot"><img src="${img}"><b>${fmtTime(left)}</b></div>`); }
+    else slots.push(`<div class="pslot wait"><img src="${img}"></div>`);
+  }
+  const sp = speedCost(k), item = ITEMS[sel.id];
+  const freeSlots = cap - jobs.length, canMake = freeSlots > 0 && has(sel.need);
+  const feedN = animal ? Math.min(freeSlots, ...Object.entries(sel.need).map(([i,n]) => Math.floor((S.inv[i]||0)/n))) : 0;
+  document.body.classList.add('pv-open');
+  root.innerHTML = `<div class="pv" ${modalRefresh ? 'style="animation:none"' : ''}>
+    <div class="pv-top"><button class="pv-arrow l" data-nav="-1" ${list.length < 2 ? 'style="visibility:hidden"' : ''}>이전</button>
+      <h2>${PROD_NAME[k]}</h2><button class="pv-arrow r" data-nav="1" ${list.length < 2 ? 'style="visibility:hidden"' : ''}>다음</button></div>
+    <button class="pv-x" data-close aria-label="닫기">✕</button>
+    <div class="pv-cap"><img src="${src(animal ? OBJS[k].animal : k)}" alt="">${jobs.length}/${cap}</div>
+    <div class="pv-slots">${slots.join('')}</div>
+    ${sp ? `<button class="pv-speed" id="pvSpeed" style="left:calc(50% - ${(cap*(innerWidth<=700?76:106))/2}px)"><img src="${src('i_gem')}" alt="">${sp.gems} 즉시 완성</button>` : ''}
+    <div class="pv-need">${Object.entries(sel.need).map(([i,n]) => `<div class="ncard"><img src="${src(ITEMS[i].img)}" alt=""><b class="${(S.inv[i]||0) < n ? 'lack':''}">${S.inv[i]||0}/${n}</b></div>`).join('')}</div>
+    <div class="pv-info"><span class="own"><img src="${src('u_bag')}" style="width:22px;vertical-align:middle"> x${S.inv[sel.id]||0}</span>
+      <div class="pimg"><img src="${src(item.img)}" alt=""></div>
+      <div style="flex:1"><h3>${item.name}</h3>${item.eat ? `<div>먹으면 ⚡+${item.eat}</div>` : ''}
+        <div class="tm">⏰ ${fmtTime(prodMs(k, sel))}</div>
+        ${animal ? `<button class="gbtn" id="pvMake" ${feedN > 0 ? '' : 'disabled'}>${freeSlots ? `모이 주기 (${Math.max(feedN,0)}마리)` : '모두 먹는 중'}</button>`
+                 : `<button class="gbtn" id="pvMake" ${canMake ? '' : 'disabled'}>${freeSlots ? '만들기' : '칸이 가득 찼어요'}</button>`}
+      </div></div>
+    ${recipes.length > 1 ? `<div class="pv-recipes">${recipes.map(r => `<button class="rtile ${r.id===sel.id?'on':''} ${has(r.need)?'':'no'}" data-rec="${r.id}" title="${ITEMS[r.id].name}"><img src="${src(ITEMS[r.id].img)}" alt=""></button>`).join('')}</div>` : ''}
+    <div class="pv-foot">${jobsDone(k).length ? `<button class="gbtn gold" id="pvCollect">완성품 받기</button>` : ''}
+      <button class="gbtn blue" id="pvUp">★ Lv${S.bld[k]}</button></div>
+  </div>`;
+  const on = (id, f) => { const e = document.getElementById(id); if (e) e.onclick = f; };
+  root.querySelectorAll('[data-close]').forEach(b => b.onclick = closeModal);
+  root.querySelectorAll('[data-nav]').forEach(b => b.onclick = () => { const n = list[(idx + +b.dataset.nav + list.length) % list.length]; openProd(n); });
+  root.querySelectorAll('[data-rec]').forEach(b => b.onclick = () => { pvSel[k] = b.dataset.rec; refreshProd(k); });
+  root.querySelectorAll('[data-collect]').forEach(b => b.onclick = () => { collect(k); refreshProd(k); });
+  on('pvCollect', () => { collect(k); refreshProd(k); });
+  on('pvSpeed', () => { speedUp(k); refreshProd(k); });
+  on('pvUp', () => openBuilding(k));
+  on('pvMake', () => {
+    if (animal){ let n = 0; while (startJob(k, sel.id, true)) n++; if (n){ sfx('pop'); toast(`${n}마리에게 모이를 줬어요`); } }
+    else startJob(k, sel.id);
+    refreshProd(k); });
   clearInterval(prodTimer);
-  prodTimer = setInterval(() => { if (!document.querySelector('.slots')){ clearInterval(prodTimer); return; }
-    const sh = document.getElementById('sheet'), y = sh ? sh.scrollTop : 0; modalRefresh = true; openProd(k); modalRefresh = false;
-    const sh2 = document.getElementById('sheet'); if (sh2) sh2.scrollTop = y; }, 1000);
+  prodTimer = setInterval(() => { if (!document.querySelector('.pv')){ clearInterval(prodTimer); return; } refreshProd(k); }, 1000);
+}
+function refreshProd(k){ modalRefresh = true; openProd(k); modalRefresh = false; }
+
+/* 밭: 심기·기다리기·개간 */
+function openPlant(fid){
+  const body = `<div class="cards">${Object.entries(CROPS).map(([id,c]) => { const ok = S.level >= c.lv;
+    return `<div class="card"><h5><img src="${src(ITEMS[id].img)}">${c.name}</h5>
+      <div class="reward">⏰ ${fmtTime(c.min*60000*Math.max(.05, CONFIG.prodSpeed))} · 수확 ${c.yield}개</div>
+      <div class="reward">${c.cost ? `<img src="${src('i_coin')}"> ${c.cost}` : '씨앗 무료'}</div>
+      ${ok ? `<button class="gbtn" data-plant="${id}" ${S.coins >= c.cost ? '' : 'disabled'}>심기</button>` : `<p class="hint">레벨 ${c.lv}에 열려요</p>`}</div>`; }).join('')}</div>
+    <div class="row-btns"><button class="gbtn blue" id="plantAll">빈 밭 모두 밀 심기</button></div>`;
+  showModal('무엇을 심을까요?', body);
+  root.querySelectorAll('[data-plant]').forEach(b => b.onclick = () => { if (plant(fid, b.dataset.plant)) closeModal(); });
+  document.getElementById('plantAll').onclick = () => { let n = 0;
+    for (let i=0;i<S.fieldsOpen;i++) if (plant(i, 'wheat', true)) n++;
+    if (n){ sfx('pop'); toast(`밭 ${n}곳에 밀을 심었어요`); } closeModal(); };
+}
+function openFieldWait(fid){
+  const f = fieldState(fid), left = f.end - Date.now(), gems = Math.max(1, Math.ceil(left/(CONFIG.speedUpMinPerGem*60000)));
+  showModal(`${CROPS[f.crop].name} 자라는 중`, `<div class="celebrate"><img src="${src(ITEMS[f.crop].img)}" style="width:90px">
+    <p>수확까지 <b>${fmtTime(left)}</b></p>
+    <div class="row-btns"><button class="gbtn blue" id="growNow"><img src="${src('i_gem')}" style="width:20px;vertical-align:middle"> ${gems} 바로 자라게</button></div></div>`);
+  document.getElementById('growNow').onclick = () => { if (S.gems < gems){ sfx('no'); toast('보석이 부족해요'); return; }
+    S.gems -= gems; f.end = Date.now(); updateHUD(); save(); closeModal(); };
+}
+function openFieldBuy(fid){
+  const price = FIELD_PRICE[fid], lv = FIELD_LV[fid], first = fid === S.fieldsOpen;
+  showModal('새 밭 개간', `<div class="celebrate"><img src="${src('f_empty')}" style="width:160px">
+    <p>${!first ? '앞의 밭부터 차례로 개간해요.' : S.level < lv ? `레벨 ${lv}이 되면 개간할 수 있어요.` : '풀을 뽑고 땅을 일궈 새 밭을 만들어요.'}</p>
+    <div class="row-btns"><button class="gbtn gold" id="buyField" ${first && S.level >= lv && S.coins >= price ? '' : 'disabled'}><img src="${src('i_coin')}" style="width:20px;vertical-align:middle"> ${price} 개간하기</button></div></div>`);
+  document.getElementById('buyField').onclick = () => { S.coins -= price; S.fieldsOpen++; sfx('level'); gainXP(10); toast('새 밭이 생겼어요!'); updateHUD(); save(); closeModal(); };
+}
+
+/* 시장(계산대): 물건 팔기 */
+let mkTab = 'res';
+function openMarket(){
+  const tabs = [['res','i_wood','자원'],['farm','i_wheat','농장'],['food','i_berry','음식'],['craft','i_plank','제작품']];
+  const tabHtml = `<div class="tabs">${tabs.map(([k,i,n]) => `<button class="tab ${k===mkTab?'on':''}" data-mt="${k}" title="${n}"><img src="${src(i)}"></button>`).join('')}</div>`;
+  const list = Object.entries(ITEMS).filter(([k,d]) => d.tab === mkTab && (S.inv[k]||0) > 0 && sellPrice(k));
+  const body = list.length ? `<div class="mk-list">${list.map(([k,d]) => `<div class="mk-row"><img src="${src(d.img)}">
+      <div class="nm">${d.name} <b>x${S.inv[k]}</b><small><img src="${src('i_coin')}" style="width:16px;height:16px;vertical-align:middle"> 개당 ${sellPrice(k)}</small></div>
+      <button class="gbtn gold" data-sell="${k}" data-n="1">1개</button><button class="gbtn" data-sell="${k}" data-n="all">모두</button></div>`).join('')}</div>`
+    : `<div class="empty">팔 물건이 없어요.</div>`;
+  showModal('시장 계산대', body + `<p class="hint" style="margin-top:12px">남는 자원을 코인으로 바꿔요. 업그레이드 재료는 남겨 두세요!</p>`, {tabs:tabHtml});
+  root.querySelectorAll('[data-mt]').forEach(b => b.onclick = () => { mkTab = b.dataset.mt; openMarket(); });
+  root.querySelectorAll('[data-sell]').forEach(b => b.onclick = () => { const k = b.dataset.sell, n = b.dataset.n === 'all' ? S.inv[k] : 1;
+    if (!n || !S.inv[k]) return; S.inv[k] -= n; const c = n*sellPrice(k); S.coins += c; stat('sold', n); sfx('coin'); toast(`+${c} 코인`); updateHUD(); save(); openMarket(); });
+}
+
+/* 과제 수첩 */
+function taskProgress(t){
+  const v = t.kind === 'harvest' ? (S.stats.harvest[t.key]||0) : t.kind === 'make' ? (S.stats.made[t.key]||0) : (S.stats[t.kind]||0);
+  return Math.min(t.n, v - t.base);
+}
+function makeTask(){
+  const lv = S.level, opts = [];
+  const add = (kind, key, n, text, img) => { if (!S.tasks.some(t => t.kind === kind && t.key === key)) opts.push({kind, key, n, text, img}); };
+  add('cleared', '', 8 + lv*2, `장애물 ${8+lv*2}개 치우기`, 'boulder');
+  add('energy', '', 40 + lv*10, `에너지 ${40+lv*10} 쓰기`, 'i_energy');
+  add('harvest', 'wheat', 9 + lv*2, `밀 ${9+lv*2}개 수확하기`, 'i_wheat');
+  if (lv >= 3) add('harvest', 'corn', 6 + lv, `옥수수 ${6+lv}개 수확하기`, 'i_corn');
+  // 만들기 과제: 지어 둔 건물 + 재료를 본 적 있는 제품만
+  for (const k of prodList()) for (const r of PROD[k]) { if (!Object.keys(r.need).every(i => S.seen[i])) continue;
+    const n = 2 + Math.floor(lv/4); add('make', r.id, n, `${ITEMS[r.id].name} ${n}개 만들기`, ITEMS[r.id].img); }
+  add('orders', '', 2, '주문 2개 들어주기', 'board');
+  add('sold', '', 10, '시장에서 물건 10개 팔기', 'u_register');
+  // 종류를 먼저 고르고(골고루), 그 안에서 하나
+  const kinds = [...new Set(opts.map(o => o.kind))], kind = kinds[Math.floor(Math.random()*kinds.length)];
+  const pool = opts.filter(o => o.kind === kind), t = pool[Math.floor(Math.random()*pool.length)];
+  t.id = S.nextTaskId++;
+  t.base = t.kind === 'harvest' ? (S.stats.harvest[t.key]||0) : t.kind === 'make' ? (S.stats.made[t.key]||0) : (S.stats[t.kind]||0);
+  t.coins = 40 + lv*15; t.xp = 15 + lv*5; const r = Math.random(); t.gems = r < .3 ? 1 : 0; t.dyn = r > .8 ? 1 : 0;
+  return t;
+}
+function openTasks(){
+  while (S.tasks.length < 3) S.tasks.push(makeTask());
+  save();
+  const body = `<div style="display:flex;flex-direction:column;gap:10px">${S.tasks.map(t => { const pr = taskProgress(t), done = pr >= t.n;
+    return `<div class="task ${done?'done':''}"><img src="${src(t.img)}"><div class="tx"><b>${t.text}</b>
+      <div class="tbar"><i style="width:${pr/t.n*100}%"></i></div><small>${pr} / ${t.n}</small></div>
+      <div class="reward" style="flex-direction:column;align-items:flex-end;gap:2px"><span><img src="${src('i_coin')}"> ${t.coins}</span><span>★ ${t.xp}</span>
+      ${t.gems ? `<span><img src="${src('i_gem')}"> ${t.gems}</span>` : ''}${t.dyn ? `<span><img src="${src('i_dynamite')}"> 1</span>` : ''}</div>
+      <button class="gbtn" data-claim="${t.id}" ${done ? '' : 'disabled'}>받기</button></div>`; }).join('')}</div>
+    <p class="hint" style="margin-top:12px">과제를 끝내고 보상을 받으면 새 과제가 나와요.</p>`;
+  showModal('과제 수첩', body);
+  root.querySelectorAll('[data-claim]').forEach(b => b.onclick = () => { const t = S.tasks.find(t => t.id == b.dataset.claim); if (!t || taskProgress(t) < t.n) return;
+    S.coins += t.coins; S.gems += t.gems; if (t.dyn) addItem('dynamite', 1); S.tasks = S.tasks.filter(x => x !== t);
+    sfx('coin'); toast(`과제 완료! +${t.coins} 코인`); gainXP(t.xp); openTasks(); });
+}
+
+/* 다이너마이트 */
+function openDynamite(lack){
+  const g = CONFIG.dynamiteGems;
+  showModal('다이너마이트', `<div class="celebrate"><img src="${src('i_dynamite')}" style="width:110px">
+    ${lack ? `<p style="color:#c33">거대한 바위는 다이너마이트로만 부술 수 있어요!</p>` : ''}
+    <p>가진 다이너마이트 <b>${S.inv.dynamite||0}개</b></p>
+    <div class="row-btns"><button class="gbtn blue" data-dyn="1"><img src="${src('i_gem')}" style="width:20px;vertical-align:middle"> ${g} · 1개</button>
+      <button class="gbtn blue" data-dyn="5"><img src="${src('i_gem')}" style="width:20px;vertical-align:middle"> ${g*4} · 5개</button></div>
+    <p class="hint">대장간(레벨 4)에서 석탄 2 + 나뭇가지 3으로 직접 만들 수도 있어요.</p></div>`);
+  root.querySelectorAll('[data-dyn]').forEach(b => b.onclick = () => { const n = +b.dataset.dyn, cost = n === 5 ? g*4 : g;
+    if (S.gems < cost){ sfx('no'); toast('보석이 부족해요'); return; } S.gems -= cost; addItem('dynamite', n); sfx('coin'); updateHUD(); openDynamite(false); });
+}
+
+/* 일일 선물 */
+const giftLeft = () => S.giftTs + CONFIG.giftHours*3600e3 - Date.now();
+function openGift(){
+  const left = giftLeft();
+  if (left > 0){ showModal('일일 선물', `<div class="celebrate"><img src="${src('u_gift')}" style="width:110px"><p>다음 선물까지 <b>${fmtTime(left)}</b></p></div>`); return; }
+  const pool = Object.keys(ITEMS).filter(k => S.seen[k] && ['res','farm'].includes(ITEMS[k].tab));
+  const item = pool[Math.floor(Math.random()*pool.length)] || 'wood', coins = 50 + S.level*10;
+  S.giftTs = Date.now(); S.coins += coins; addItem(item, 5); addEnergy(20); sfx('level'); updateHUD(); save();
+  showModal('일일 선물!', `<div class="celebrate"><img src="${src('u_gift')}" style="width:110px">
+    <p>⚡ +20 &nbsp; <img src="${src('i_coin')}" style="width:24px;vertical-align:middle"> +${coins} &nbsp; <img src="${src(ITEMS[item].img)}" style="width:28px;vertical-align:middle"> ${ITEMS[item].name} +5</p>
+    <div class="row-btns"><button class="gbtn" data-close>고마워요!</button></div></div>`);
+}
+
+/* 도감 */
+function openAlbum(){
+  const all = Object.entries(ITEMS), seen = all.filter(([k]) => S.seen[k]).length;
+  showModal(`도감 ${seen} / ${all.length}`, `<div class="album">${all.map(([k,d]) => `<div class="${S.seen[k]?'':'no'}"><img src="${src(d.img)}"><br>${S.seen[k] ? d.name : '???'}</div>`).join('')}</div>`);
 }
 
 /* 건물 정보·건설·업그레이드 */
@@ -1207,7 +1680,7 @@ function openBuilding(k){
     body += `<h4 class="subh">Lv${lv+1} 업그레이드</h4><p class="fxnext">다음: <b>${B.fx(lv+1)}</b></p>
       ${ok ? '' : `<p class="hint">탐험가 레벨 ${need}이 되면 업그레이드할 수 있어요.</p>`}${costHtml(c)}
       <div class="row-btns"><button class="gbtn blue" id="doUp" ${ok && canPay(c) ? '' : 'disabled'}>업그레이드</button></div>
-      <p class="hint">판자는 제재소, 철 주괴는 대장간에서 만들어요.</p>`;
+      <p class="hint">판자는 제재소, 철 주괴는 대장간, 벽돌은 벽돌 가마에서 만들어요.</p>`;
   } else body += `<p class="fxnext"><b>최고 레벨이에요!</b></p>`;
   if (k === 'cabin') body += `<div class="row-btns"><button class="gbtn gold" id="goBag">창고 열기</button></div>`;
   if (k === 'tent'){ const left = napLeft();
@@ -1217,10 +1690,10 @@ function openBuilding(k){
   showModal(O.name, body);
   const on = (id, f) => { const e = document.getElementById(id); if (e) e.onclick = f; };
   on('doBuild', () => { if (!canPay(B.build)) return; pay(B.build); S.bld[k] = 1; sfx('level'); gainXP(20);
-    toast(`${O.name} 완성!`); if (world.home) { const [x,y] = HOME_POS[k]; burst(x, y, '#ffd23a', 24); } save(); openBuilding(k); });
+    toast(`${O.name} 완성!`); if (world.home) { const [x,y] = objPos(k); burst(x, y, '#ffd23a', 24); } save(); openBuilding(k); });
   on('doUp', () => { const c = B.cost(lv); if (!canPay(c)) return; pay(c); S.bld[k] = lv+1; sfx('level'); gainXP(15*lv);
     if (k === 'cabin') S.energy = Math.min(maxEnergy(), S.energy + 10);
-    toast(`${O.name} Lv${lv+1}!`); if (world.home){ const [x,y] = HOME_POS[k]; burst(x, y, '#ffd23a', 24); } updateHUD(); save(); openBuilding(k); });
+    toast(`${O.name} Lv${lv+1}!`); if (world.home){ const [x,y] = objPos(k); burst(x, y, '#ffd23a', 24); } updateHUD(); save(); openBuilding(k); });
   on('goBag', openBag); on('goProd', () => openProd(k)); on('goOrd', openOrders);
   on('doNap', () => { if (nap()) openBuilding('tent'); });
 }
@@ -1247,7 +1720,7 @@ function openOrders(){
   document.getElementById('upBoard').onclick = () => openBuilding('board');
   root.querySelectorAll('[data-ord]').forEach(b => b.onclick = () => { const o = S.orders.find(o=>o.id==b.dataset.ord); if (!o || !has(o.need)) return;
     for (const [k,n] of Object.entries(o.need)) S.inv[k] -= n;
-    S.coins += o.coins; S.orders = S.orders.filter(x=>x!==o); sfx('coin'); toast(`부탁 완료! +${o.coins} 코인`); gainXP(o.xp); openOrders(); });
+    S.coins += o.coins; S.orders = S.orders.filter(x=>x!==o); stat('orders'); sfx('coin'); toast(`부탁 완료! +${o.coins} 코인`); gainXP(o.xp); openOrders(); });
   root.querySelectorAll('[data-skip]').forEach(b => b.onclick = () => { S.orders = S.orders.filter(x=>x.id!=b.dataset.skip); openOrders(); });
 }
 
@@ -1339,8 +1812,12 @@ function openSettings(){
 /* ══════════ 버튼 연결·시작 ══════════ */
 document.getElementById('bagBtn').onclick = openBag;
 document.getElementById('orderBtn').onclick = openOrders;
-document.getElementById('cookBtn').onclick = () => openProd('kitchen');
-document.getElementById('homeBtn').onclick = () => enter('home');
+document.getElementById('marketBtn').onclick = openMarket;
+document.getElementById('taskBtn').onclick = openTasks;
+document.getElementById('dynBtn').onclick = () => openDynamite(false);
+document.getElementById('evAlbum').onclick = openAlbum;
+document.getElementById('evShop').onclick = () => openShop(false);
+document.getElementById('evGift').onclick = openGift;
 document.getElementById('mapBtn').onclick = () => openMap();
 document.getElementById('enPlus').onclick = () => openShop(false);
 document.querySelectorAll('[data-shop]').forEach(b => b.onclick = () => openShop(false));
@@ -1361,6 +1838,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) upda
     showModal('다람 탐험대에 온 것을 환영해요!', `<div class="celebrate"><img src="${src('explorer')}" style="height:150px">
       <p>구름에 덮인 땅을 탐험해요. 나무·바위를 누르면 <b>에너지</b>를 써서 치우고 자원을 얻어요.</p>
       <p>치운 자리 주변의 <b>구름이 걷히며</b> 새 길이 열려요. 숨은 <b>룬 석판 3개</b>를 찾아보세요!</p>
+      <p>캠프에서는 <b>밭에 밀을 심고</b>, 닭·소를 키우고, 빵집·대장간에서 물건을 만들어요.</p>
       <p class="hint">화면 끌기: 이동 · 휠/두 손가락: 확대·축소 · 여러 개를 연달아 누르면 순서대로 작업해요</p>
       <div class="row-btns"><button class="gbtn blue" id="goFirst">첫 탐험 떠나기</button><button class="gbtn" data-close>캠프 둘러보기</button></div></div>`);
     document.getElementById('goFirst').onclick = () => { closeModal(); enter('canyon'); };

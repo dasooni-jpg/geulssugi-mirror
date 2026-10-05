@@ -4,6 +4,13 @@ import sys, os, numpy as np
 from PIL import Image, ImageFilter
 from collections import deque
 
+ICON_MAX = 240
+def small(dst, im):
+    n = os.path.basename(dst)
+    if n[:2] in ('i_','u_','m_') and max(im.size) > ICON_MAX:
+        im.thumbnail((ICON_MAX, ICON_MAX), Image.LANCZOS)
+    return im
+
 def cutout(src, dst, thr=34, scale=2):
     im = Image.open(src).convert('RGB')
     im = im.resize((im.width*scale, im.height*scale), Image.LANCZOS)
@@ -31,7 +38,7 @@ def cutout(src, dst, thr=34, scale=2):
     out = im.convert('RGBA'); out.putalpha(alpha)
     bbox = alpha.point(lambda v: 255 if v > 20 else 0).getbbox()
     if bbox: out = out.crop(bbox)
-    out.save(dst, 'WEBP', quality=86, method=6)
+    out = small(dst, out); out.save(dst, 'WEBP', quality=86, method=6)
     print(os.path.basename(dst), out.size)
 
 def greenkey(src, dst):
@@ -49,8 +56,11 @@ def greenkey(src, dst):
 if __name__ == '__main__':
     raw, outdir = sys.argv[1], sys.argv[2]
     keep = {'avatar'}   # 배경 유지
+    force = '--all' in sys.argv
     for f in sorted(os.listdir(raw)):
         n = os.path.splitext(f)[0]
+        dst = os.path.join(outdir, n + '.webp')   # 이미 변환된 그림은 건너뜀(--all 이면 전부 다시)
+        if not force and os.path.exists(dst) and os.path.getmtime(dst) >= os.path.getmtime(os.path.join(raw, f)): continue
         if n == 'cloud':
             greenkey(os.path.join(raw, f), os.path.join(outdir, n+'.webp')); continue
         if n.startswith('t_'):   # 바닥 텍스처: 거울 반복으로 이음새 없는 타일 제작
