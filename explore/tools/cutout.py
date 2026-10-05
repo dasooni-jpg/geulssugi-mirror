@@ -5,12 +5,15 @@ from PIL import Image, ImageFilter
 from collections import deque
 
 ICON_MAX = 240
+SPR_MAX = 300
 HOLES = {'dec_moonarch', 'dec_carousel', 'dec_bench', 'dec_pavilion', 'dec_swing'}; HOLE_MIN = 120
 Q = 80   # WebP 품질(배포 파일이 무료 워커 3MB 한도 안에 들도록)
 def small(dst, im):
     n = os.path.basename(dst)
     if n[:2] in ('i_','u_','m_') and max(im.size) > ICON_MAX:
         im.thumbnail((ICON_MAX, ICON_MAX), Image.LANCZOS)
+    elif max(im.size) > SPR_MAX:   # 원본이 약 200px라 300px보다 크게 둬도 더 선명해지지 않음(배포 용량만 늘어남)
+        im.thumbnail((SPR_MAX, SPR_MAX), Image.LANCZOS)
     return im
 
 def cutout(src, dst, thr=34, scale=2):
@@ -66,6 +69,7 @@ def greenkey(src, dst):
     rgb = np.clip(rgb, 0, 255)
     out = Image.fromarray(np.dstack([rgb, alpha]).astype(np.uint8), 'RGBA')
     out = out.crop(out.getchannel('A').point(lambda v: 255 if v > 20 else 0).getbbox())
+    if not dst.endswith('cloud.webp'): out = small(dst, out)   # 구름(안개)은 크게 그려서 제외
     out.save(dst, 'WEBP', quality=Q, method=6); print(os.path.basename(dst), out.size)
 
 if __name__ == '__main__':
