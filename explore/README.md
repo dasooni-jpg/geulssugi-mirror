@@ -8,7 +8,7 @@
 
 ## ▶️ 실행 방법
 - **Cloudflare에 올리기(권장)**: `explore-cloudflare.zip` 안의 `1-읽어보세요.txt` 참고.
-  `explore-worker.js`(워커 붙여넣기용)와 `dist/index.html`(Pages용)은 **그림 203장이 파일 안에 들어간 한 파일짜리**라 `img` 폴더가 필요 없음.
+  `explore-worker.js`(워커 붙여넣기용)와 `dist/index.html`(Pages용)은 **그림 206장이 파일 안에 들어간 한 파일짜리**라 `img` 폴더가 필요 없음.
   화면이나 그림을 고친 뒤에는 `node build-explore.mjs`로 다시 만듦.
 - **Cloudflare Pages로 옮기기**: `PAGES-GUIDE.txt` 참고(주소가 바뀌면 학생 진행 기록이 따라오지 않음에 주의).
 - **가장 쉬운 방법**: `explore` 폴더를 통째로 정적 호스팅(Cloudflare Pages, GitHub Pages 등)에 올리고 주소로 접속함.
