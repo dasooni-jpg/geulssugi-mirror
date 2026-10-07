@@ -2594,7 +2594,12 @@ function seekObj(key, o){
   if (!here){ toast(`지도에서 ${REGIONS[key].name}(으)로 가서 찾아보세요`); return; }
   if (o.t === 'clear'){ const i = nearestTile(t => t.o === o.o); if (i >= 0) focusTile(i); else toast('아직 구름 속에 있어요. 길을 따라 구름을 걷어 보세요'); return; }
   if (o.t === 'fix'){ const i = world.spots[o.s]; focusTile(i); if (!world.tiles[i].rev) toast('흙길을 따라 구름을 걷으면 나타나요'); return; }
-  toast('룬 석판은 구름 속 어딘가에 숨어 있어요. 흙길 끝을 살펴보세요!');
+  // 룬 석판: 보이는 룬 → 길을 막는 거대한 바위 → 아직 못 고친 수리 지점 순서로 알려 줌
+  const ri = nearestTile(t => t.o === 'rune'); if (ri >= 0){ focusTile(ri); return; }
+  const rock = nearestTile(t => t.o === 'bigrock'); if (rock >= 0){ focusTile(rock); toast('거대한 바위 너머에 룬 석판이 숨어 있어요. 다이너마이트로 길을 열어 봐요!'); return; }
+  const si = (world.spots||[]).find(i => world.tiles[i].o.startsWith('fix_') && GATE_KIND[world.tiles[i].o.slice(4)]);
+  if (si != null){ focusTile(si); toast('이곳을 고쳐야 룬 석판이 있는 깊은 곳으로 갈 수 있어요'); return; }
+  toast('룬 석판은 구름 속 깊은 곳에 숨어 있어요. 길을 따라 구름을 더 걷어 봐요!');
 }
 
 /* 왼쪽 미션 단추(원작의 왼쪽 퀘스트 아이콘) */
