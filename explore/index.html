@@ -493,7 +493,6 @@ const CONFIG = {
   regionClearCoins: 300,  // 지역 탐험 완료 코인
   runesPerRegion: 3,
   chestsPerRegion: 5,
-  mapSize: 22,
   prodSpeed: 1,           // 요리·제작 시간 배율(0.5면 두 배 빠름)
   chapter2Level: 10,      // 2장 지도가 열리는 레벨
   chapter3Level: 20,      // 3장 지도가 열리는 레벨
@@ -1163,118 +1162,167 @@ const TW = 128, TH = 64;
 let world = null;   // {key, N, tiles:[{o, rev}], start:{x,y}, tex, region}
 
 /* ══════════ 지역 고정 지도(직접 설계) ══════════
-   좌표 (x, y): 0~21. 화면에서 위쪽이 작은 x+y, 아래쪽이 큰 x+y. 출발점은 (11,19).
-   river : 지역을 가로지르는 물길·용암·낭떠러지·생울타리(지나갈 수 없음). 반드시 지도 끝에서 끝까지.
-   gate  : 강 위의 수리 지점 번호. 고치기 전엔 건너편으로 갈 수 없음(미션 순서가 자연스럽게 생김).
-   path  : 흙길이 지나가는 점들(출발점 → 수리 지점 → 룬 석판 쪽).
-   runes/chests/rocks : 룬 석판·보물 상자·거대한 바위(다이너마이트) 자리. 룬 석판은 모두 강 건너편. */
-const MAPS = {
-  canyon:  {river:{kind:'water', pts:[[0,17],[6,16],[11,12],[16,8],[21,7]]}, gate:0, spots:[[11,12],[8,5]],
-            path:[[11,19],[11,13],[11,12],[11,9],[9,6],[8,6]], runes:[[3,3],[16,3],[5,10]],
-            chests:[[15,16],[4,18],[14,5],[2,8],[19,3]], rocks:[[6,12],[17,12]]},
-  nest:    {river:{kind:'hedge', pts:[[0,14],[8,13],[12,11],[21,10]]}, gate:0, spots:[[12,11],[10,4]],
-            path:[[11,19],[12,16],[12,12],[12,11],[12,8],[10,5]], runes:[[4,4],[18,4],[3,9]],
-            chests:[[6,17],[17,15],[16,7],[7,7],[1,2]], rocks:[[15,13],[5,6]]},
-  windmill:{river:{kind:'water', pts:[[0,11],[7,10],[13,9],[21,8]]}, gate:1, spots:[[6,15],[13,9]],
-            path:[[11,19],[8,17],[6,16],[9,13],[13,12],[13,10],[13,9],[13,6],[11,3]], runes:[[4,4],[18,3],[9,1]],
-            chests:[[16,15],[3,13],[18,12],[6,6],[15,2]], rocks:[[10,14],[17,5]]},
-  snow:    {river:{kind:'ice', pts:[[0,15],[5,14],[9,12],[14,10],[21,9]]}, gate:0, spots:[[9,12],[12,4]],
-            path:[[11,19],[10,16],[9,13],[9,12],[8,8],[12,5]], runes:[[3,5],[17,4],[6,1]],
-            chests:[[15,15],[3,18],[17,11],[2,9],[12,1]], rocks:[[13,14],[10,7],[4,11]]},
-  beach:   {river:{kind:'water', pts:[[0,13],[7,12],[12,10],[17,9],[21,7]]}, gate:0, spots:[[12,10],[6,4]],
-            path:[[11,19],[13,16],[12,13],[12,10],[11,7],[7,5],[6,5]], runes:[[2,2],[17,3],[15,7]],
-            chests:[[16,16],[4,16],[19,12],[9,2],[3,8]], rocks:[[8,15],[18,4]]},
-  swamp:   {river:{kind:'swamp', pts:[[0,12],[6,12],[10,10],[15,9],[21,9]]}, gate:1, spots:[[15,16],[10,10]],
-            path:[[11,19],[14,18],[15,17],[12,14],[10,12],[10,10],[9,6],[11,3]], runes:[[3,4],[18,4],[7,1]],
-            chests:[[4,17],[18,14],[2,9],[15,5],[12,1]], rocks:[[7,15],[17,11]]},
-  desert:  {river:{kind:'chasm', pts:[[0,13],[5,12],[9,11],[14,9],[21,8]]}, gate:1, spots:[[6,16],[9,11]],
-            path:[[11,19],[8,18],[6,17],[8,14],[9,12],[9,11],[9,7],[12,4]], runes:[[3,3],[17,3],[15,6]],
-            chests:[[15,16],[3,15],[18,11],[5,7],[10,1]], rocks:[[13,14],[2,8]]},
-  volcano: {river:{kind:'lava', pts:[[0,14],[6,13],[11,11],[16,9],[21,9]]}, gate:0, spots:[[11,11],[16,4]],
-            path:[[11,19],[11,16],[11,12],[11,11],[12,8],[15,5],[16,5]], runes:[[4,4],[9,1],[19,6]],
-            chests:[[16,15],[4,17],[18,12],[6,8],[13,2]], rocks:[[8,15],[14,13],[3,10]]},
-  // 3장
-  bamboo:  {river:{kind:'water', pts:[[0,12],[5,13],[10,11],[15,10],[21,11]]}, gate:0, spots:[[10,11],[14,5]],
-            path:[[11,19],[10,15],[10,12],[10,11],[11,8],[14,6]], runes:[[3,4],[18,3],[7,8]],
-            chests:[[16,16],[3,17],[18,13],[2,7],[11,2]], rocks:[[7,15],[16,6]]},
-  cave:    {river:{kind:'chasm', pts:[[0,10],[6,11],[11,13],[16,12],[21,10]]}, gate:1, spots:[[5,16],[11,13]],
-            path:[[11,19],[8,18],[6,17],[9,15],[11,14],[11,13],[11,10],[14,6]], runes:[[4,4],[17,5],[10,2]],
-            chests:[[16,17],[3,15],[19,14],[6,7],[15,2]], rocks:[[14,16],[3,7]]},
-  jungle:  {river:{kind:'swamp', pts:[[0,15],[4,14],[9,13],[13,11],[17,9],[21,8]]}, gate:0, spots:[[13,11],[5,4]],
-            path:[[11,19],[12,16],[13,13],[13,11],[11,8],[6,5],[5,5]], runes:[[2,3],[16,2],[17,6]],
-            chests:[[17,16],[4,18],[20,11],[9,3],[2,9]], rocks:[[7,16],[13,5]]},
-  maple:   {river:{kind:'water', pts:[[0,9],[6,10],[12,12],[17,11],[21,13]]}, gate:1, spots:[[16,17],[12,12]],
-            path:[[11,19],[14,18],[16,18],[14,15],[12,13],[12,12],[12,9],[9,5],[9,4]], runes:[[3,3],[18,5],[8,1]],
-            chests:[[5,16],[19,16],[2,6],[16,3],[6,7]], rocks:[[8,15],[4,5]]},
-  // 4장
-  sky:     {river:{kind:'sky', pts:[[0,11],[6,12],[11,10],[16,11],[21,9]]}, gate:0, spots:[[11,10],[15,4]],
-            path:[[11,19],[11,14],[11,11],[11,10],[12,7],[15,5]], runes:[[3,4],[19,4],[7,7]],
-            chests:[[16,16],[4,17],[19,13],[2,8],[10,2]], rocks:[[7,15],[17,7]]},
-  fairy:   {river:{kind:'water', pts:[[0,14],[5,13],[9,14],[14,11],[18,10],[21,10]]}, gate:1, spots:[[16,16],[14,11]],
-            path:[[11,19],[14,18],[16,17],[15,14],[14,12],[14,11],[13,8],[10,5]], runes:[[3,4],[17,4],[8,9]],
-            chests:[[5,17],[19,15],[2,10],[16,7],[11,2]], rocks:[[8,16],[5,6]]},
-  pirate:  {river:{kind:'water', pts:[[0,12],[5,11],[10,12],[15,10],[21,9]]}, gate:0, spots:[[10,12],[6,5]],
-            path:[[11,19],[10,16],[10,13],[10,12],[9,9],[7,6],[6,6]], runes:[[2,3],[17,3],[16,7]],
-            chests:[[16,16],[3,16],[19,13],[12,3],[2,7]], rocks:[[14,15],[13,6]]},
-  glacier: {river:{kind:'ice', pts:[[0,10],[4,11],[9,13],[13,12],[17,11],[21,12]]}, gate:1, spots:[[6,17],[9,13]],
-            path:[[11,19],[8,18],[6,18],[8,15],[9,14],[9,13],[9,10],[12,6],[12,5]], runes:[[3,3],[18,4],[15,8]],
-            chests:[[16,17],[3,15],[19,15],[5,7],[10,2]], rocks:[[14,16],[16,5]]},
-  // 5장
-  honey:   {river:{kind:'water', pts:[[0,13],[5,12],[10,13],[15,11],[21,10]]}, gate:0, spots:[[10,13],[14,5]],
-            path:[[11,19],[10,16],[10,14],[10,13],[11,9],[14,6]], runes:[[3,4],[18,3],[6,9]],
-            chests:[[16,17],[3,17],[19,14],[2,8],[10,3]], rocks:[[7,16],[17,6]]},
-  dino:    {river:{kind:'chasm', pts:[[0,9],[5,10],[10,12],[15,12],[21,10]]}, gate:1, spots:[[5,16],[10,12]],
-            path:[[11,19],[8,18],[6,17],[8,15],[10,14],[10,13],[10,12],[10,9],[13,5]], runes:[[3,3],[17,4],[14,8]],
-            chests:[[16,16],[2,14],[19,14],[5,6],[11,2]], rocks:[[14,16],[3,7]]},
-  candy:   {river:{kind:'choco', pts:[[0,14],[6,13],[11,11],[16,10],[21,11]]}, gate:0, spots:[[11,11],[7,5]],
-            path:[[11,19],[11,15],[11,12],[11,11],[10,8],[7,6]], runes:[[2,4],[17,3],[16,7]],
-            chests:[[16,16],[4,17],[19,14],[11,3],[2,9]], rocks:[[7,16],[14,5]]},
-  clock:   {river:{kind:'chasm', pts:[[0,11],[4,12],[9,12],[13,10],[17,10],[21,8]]}, gate:1, spots:[[15,16],[13,10]],
-            path:[[11,19],[14,18],[15,17],[14,14],[13,12],[13,11],[13,10],[12,7],[9,4]], runes:[[3,4],[18,4],[7,8]],
-            chests:[[5,16],[19,15],[2,8],[16,6],[10,2]], rocks:[[8,15],[5,6]]},
+   tools/maps_regions.py에서 설계하고 자동 검증한 24×24 글자 지도. 줄 = y(0~23), 글자 = x(0~23). 화면 맨 위 꼭짓점이 (0,0).
+   지나갈 수 없음:  ^ 높은 절벽   # 절벽   T 울창한 숲   ~ 물(지역마다 강·용암·낭떠러지)   % 두 번째 물(연못·웅덩이)
+   땅:  . 장애물 땅(80%)   o 반드시 장애물   h 무거운 장애물   - 빈 땅   , 흙길(가끔 가벼운 장애물)
+   S 출발점   A 탐험 텐트   1 2 수리 지점(이야기 미션 순서)   R 룬 석판   C 보물 상자   B 거대한 바위(다이너마이트)
+   검증 내용: 수리 지점 1을 고쳐야 둘째 구역, 수리 지점 2(또는 거대한 바위)를 넘어야 마지막 구역에 갈 수 있음. 룬 석판 2개 이상은 마지막 구역. */
+/* LAYOUTS-BEGIN (tools/maps_regions.py가 자동으로 채움) */
+const LAYOUTS = {
+  canyon:['^^^^^^^^^^^^^^^^^^^^^^^^','^#C.##^#.##.#.#%%%.#C.#.','^.....^......C.%%%......','^.R...^........%%%..~~~~','^#...h^....2........~^^^','^#....^.............~^^^','^#.%..^.,,,,.....~~~~^^^','^.....B,,..,TTTTT~^^^^^^','^..h..^....,,TTTT~^^^^^^','^#....^..#^#,.~~~~.^%^^^','^#..R.^..#^#,.~.#..%%%^^','^#....^.C...,.~.##.R%^^^','^^^^^^^....~1~~......^^^','^..........~.,....#^^^^^','^#.........~.,,h..##^^^^','^#......~~~~..h,...###^^','^#......~~##...,,....##^','^.......~^^##...,,....##','^....~~~~^^^#....,,--..#','^#...~^^^^^......A,S-...','^#...~^^^^...##...---...','^#~~~~^^^^^.C.###.......','^#~^^^^^^^^^...^##......','^#~^^^^^^^^^^.^^^##.....'],
+  nest:['^^^^^^^^^^^^^^^^^^^^^^^^','^TTTTTTTT.....TTTTTTTTTT','^TTTTT...........TTTTTTT','^TTTT..........C##TTTTTT','^TTTC....TTTTT.####TTTTT','^TT....TT.....TT####TTTT','^T....TT.,,2...TT###.TTT','^T...TT.,,......TT#..TTT','^T...T.,,^^^^^...T...TTT','^...T..,^^^.^^^C..TC..TT','^...T.,,^^.R.^^...T...TT','^..,1,,.^.....^...T...TT','^..,T...^^R.C^^...T...TT','^.h,T.,,^^^.^^%%..T...TT','^T.,,T.,,^^B^^...T...TTT','^T..,TT.R,,,....TT...TTT','^T...hTT.......TT---.TTT','^TT...,TT,,,..TTA,S-TTTT','^TTT.....TTTTT..,,-TTTTT','^TTTT.......,,,,,.TTTTTT','^TTTT.C..........TTTTTTT','^TTTT...T.....TTTTTTTTTT','^TTTTTTTTTTTTTTTTTTTTTTT','^TTTTTTTTTTTTTTTTTTTTTTT'],
+  windmill:['^^^^^^^^^^^^^^^~^^^^^^^^','^##.#.##.###~~~~##^#^##^','^#......R###~..^^^^^^^^^','^#.R.h,..###~..^^^^^^^^^','^...,^,..~~~~C..^^^^^^^^','^..,^^^..~.......^^^^^^^','^#.,.^,,.~........^^^^^^','^#....~2~~......C..^^^^^','^#....~.,,..........^###','^.C...~..,,,,,,......#C.','^..~~~~......##,.....#..','^#.~........##.,..####..','^#.~.#.....h#..,.R#.....','~~~~..#...##...,,.#.##..','^......#.##....####.##..','^.^^....##....h#........','^#^^^..##....,,#........','^#^^^^##....#1##........','^#^^^^^.....#,,,,,,,--..','^^^^^^^^....#.....A,S-..','^^^^^^^^^####......---..','^#^^^^^^^#....%%........','^#^^^^^^^#.##.%%%.......','^#^^^^^^^###C..%%.......'],
+  snow:['^^^^^^^^^^^^^^^^^^^^^^^^','^^^^^^^^^^^^R..#^^^^^^^^','^^^^...#^^^.....#^^^^^^^','^^^..2...B....%.#^^^^^^^','^^C.....###C....#^^^^^^^','^^^.....#^^#...R^^^^^^^^','^^^#.,.#^^^^###^^^^^^^^^','^^^^.,#^^^^^^^^^^^^^^^^^','^^^^.,#^^^^^^^^^^^^^^^^^','^^^^.,,,,..#^^^^^^^^^^^^','^^^^....,,.#^^^^^^^^^^^^','^^^^..##.,#^^^^^^^^^^^^^','^^^^##^^.,#^.#^^^^^^.C.#','^^^^^^^^.,..R.#^^^^^...#','^^^^^^^^C,##.#^^^^^^...#','^^^^^^^^.,#^#^^^.....##^','^^^^^^^^.,#^~^^.......#^','^^^^^^^^.,#^~^^........#','^^^^^^^^..,,1,,,,,,--...','^^^^^^^^....~....A,S-..#','^^^^^^^^..##~##...---.#^','^^^^^^^^##^^~^.......#^^','^^^^^^^^^^^^^.C.#####^^^','^^^^^^^^^^^^^#.#^^^^^^^^'],
+  beach:['^^^^^^^^^^^^^^^^^^^^^^^^','^#C##.####.#.##.#.##.#.#','^......#........C.......','^#.R...#................','^#.....#.....##.........','^#...h.#.....#^#....~~~~','^..%...B,.....##....~...','^...%..#,,...2......~...','~#..R..#.,,......~~~~...','~~~....#..,,.....~......','~~~~####...,,....~......','~~~~......h.,.~~~~.TT...','~~~~~~......,.~....TTT..','~~~~~~~..C..,.~.....TTT.','~~~~~~~....~1~~...R..TT.','~~~~~~~~...~,,,.......C.','~~~~~~~~~~.~..,h........','~~~~~~~~~~~~.#.,,,,,--..','~~~~~~~~~~~.......A,S-..','~~~~~~~~~~~~~......---..','~~~~~~~~~~~~~~..%%......','~~~~~~~~~~~~~~..%%%.....','~~~~~~~~~~~~~~~.C%%.....','~~~~~~~~~~~~~~~~~.......'],
+  swamp:['^^^^^^^^^^^^^^^~^^^^^^^^','^T.T.TT.TCTT~~~~TTTTTTTT','^T....R.....~..TTTTTTTTT','^...........~..%%TTTTTTT','^..R.....~~~~..%%TTTTTTT','^T%%.....~.......CTTTTTT','^T%%h....~..........T...','^T....~2~~..........T...','^.....~,......%%.TTTT...','^.....~,,T....%%%T......','^T.~~~~.,,T....R%T......','^T.~.....,,T..TTTT......','^T.~.....h,,..T....%%...','~~~~.......,,.T...T%%%..','^....%%....TTTT.....%C..','^T...%%%...1,,..........','^TC...%%%..T.,,.........','^T.....%TTTT..,,h,,--...','^.......T........A,S-TT.','^.......T.........---TT.','^T...TTTTT..............','^T...T..CTT..%%.........','^T...T...TT..%%%........','^....T........%%........'],
+  desert:['^^^^^^^^^^^^^^^~^^^^^^^^','^#####.##.#.##.C.##^#^##','^#R.##.........~.^^^^^^^','^#..###...R.~~~~^^^^^^^^','^#...##.....~..^^^^^^^^^','^...R.,.h...~..#^^^^^^^^','^^B^^.,..~~~~...#^^^^^^^','^#....,..~.......#^^^^^^','^#C...,,.~.#......#^^^^^','^#....~2~~..#......#^^^^','^.....~,,,,..#......#^^^','^.....~...,,.........#^^','^#.~~~~....,,...##....#^','^#.~......h.%%,.###C...#','^#.~.....##.1%%,.##.....','~~~~^#..####.%%,........','^#^^^^###C##..h,........','^#^^^^^#.......,,,......','^#^^^^^^#....C##.,,--...','^#^^^^^^^#....###A,S-...','^^^^^^^^^^#....##.---...','^^^^^^^^^^^#............','^#^^^^^^^^^^#...........','^#^^^^^^^^^^^#..........'],
+  volcano:['^^^^^^^^^^#^^^^^^^^^^^^^','^##.##.#.##.#%##.#.##.#.','^.......R.#.%%..........','^..R......#....C........','^#..%%%...#......%%.....','^#..%%%...#..##..%%.~~~~','^#..%%%...#..###....~~~~','^......h..#...##....~~^^','^.C.......#..h...~~~~^^^','^#........#......~R..^^^','######2####......~...^^^','^#....,,......~~~~....^^','^......,,,#,,.~........^','^.C.......,#..~.........','^#.........~1~~.........','^##........~,,.......C..','^##........~.,,.h....%%.','^.......~~~~..,,,,...%%.','^.......~........,,--...','^#.....^~....%%..A,S-...','^#...~~~~....%%...---...','^#...~^^^^..C...........','^...^~^^^^^.............','^..^^~^^^^^^............'],
+  bamboo:['^^^^^^^^^^^^^~^^^^^^^^^^','^TT.T.T^.T.TT~TCTT.T.TT.','^TR....^.h...~..........','^T.%...^.....~.......R..','^......B,....~....T.....','^C...R.^,..~~~....T.....','^T.....^,..~......T.....','^^^^^^^^,..~......T.....','^T......,,,1,,.h..T.....','^..#######.~.,,.TTTTTTTT','^..#C....#.~..,,,,,,,...','^T.#.....#.~~~......h,..','^T.#..2......~.......,,.','^T.#.....#...~TTTTTTTT,.','^..#.....#...~......,,,.','^..#######...~..C..,,.TT','^T........~~~~....-,-.TT','^TTTTTTTTT~......A-S-...','^TTTTTTTTT~.......---...','^TTT%%%TTT~...........C.','^TTT%%%TTT~.............','^TTT%%%TTT~.............','^TTTTTTTTT~.............','^TTTTTTTTT~.............'],
+  cave:['^^^^^^^^^^^^^^^^^^^^^^^^','^####~##################','^R.##~##################','^..C#~##..h######.######','^....~#.....R###.C.#####','^....2...^..........####','^#.##~#.....####...#####','^#.##~##...######.######','^#.##~###.#######.######','^#.##~###1#######.######','^...#####,######.C.#####','^.R.####.,.######.###.##','^...###h.,,.########.C.#','^######...,,..#######.##','^######.%..,,.#######.##','^#######...#,.###...#.##','^###########,.##......##','^###########,,h,,.---.##','^###########....,A-S-.##','^##############...---.##','^###########.###.....###','^##########.C.......####','^###########.###########','^#######################'],
+  jungle:['^^^^^^^^^^^^^^^^^^^^^^^^','^T.TT.T.TT.T.TT.T.TT.T.T','^..................C....','^T.###########..........','^T.#C.......C#..TT......','^T.#.^^^^^^..#..TTT...~~','^..#.^..R.^..#h..TT...~.','^..#.^.^.C^..#..%.....~.','^T.#.^R...B.,.,..%.~~~~.','^T.#.^....^.,#,...%~R...','^T.#.^^^^^^.,#,,...~....','^..#.......2,#.,~~~~....','^..#h......,.#.T~....TT.','^T.#####.#####,T~....TT.','^T...........~~~~.......','^T...........1,.........','^.T..........~,,h.....TT','^..T...TT.~~~~.,......CT','^T..T..TTT~....,,,,--..T','^T......TT~......A,S-...','^T.....~~~~.......---...','^......~.....TT..%%.....','^......~....CTTT.%%.....','^T.....~......TT........'],
+  maple:['^^^^^^^^####^^^^^^^^^^^^','^T.T.TT.T.T#.T.TT.T.TT.T','^T.........#............','^..........####.C.......','^.............#....TTR..','^T............#,,,,TT...','~~~~..........#1##,,....','^T~~..........,,.#.,,TT.','^##C.........,,..#.A,STT','^##~~~~.....,,...####-TT','^T.##.~....,T.......#...','^T...h~....,.T......#...','^T....~~~~,,.hT.....####','^........2,.......h..TT#','^.TTR....~........%...TT','^TTTT....~.........%...T','^T.TT....~..TT..........','^T.......~..TTT.........','^.R......~...TT.T.......','^........~.......T......','^TC......~........T...C.','^T.......~...C..........','^T.......~..............','^........~..............'],
+  sky:['~~~~~~~~~~~~~~~~~~~~~~~~','~~...~~~~~~~~~~~~~~~~~~~','~.R...~~~~~~~~~~~~~~~~~~','~.....~~~~~~~~~~.~~~~~~~','~.C.R.~~~~~~~~~..C~~~~~~','~~....B~~~~~~~.....~~~~~','~~~~~~.~...~~~....~~~~~~','~~~~~~..2......~.~~~~~~~','~~~~~~...%,.C~~~~~~~~~~~','~~~~~...%%%...~~~~~~~~~~','~~~~~....%,...~~~~~~~~~~','~~~~~.h...,.h.~~~~~~~~~~','~~~~~~.#..,,,~~~~~~~.R.~','~~~~~~.....#,,1,~~~~...~','~~~~~~.~...~~~~,~......~','~~~~...~~~~~~~~,,....~~~','~~~...~~~~~~~~~.,,--..~~','~~.....~~~~~~~..A,S-...~','~~~.C.~~~~~~~~..h---...~','~~~~.~~~~~~~~~.........~','~~~~~~~~~~~~~~~...%...~~','~~~~~~~~~~~~~~~~...C.~~~','~~~~~~~~~~~~~~~~~...~~~~','~~~~~~~~~~~~~~~~~~~~~~~~'],
+  fairy:['^^^^^^^^^^^^^^^^^^^^^^^^','^TTTTTTTTTTTTTTTTTTTTTTT','^TTTTTTTTTTTTTTTTTTTTTTT','^TTTTTTTTTTT...TTTTT.TTT','^TTTTTTTTTT.........R.TT','^TTTTTTTTTT.....TTTT.TTT','^TTTTTTT.h......TTTTTTTT','^TTTTTT...TT...TTTTTT.TT','^TTTTT..C..TTT.TTTTT.C.T','^TTTTT~...TTTT1TTTTTT.TT','^TTTTT~T.TTTTT,TTTTTT.TT','^TR..T~T.TTTT.,.TTTTT.TT','^.....2..TTTT.,,,,....TT','^..%..~TTTTTT.h.TT,TTTTT','^C....~TTTT.TT.TTT,TTTTT','^T..RT~TTT.....TTT,TTTTT','^TTTTT~TTTT.TTTTT.,.TTTT','^TTTTT~TTTT.TTTT..---TTT','^TTTTTTT....h....A-S-.TT','^TTTTTTT.TTTTTTT..---.TT','^TTTTTT..TTTTTTTT...T.TT','^TTTTT.C.TTTTTTTTTTT.C.T','^TTTTTT.TTTTTTTTTTTTT.TT','^TTTTTTTTTTTTTTTTTTTTTTT'],
+  pirate:['~~~~~~~~~~~~~~~~~~~~~~~~','~~~~~~~^~~~~~~~~~~~~~~~~','~~~...~^~.......~~~~~~~~','~~...h.^..#######.~~~~~~','~~C.R..^..#.....#..~~~~~','~~.....B..#C.2......~~~~','~~~R...^..#.....#...~~~~','~~~....^..#.....#..C~.~~','~^^^^^^^..###,###~~~~.~~','~~...........,...~.....~','~~...........,...~.....~','~~.........h.,~~~~.....~','~~...........,~........~','~~..........,,~........~','~~.........~1~~...TT...~','~~..C......~.,....TT.R.~','~~~........~.,,.....%.~~','~~~.....~~~~..,,h,,--.~~','~~~~....~........A,S-~~~','~~~~~...~.........--~~~~','~~~~~~~~~..........~~~~~','~~~~~~~...........~~~~~~','~~~~~~~~~.......~C~~~~~~','~~~~~~~~~~~~~~~~~~~~~~~~'],
+  glacier:['^^^^^^^^~^^^^^^^^^^^^^^^','^###.C.#~.#.##.#.##.####','^#......~...........##^.','^#.R..~~~......^^...#...','^#.h..~........^^^..#...','^.....~.........^^C#^...','^...~2~...........#.....','^#R.~.,,,,,,......#.....','^#..~......,,...##^.....','^#~~~.....%.,,..#..R....','^#~......%%%.,..#.......','^~~.....%%%%%,##^.......','~~~......%%%.h#.........','^#........%..,#.........','^#..........##^.......C.','^.C...^^....1........%..','^.....^^....#..,......%.','^#........##^..,,h,....%','^#........#.......,,--..','^#........#.##....A,S-..','^.......##^.###....---..','^.......#....##.........','^#......#....C..........','^#......#...............'],
+  honey:['^^^^^^^^T^^^^^^^^^^^^^^^','^RTTTTTTTTT.T.TT.T.TT.T.','^.TTTTT.T...............','^.......T..........C....','^T.hT.T.T...............','^T..TRT.B,...........~~~','^TT.T.T.T,..h........~..','^...T...T,....T...%..~..','^C......T,....T..%%%~~..','TTTTTTTTT,,...T...%.C...','^T........,...T...~.....','^T........,2..T~~~~.....','^.........,,...~........','^..C.......,...~.R...T..','^T.......TTT~1~~.....T..','^T.........,~...T..C.T..','^T..........~...T....T..','^........~~~~,,.T....T..','^........~....,,,h,--T..','^T.......~.......A,S-...','^T....~~~~...TTTTTT--...','^T....~.................','^.....~.......C.........','^.....~.................'],
+  dino:['^^^^^^^^^^^^~^^^^^^^^^^^','^####R##.#.#~.#^##^#^###','^#.##.....C.~..^^^^^####','^#R##....~~~~...^^^^####','^........~#......^^####^','^...h....~.#.....#####^^','^C....~2~~..#....####^^^','^#....~.,........###^^^^','^#....~.,...C.#####^^^^^','^..~~~~.%,.h.#####^^^^^^','^..~.....%....###^..^^^^','^#.~.....,.#1###^^...^^^','~~~~..##.,,#...#^^^R.#^^','^#....##...#,,.##^...##^','^.......####.,..##....#^','^...C...#....,........^^','^#......#....,,,,%...##^','^#...####......#,,%...##','^#...######...^#h.,,--.#','^....###^^##.^^^##A,S-..','^.#####^^^^#^^^^^..---..','^#####^^^^^^^^^^#C......','^####^^^^^^^^^^^##......','^###^^^^^^^^^^^^^##.....'],
+  candy:['^^^^^^^^^^^^^^^^^^^^^^^^','^T.TT.T.TT^T.TTTT.TT.T.T','^..R....R.^...TTT.......','^T...%....^....TT.......','^C....h...^.............','^T........^........C....','^^^^^^^B^^^....##.......','^......,.......##.......','^T.....,,..#h.......~~~~','^T......,,.##.......~...','^T.......,,,,.......~...','^.........2.,,##~~~~~T..','^......##....,##~.....T.','^T.C...##.##.C..~....R..','^T........##~~~~~.......','^T...TT.....1.........%%','^....TTT....~.,,......%%','^.....TT~~~~~..,,,......','^T......~.......h,,--...','^T......~........A,S-...','^T..~~~~~....TT...---...','^...~........TTT........','^...~.......C.TT........','^T..~...................'],
+  clock:['^^^^^^^^^^^^^^^~^^^^^^^^','^#.#.##.####~~~~#.#.##.#','^#R......%..~...........','^......R....~...........','^...^^...~~~~...........','^#..^^...~..............','^#...,,..~.........C....','^#.,h,~2~~..............','^.....~.,.##....##....##','^C....~.,,##....##....#.','^#.~~~~....,,.........#.','^#.~.......h,##....####.','^#.~........,##....#....','~~~~.....##.,,,..###.R..','^........##...,,####....','^#.C............#.......','^#....##.......,#.......','^#....##.....#1##...##..','^............#..,...##..','^...........##..,...---.','^#........####..,,hA,S-.','^#........#......##.---.','^#......C.#...##.##.....','^.........#...##......C.'],
+  fest:['TTTTTTTTTTTTTTTTTTTTTTTT','TTT..T.T..T.T..T.T..T.T.','TTC..........C..........','TT...............%%%....','T...%............%%%....','T..%%%...T...T...%%%....','T...%...Th....T.........','TT.....T...-...T........','TT....T..--C--..T....C..','T....Th.-.....-..T...T..','T.......-.---.-.......T.','T......-..-1-..-.......T','TT......-.---.-.........','TTC..T..-.....-.hT..%...','T.....T..--.--,.T..%%%..','T......T...,..,T....%...','T.......T..,..T,,...T...','TT.%%%...T.,.T..,,..T.T.','TT.%%%...........,,--..T','T..%%%...........A,S-...','T.............TTTT---...','T.......CT..............','TT........T......T......','TT.........T......T.....']
+};
+/* LAYOUTS-END */
+// 지역마다 물·숲·절벽 모양: w1 = '~' 물 종류, w2 = '%' 물 종류, forest = 숲 벽 나무, rock = 절벽 옆면 색(밝은 쪽·어두운 쪽), deco = 절벽 위 작은 장식
+// (숲 나무·장식은 그 지역 미션에서 치워야 하는 장애물과 헷갈리지 않는 것으로 고름)
+const LOOK = {
+  canyon:  {w1:'water', w2:'water', forest:['spruce','redwood'],      rock:['#9b7a52','#5e4630'], deco:['flowers','boulder']},
+  nest:    {w1:'water', w2:'water', forest:['spruce','redwood'],         rock:['#8f6a45','#5a3f27'], deco:['flowers']},
+  windmill:{w1:'water', w2:'water', forest:['oak','spruce'],                rock:['#a39a8c','#6b645a'], deco:['flowers','boulder']},
+  snow:    {w1:'ice',   w2:'ice',   forest:['spruce'],                      rock:['#b9c7d6','#7d8ea3'], deco:['boulder']},
+  beach:   {w1:'water', w2:'water', forest:['palm'],                        rock:['#d9b37a','#a57c48'], deco:['driftwood','boulder']},
+  swamp:   {w1:'swamp', w2:'swamp', forest:['spruce','oak'],    rock:['#6f6a4a','#45412c'], deco:['log','flowers']},
+  desert:  {w1:'chasm', w2:'water', forest:['palm'],                      rock:['#d98b52','#9c5530'], deco:['boulder']},
+  volcano: {w1:'lava',  w2:'lava',  forest:['burnttree'],                   rock:['#5d5552','#36302e'], deco:['boulder','coalrock']},
+  bamboo:  {w1:'water', w2:'water', forest:['bamboo'],    rock:['#9aa08c','#646a58'], deco:['flowers','boulder']},
+  cave:    {w1:'chasm', w2:'water', forest:['stalagmite'],                  rock:['#5b6478','#363c4c'], deco:['boulder','coalrock']},
+  jungle:  {w1:'swamp', w2:'water', forest:['palm','redwood'],        rock:['#a89d7c','#6d654c'], deco:['flowers','mushrooms']},
+  maple:   {w1:'water', w2:'water', forest:['oak','spruce'],         rock:['#a07a50','#664a30'], deco:['flowers','boulder']},
+  sky:     {w1:'sky',   w2:'water', forest:['oak'],         rock:['#e8eef8','#aebcd2'], deco:['flowers']},
+  fairy:   {w1:'water', w2:'water', forest:['spruce'],rock:['#6e5f86','#433857'], deco:['mushrooms','flowers']},
+  pirate:  {w1:'water', w2:'water', forest:['palm'],                        rock:['#c9a06a','#8a6a40'], deco:['shells','driftwood']},
+  glacier: {w1:'ice',   w2:'ice',   forest:['spruce'],                      rock:['#bfe3f5','#7fb2d0'], deco:['icerock','boulder']},
+  honey:   {w1:'water', w2:'water', forest:['oak','spruce'],         rock:['#a8875a','#6b5536'], deco:['flowers']},
+  dino:    {w1:'chasm', w2:'swamp', forest:['palm'],                rock:['#c99560','#8a5f38'], deco:['boulder','reeds']},
+  candy:   {w1:'choco', w2:'choco', forest:['cherry'],           rock:['#e8a8c8','#b0708f'], deco:['flowers','berrybush']},
+  clock:   {w1:'chasm', w2:'water', forest:['burnttree'],                   rock:['#9a8f80','#5f574d'], deco:['boulder','wall']},
+  fest:    {w1:'water', w2:'water', forest:['oak','spruce'],                rock:['#9b7a52','#5e4630'], deco:['flowers']},
 };
 const RIVER_COL = {choco:['#f6cfe0','#6b3a1e','#a0603a'], sky:['#eef6ff','#a9cff2','#ffffff'], water:['#e6d3a0','#4aa8d8','#8fd0f0'], ice:['#e4f2fb','#9fd4ef','#d8f0ff'], swamp:['#6b6a3a','#556b32','#7f9a4a'],
   chasm:['#c48a52','#3b2a1e','#5a3e28'], lava:['#3a2a26','#e8541e','#ffb02e']};
-OBJS._water = {fixed:true, hidden:true};
-OBJS.hedge  = {name:'생울타리', img:'spruce', w:.9, fixed:true};
+// 지나갈 수 없는 칸을 누르면 보이는 안내
+const WATER_MSG = {water:'물이 깊어서 건널 수 없어요', ice:'얼음 골짜기라 건널 수 없어요', swamp:'발이 푹 빠지는 늪이에요', chasm:'깊은 낭떠러지예요',
+  lava:'뜨거운 용암이에요! 가까이 가면 안 돼요', sky:'구름 아래는 하늘이에요. 떨어지면 큰일!', choco:'초콜릿 강은 너무 깊어요'};
+OBJS._water  = {fixed:true, hidden:true, wall:true};
+OBJS._cliff  = {fixed:true, wall:true, msg:'높은 절벽이라 지나갈 수 없어요'};
+OBJS._forest = {fixed:true, wall:true, msg:'나무가 빽빽해서 지나갈 수 없어요'};
 OBJS.done_bridge.walk = true; OBJS.done_fence.walk = true;   // 고친 다리·울타리 문은 지나갈 수 있음
 const hashKey = k => [...k].reduce((h,c) => (h*31 + c.charCodeAt(0)) >>> 0, 7);
-function line(ax, ay, bx, by){ const out = []; let dx = Math.abs(bx-ax), sx = ax<bx?1:-1, dy = -Math.abs(by-ay), sy = ay<by?1:-1, e = dx+dy;
-  for (;;){ out.push([ax,ay]); if (ax===bx && ay===by) break; const e2 = 2*e; if (e2 >= dy){ e += dy; ax += sx; } if (e2 <= dx){ e += dx; ay += sy; } } return out; }
+const GATE_KIND = {bridge:1, fence:1};   // 고치기 전엔 길을 막는 수리 지점
 
-const LAYOUT_V = 2;   // 지도 설계가 바뀌면 올림(예전 진행은 그 지역만 처음부터)
-function buildRegion(key){
-  const R = REGIONS[key], M = MAPS[key];
-  let st = S.regions[key];
-  if (key === 'fest') return buildFestival();
-  if (!st || st.layout !== LAYOUT_V){ st = S.regions[key] = {layout:LAYOUT_V, cleared:[], runes:0, clears:(st && st.clears) || 0, queue:[]}; }
-  const N = CONFIG.mapSize, r = rng(hashKey(key));        // 모든 학생에게 같은 지도
-  const tiles = [], start = {x:11, y:19};
-  for (let y=0;y<N;y++) for (let x=0;x<N;x++){
-    const d = Math.hypot(x-start.x, y-start.y);
-    tiles.push({o: d > 1.6 && r() < 0.84 ? pickW(R.mix, r) : null, rev:false, seed:r()});
+// 글자 지도에서 출발점부터 갈 수 있는 칸(수리 지점 open만 지나감, rock이면 거대한 바위도 지나감)
+function layoutReach(L, start, open, rock){
+  const N = L.length, seen = new Set([start.y*N + start.x]), q = [[start.x, start.y]];
+  while (q.length){ const [x,y] = q.pop();
+    for (const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){ const nx = x+dx, ny = y+dy, k = ny*N + nx;
+      if (nx<0 || ny<0 || nx>=N || ny>=N || seen.has(k)) continue;
+      const c = L[ny][nx];
+      if ('^#T~%A'.includes(c) || (c === 'B' && !rock) || ((c === '1' || c === '2') && !open.includes(c))) continue;
+      seen.add(k); q.push([nx,ny]); } }
+  return seen;
+}
+// 미션에 필요한 장애물·자원이 그 구역에 넉넉히 있게(무작위 배치가 모자라면 다른 장애물을 바꿔 넣음)
+function ensureTargets(tiles, cells, objs, mix, r, protect){
+  const pool = cells.filter(i => { const o = tiles[i].o; return o && !tiles[i].path && !protect.has(o) && !OBJS[o].fixed && !OBJS[o].chest && !OBJS[o].rune && !OBJS[o].tool; });
+  for (let k = pool.length - 1; k > 0; k--){ const j = Math.floor(r()*(k+1)); [pool[k], pool[j]] = [pool[j], pool[k]]; }
+  for (const ob of objs){
+    if (ob.t === 'clear'){ let have = cells.filter(i => tiles[i].o === ob.o).length;
+      while (have < ob.n + 1 && pool.length){ tiles[pool.pop()].o = ob.o; have++; } }
+    if (ob.t === 'get'){ const best = dropperOf(ob.i, mix); if (!best) continue;
+      let got = 0; for (const i of cells){ const d = OBJS[tiles[i].o]; if (d && d.drops && d.drops[ob.i]) got += d.drops[ob.i]; }
+      while (got < ob.n + 2 && pool.length){ tiles[pool.pop()].o = best; got += OBJS[best].drops[ob.i]; } }
   }
-  const T = (x,y) => tiles[y*N+x];
-  // 강(지나갈 수 없음)
-  for (let k=1;k<M.river.pts.length;k++){ const [a,b] = [M.river.pts[k-1], M.river.pts[k]];
-    for (const [x,y] of line(a[0],a[1],b[0],b[1])){ const t = T(x,y); t.water = M.river.kind; t.o = M.river.kind === 'hedge' ? 'hedge' : '_water'; t.path = false; } }
-  // 흙길(대부분 빈칸, 가끔 가벼운 장애물)
-  const light = ['twigpile','flowers', null, null, null, null, null, null];
-  for (let k=1;k<M.path.length;k++){ let [x,y] = M.path[k-1]; const [bx,by] = M.path[k];
-    while (x !== bx || y !== by){ if (x !== bx && (y === by || (x+y+k) % 2)) x += Math.sign(bx-x); else y += Math.sign(by-y);
-      const t = T(x,y); if (t.water) continue; t.path = true; t.o = light[Math.floor(r()*light.length)]; } }
-  for (const [x,y] of M.runes) T(x,y).o = 'rune';
-  for (const [x,y] of M.chests) T(x,y).o = 'chest';
-  for (const [x,y] of M.rocks) T(x,y).o = 'bigrock';
-  T(9,19).o = 'tent_camp';
-  for (let y=start.y-1;y<=start.y+1;y++) for (let x=start.x-1;x<=start.x+1;x++) if (T(x,y) && T(x,y).o !== 'tent_camp') T(x,y).o = null;
-  const w = {key, N, tiles, start, tex:R.tex, tint:R.tint, region:st, home:false, spots:[]};
-  M.spots.forEach(([x,y], k) => { const t = T(x,y); t.o = 'fix_' + STORY[key].repairs[k].kind; t.spot = k; t.water = t.water || null; w.spots[k] = y*N+x; });
+}
+// 그 자원을 가장 많이 주는 장애물(지역 장애물 중에서 먼저 찾음)
+function dropperOf(item, mix){
+  const src = Object.keys(OBJS).filter(k => OBJS[k].drops && OBJS[k].drops[item] && !OBJS[k].fixed && !OBJS[k].tool && !OBJS[k].chest)
+    .sort((a,b) => OBJS[b].drops[item] - OBJS[a].drops[item]);
+  return src.find(k => mix[k]) || src[0];
+}
+
+const LAYOUT_V = 3;   // 지도 설계가 바뀌면 올림(그 지역 진행은 처음부터. 미션 단계·고친 수리 지점·완료 기록은 이어짐)
+function regionState(key, extra){
+  let st = S.regions[key];
+  if (!st || st.layout !== LAYOUT_V){
+    const old = st || {};
+    st = S.regions[key] = {layout:LAYOUT_V, cleared:[], runes:Math.min(old.runes||0, CONFIG.runesPerRegion), clears:old.clears||0, queue:[], fixed:{...(old.fixed||{})}, ...(extra||{})};
+    for (const k of ['qi','qb','qdone','introSeen']) if (old[k] != null) st[k] = old[k];
+  }
+  return st;
+}
+function buildRegion(key){
+  if (key === 'fest') return buildFestival();
+  const st = regionState(key);
+  return buildLayoutWorld(key, LAYOUTS[key], REGIONS[key], LOOK[key], st, (hashKey(key) + st.clears * 7919) >>> 0);   // 다시 탐험할 때마다 장애물 종류가 조금씩 바뀜
+}
+function buildLayoutWorld(key, L, R, look, st, seed){
+  const N = L.length, r = rng(seed), tiles = [], kinds = STORY[key].repairs.map(p => p.kind);
+  const mix = Object.fromEntries(Object.entries(R.mix).filter(([k]) => k !== 'bigrock'));   // 거대한 바위는 정해 둔 자리(B)에만
+  const byCost = Object.keys(mix).sort((a,b) => OBJS[a].cost - OBJS[b].cost);
+  const light = byCost.slice(0, 2), heavy = byCost.slice(-3);
+  let start = {x:N-5, y:N-5}; const spotXY = [];
+  for (let y=0;y<N;y++) for (let x=0;x<N;x++){
+    const c = L[y][x], t = {o:null, rev:false, seed:r()};
+    if (c === '^' || c === '#'){ t.o = '_cliff'; t.wall = c; }
+    else if (c === 'T'){ t.o = '_forest'; t.wall = c; }
+    else if (c === '~' || c === '%'){ t.o = '_water'; t.water = c === '~' ? look.w1 : look.w2; t.wet = 1; }
+    else if (c === '.'){ if (r() < .8) t.o = pickW(mix, r); }
+    else if (c === 'o') t.o = pickW(mix, r);
+    else if (c === 'h') t.o = heavy[Math.floor(r()*heavy.length)];
+    else if (c === ','){ t.path = true; if (r() < .28) t.o = light[Math.floor(r()*light.length)]; }
+    else if (c === 'C') t.o = 'chest';
+    else if (c === 'R') t.o = 'rune';
+    else if (c === 'B') t.o = 'bigrock';
+    else if (c === 'A') t.o = 'tent_camp';
+    else if (c === 'S') start = {x, y};
+    else if (c === '1' || c === '2') spotXY[+c - 1] = [x, y];
+    tiles.push(t);
+  }
+  const w = {key, N, tiles, start, tex:R.tex, tint:R.tint, region:st, home:false, spots:[], look};
   st.fixed = st.fixed || {};
-  for (const [s2, done] of Object.entries(st.fixed)) if (done && w.spots[s2] != null) tiles[w.spots[s2]].o = 'done_' + STORY[key].repairs[s2].kind;
-  for (const i of st.cleared) if (!OBJS[tiles[i].o] || !OBJS[tiles[i].o].fixed) tiles[i].o = null;
-  revealAround(w, start.x, start.y, 3.2);
-  for (const i of st.cleared) revealAround(w, i % N, (i / N)|0, 2.3);
+  spotXY.forEach(([x,y], k) => { const t = tiles[y*N+x], kind = kinds[k], at = (dx,dy) => (L[y+dy]||'')[x+dx];
+    t.o = (st.fixed[k] ? 'done_' : 'fix_') + kind; t.spot = k; w.spots[k] = y*N+x;
+    const side = [at(1,0), at(-1,0), at(0,1), at(0,-1)];
+    if (kind === 'bridge'){ t.water = side.includes('~') || !side.includes('%') ? look.w1 : look.w2; t.flip = '~%'.includes(at(1,0) || '?') || '~%'.includes(at(-1,0) || '?'); }
+    if (kind === 'fence') t.flip = '#^T'.includes(at(0,1) || '?') || '#^T'.includes(at(0,-1) || '?');
+  });
+  // 미션 대상 보장: 첫 미션은 출발 구역, 둘째 미션은 수리 지점 1 너머(문이 아니면 출발 구역)
+  const quests = STORY[key].quests, A = layoutReach(L, start, [], false);
+  const AB = GATE_KIND[kinds[0]] ? layoutReach(L, start, ['1'], false) : A;
+  const areaA = [...A], areaB = [...AB].filter(i => !A.has(i));
+  const protect = new Set();
+  for (const q of quests) for (const ob of q.objs){ if (ob.t === 'clear') protect.add(ob.o); if (ob.t === 'get'){ const d = dropperOf(ob.i, mix); if (d) protect.add(d); } }
+  if (key === 'fest') ensureTargets(tiles, areaA, [{t:'clear', o:'lantern', n:19}, {t:'clear', o:'giftbox', n:3}, {t:'get', i:'medal', n:70}], mix, r, protect);
+  else { ensureTargets(tiles, areaA, quests[0].objs, mix, r, protect); ensureTargets(tiles, areaB.length ? areaB : areaA, quests[1].objs, mix, r, protect); }
+  for (const i of st.cleared) if (tiles[i] && tiles[i].o && !OBJS[tiles[i].o].fixed) tiles[i].o = null;
+  // 벽 바로 뒤(화면 위쪽)에 땅이 있으면 낮게 그려 뒤쪽 길·물체가 덜 가려지게(low 2: 바로 뒤, 1: 두 칸 뒤)
+  const landAt = (x,y) => x>=0 && y>=0 && x<N && y<N && !tiles[y*N+x].wall && !tiles[y*N+x].wet;
+  for (let y=0;y<N;y++) for (let x=0;x<N;x++){ const t = tiles[y*N+x]; if (!t.wall) continue;
+    t.low = landAt(x-1,y) || landAt(x,y-1) ? 2 : landAt(x-1,y-1) || landAt(x-2,y) || landAt(x,y-2) ? 1 : 0;
+    t.hk = t.wall === '^' && t.low ? '#' : t.wall; }
+  w.landTotal = tiles.filter(t => !t.wall && !t.wet).length;
+  revealAround(w, start.x, start.y, 3.2, true);
+  for (const i of st.cleared) revealAround(w, i % N, (i / N)|0, 2.3, true);
+  for (const [k, done] of Object.entries(st.fixed)) if (done && w.spots[k] != null) revealAround(w, w.spots[k] % N, (w.spots[k] / N)|0, 2.3, true);
   return w;
 }
 OBJS.tent_camp = {img:'tent', w:1.3, fixed:true};
@@ -1314,16 +1362,36 @@ function buildHome(){
   return w;
 }
 
-function revealAround(w, cx, cy, rad){
-  const N = w.N, out = [];
-  const R = Math.ceil(rad);
-  for (let y=cy-R;y<=cy+R;y++) for (let x=cx-R;x<=cx+R;x++){
-    if (x<0||y<0||x>=N||y>=N) continue;
-    const wob = ((((x*92821) ^ (y*68917)) >>> 0) % 100 / 100 - .5) * .9;   // 가장자리를 조금씩 들쭉날쭉하게(칸마다 고정)
-    if (Math.hypot(x-cx,y-cy) > rad + wob) continue;
-    const t = w.tiles[y*N+x]; if (!t.rev){ t.rev = true; out.push([x,y]); }
-  }
+// 구름 걷기: 반지름 안에서 이어진 칸만 드러남. 땅·물 너머는 보이지만 절벽·숲은 그 벽까지만(벽 뒤는 그대로 구름)
+function revealAround(w, cx, cy, rad, quiet){
+  const N = w.N, out = [], now = performance.now();
+  const wob = (x,y) => ((((x*92821) ^ (y*68917)) >>> 0) % 100 / 100 - .5) * .9;   // 가장자리를 칸마다 조금씩 들쭉날쭉하게(칸마다 고정)
+  const show = (x,y) => { const t = w.tiles[y*N+x]; if (!t.rev){ t.rev = true; if (!quiet) t.fadeAt = now; out.push([x,y]); } };
+  const seen = new Set([cy*N+cx]), q = [[cx,cy]], land = [];
+  show(cx, cy);
+  while (q.length){ const [x,y] = q.shift(), t = w.tiles[y*N+x];
+    if (!t.wall) land.push([x,y]);
+    for (const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){ const nx = x+dx, ny = y+dy, k = ny*N+nx;
+      if (nx<0 || ny<0 || nx>=N || ny>=N || seen.has(k) || Math.hypot(nx-cx, ny-cy) > rad + wob(nx,ny)) continue;
+      if (t.wall && !w.tiles[k].wall) continue;          // 벽 너머 땅은 안 보임
+      seen.add(k); show(nx, ny); q.push([nx,ny]); } }
+  // 드러난 땅에 대각선으로 닿은 벽 모서리도 보이게(구름 구멍이 매끄럽게)
+  for (const [x,y] of land) for (const [dx,dy] of [[1,1],[1,-1],[-1,1],[-1,-1]]){ const nx = x+dx, ny = y+dy;
+    if (nx>=0 && ny>=0 && nx<N && ny<N && w.tiles[ny*N+nx].wall) show(nx, ny); }
   return out;
+}
+
+// 걸어갈 수 있는 곳 바로 옆 칸은 늘 보이게(빈 길이 이어져도 구름에 막혀 멈추지 않음)
+function cascadeReveal(w, quiet){
+  const N = w.N, all = [];
+  for (let pass = 0; pass < 40; pass++){
+    computeReach(); let added = 0;
+    for (const k of reach){ const x = k % N, y = (k / N)|0;
+      for (const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){ const nx = x+dx, ny = y+dy;
+        if (nx>=0 && ny>=0 && nx<N && ny<N && !w.tiles[ny*N+nx].rev){ const c = revealAround(w, x, y, 1.5, quiet); all.push(...c); added += c.length; break; } } }
+    if (!added) break;
+  }
+  return all;
 }
 
 /* ══════════ 화면 좌표 ══════════ */
@@ -1342,10 +1410,11 @@ function resize(){
 addEventListener('resize', resize);
 
 /* ── 바닥·구름 캐시(무거운 그림은 미리 그려 둠) ── */
-const CS = 0.6;          // 캐시 해상도 배율
-let groundC = null, fogC = null, cacheBox = null;
-function worldBox(w){
-  const N = w.N, pad = 3;
+const CS = 0.6, FCS = 0.45;   // 캐시 해상도 배율(바닥 / 구름)
+const FOG_PAD = 5;             // 섬 밖으로 구름을 깔아 두는 칸 수(바깥으로 갈수록 옅어짐)
+let groundC = null, fogC = null, cacheBox = null, fogBox = null;
+function worldBox(w, pad=3){
+  const N = w.N;
   const minX = iso(-pad, N-1+pad).x - TW, maxX = iso(N-1+pad, -pad).x + TW;
   const minY = iso(-pad, -pad).y - TH*3, maxY = iso(N-1+pad, N-1+pad).y + TH*3;
   return {x:minX, y:minY, w:maxX-minX, h:maxY-minY};
@@ -1355,53 +1424,63 @@ function diamond(c, sx, sy, grow=0){
   c.moveTo(sx, sy - TH/2 - grow); c.lineTo(sx + TW/2 + grow*2, sy);
   c.lineTo(sx, sy + TH/2 + grow); c.lineTo(sx - TW/2 - grow*2, sy); c.closePath();
 }
+// 색을 밝게(+) 어둡게(-)
+function shade(hex, k){ const n = parseInt(hex.slice(1), 16), f = v => Math.max(0, Math.min(255, Math.round(k < 0 ? v*(1+k) : v + (255-v)*k)));
+  return `rgb(${f(n>>16)},${f((n>>8)&255)},${f(n&255)})`; }
+const isVoid = t => t && t.water === 'sky';     // 하늘 섬 지역의 구름 아래(땅이 없음)
 function renderGround(){
-  const w = world, b = cacheBox = worldBox(w);
+  const w = world, b = cacheBox = worldBox(w, 3);
   groundC = document.createElement('canvas');
   groundC.width = Math.ceil(b.w*CS); groundC.height = Math.ceil(b.h*CS);
   const c = groundC.getContext('2d');
   c.setTransform(CS,0,0,CS,-b.x*CS,-b.y*CS);
-  const N = w.N;
-  // 섬 옆면(흙 절벽)
+  const N = w.N, T = (x,y) => (x>=0 && y>=0 && x<N && y<N) ? w.tiles[y*N+x] : null;
+  // 섬 옆면(흙 절벽): 앞쪽이 지도 끝이거나 하늘(빈 곳)인 칸 아래에
   const cliff = 70;
-  for (let i=0;i<N;i++){
-    for (const [x,y,side] of [[N-1,i,'r'],[i,N-1,'l']]){
-      const p = iso(x,y);
+  for (let y=0;y<N;y++) for (let x=0;x<N;x++){
+    const t = T(x,y); if (isVoid(t)) continue;
+    for (const side of ['r','l']){
+      const nb = side === 'r' ? T(x+1,y) : T(x,y+1);
+      if (nb && !isVoid(nb)) continue;
+      const p = iso(x,y), i = side === 'r' ? x+y*3 : y+x*3;
       c.beginPath();
       if (side === 'r'){ c.moveTo(p.x+TW/2, p.y); c.lineTo(p.x, p.y+TH/2); c.lineTo(p.x, p.y+TH/2+cliff); c.lineTo(p.x+TW/2, p.y+cliff); }
       else { c.moveTo(p.x-TW/2, p.y); c.lineTo(p.x, p.y+TH/2); c.lineTo(p.x, p.y+TH/2+cliff); c.lineTo(p.x-TW/2, p.y+cliff); }
       c.closePath();
       const g = c.createLinearGradient(0, p.y, 0, p.y+TH/2+cliff);
-      g.addColorStop(0, side==='r' ? '#8a5a32' : '#a7703f'); g.addColorStop(1, side==='r' ? '#4e3018':'#6a4222');
+      if (t.wet){ const wc = RIVER_COL[t.water][1]; g.addColorStop(0, shade(wc, side==='r' ? -.15 : 0)); g.addColorStop(1, shade(wc, -.55)); }
+      else { g.addColorStop(0, side==='r' ? '#8a5a32' : '#a7703f'); g.addColorStop(1, side==='r' ? '#4e3018':'#6a4222'); }
       c.fillStyle = g; c.fill();
       c.strokeStyle = 'rgba(40,20,5,.25)'; c.lineWidth = 2; c.stroke();
-      // 돌멩이 무늬
-      c.fillStyle = 'rgba(255,230,190,.12)';
-      for (let k=0;k<3;k++){ const t = (i*7+k*13)%10/10; c.beginPath();
-        c.ellipse(p.x + (side==='r'?1:-1)*TW/4*(0.4+t), p.y+TH/2*(0.6)+20+k*15, 8, 4, 0, 0, 7); c.fill(); }
+      if (!t.wet){ c.fillStyle = 'rgba(255,230,190,.12)';   // 돌멩이 무늬
+        for (let k=0;k<3;k++){ const tt = (i*7+k*13)%10/10; c.beginPath();
+          c.ellipse(p.x + (side==='r'?1:-1)*TW/4*(0.4+tt), p.y+TH/2*(0.6)+20+k*15, 8, 4, 0, 0, 7); c.fill(); } }
     }
   }
-  // 윗면 풀밭 텍스처
+  // 윗면 풀밭 텍스처(하늘 칸은 비워 둠)
   const tex = IMG[w.tex], pat = c.createPattern(tex, 'repeat');
   c.save();
   c.beginPath();
-  const a = iso(0,0), bb = iso(N-1,0), cc = iso(N-1,N-1), d = iso(0,N-1);
-  c.moveTo(a.x, a.y-TH/2); c.lineTo(bb.x+TW/2, bb.y); c.lineTo(cc.x, cc.y+TH/2); c.lineTo(d.x-TW/2, d.y); c.closePath();
+  if (w.tiles.some(isVoid)){ for (let y=0;y<N;y++) for (let x=0;x<N;x++){ if (isVoid(T(x,y))) continue; const p = iso(x,y);
+      c.moveTo(p.x, p.y-TH/2-1); c.lineTo(p.x+TW/2+2, p.y); c.lineTo(p.x, p.y+TH/2+1); c.lineTo(p.x-TW/2-2, p.y); c.closePath(); } }
+  else { const a = iso(0,0), bb = iso(N-1,0), cc = iso(N-1,N-1), d = iso(0,N-1);
+    c.moveTo(a.x, a.y-TH/2); c.lineTo(bb.x+TW/2, bb.y); c.lineTo(cc.x, cc.y+TH/2); c.lineTo(d.x-TW/2, d.y); c.closePath(); }
   c.clip();
   c.fillStyle = pat; c.fillRect(b.x, b.y, b.w, b.h);
   c.fillStyle = w.tint; c.fillRect(b.x, b.y, b.w, b.h);
-  // 타일마다 밝기 살짝 다르게 + 흙길 얼룩
+  // 타일마다 밝기 살짝 다르게 + 흙 얼룩, 숲 바닥은 어둡게
   for (let y=0;y<N;y++) for (let x=0;x<N;x++){
     const t = w.tiles[y*N+x], p = iso(x,y);
     const v = (t.seed - .5);
     diamond(c, p.x, p.y, 1);
     c.fillStyle = v > 0 ? `rgba(255,240,180,${v*0.16})` : `rgba(40,60,10,${-v*0.16})`; c.fill();
-    if (t.seed > .86 && !w.home && !t.path){ c.fillStyle = 'rgba(120,80,30,.16)'; c.beginPath(); c.ellipse(p.x, p.y, TW*.3, TH*.26, 0, 0, 7); c.fill(); }
+    if (t.wall === 'T'){ diamond(c, p.x, p.y, 4); c.fillStyle = 'rgba(16,46,22,.42)'; c.fill(); continue; }
+    if (t.seed > .86 && !w.home && !t.path && !t.wall){ c.fillStyle = 'rgba(120,80,30,.16)'; c.beginPath(); c.ellipse(p.x, p.y, TW*.3, TH*.26, 0, 0, 7); c.fill(); }
   }
-  // 강·용암·낭떠러지(설계된 지도)
-  for (let y=0;y<N;y++) for (let x=0;x<N;x++){ const t = w.tiles[y*N+x]; if (!t.water || t.water === 'hedge') continue; const p = iso(x,y), col = RIVER_COL[t.water];
+  // 강·용암·낭떠러지·연못
+  for (let y=0;y<N;y++) for (let x=0;x<N;x++){ const t = w.tiles[y*N+x]; if (!t.water || isVoid(t)) continue; const p = iso(x,y), col = RIVER_COL[t.water];
     diamond(c, p.x, p.y, 7); c.fillStyle = col[0]; c.fill(); }
-  for (let y=0;y<N;y++) for (let x=0;x<N;x++){ const t = w.tiles[y*N+x]; if (!t.water || t.water === 'hedge') continue; const p = iso(x,y), col = RIVER_COL[t.water];
+  for (let y=0;y<N;y++) for (let x=0;x<N;x++){ const t = w.tiles[y*N+x]; if (!t.water || isVoid(t)) continue; const p = iso(x,y), col = RIVER_COL[t.water];
     diamond(c, p.x, p.y, 2); c.fillStyle = col[1]; c.fill();
     c.strokeStyle = col[2]; c.lineWidth = 3; c.globalAlpha = .7;
     for (let k=0;k<2;k++){ const ox = ((x*37+y*11+k*23)%40)-20, oy = ((x*13+y*29+k*7)%14)-7; c.beginPath(); c.moveTo(p.x+ox-10, p.y+oy); c.quadraticCurveTo(p.x+ox, p.y+oy-5, p.x+ox+10, p.y+oy); c.stroke(); }
@@ -1419,7 +1498,8 @@ function renderGround(){
     for (let k=0;k<3;k++){ const ex = p.x + (pr()<.5?-1:1)*TW*.38, ey = p.y + (pr()-.5)*TH*.3; c.beginPath(); c.moveTo(ex, ey); c.lineTo(ex+2, ey-8); c.stroke(); }
   }
   // 가장자리 안쪽 그림자
-  const sh = c.createLinearGradient(0, a.y-TH/2, 0, cc.y+TH/2);
+  const a0 = iso(0,0), c0 = iso(N-1,N-1);
+  const sh = c.createLinearGradient(0, a0.y-TH/2, 0, c0.y+TH/2);
   sh.addColorStop(0,'rgba(255,255,255,.08)'); sh.addColorStop(1,'rgba(0,0,0,.10)');
   c.fillStyle = sh; c.fillRect(b.x,b.y,b.w,b.h);
   c.restore();
@@ -1439,31 +1519,114 @@ function renderGround(){
     }
   }
 }
+// 구름 구멍(가운데는 완전히, 가장자리는 부드럽게 지움) — 한 번만 만들어 둠
+let HOLE = null;
+function holeImg(){
+  if (HOLE) return HOLE;
+  const R = 128; HOLE = document.createElement('canvas'); HOLE.width = HOLE.height = R*2;
+  const g = HOLE.getContext('2d'), gr = g.createRadialGradient(R, R, 0, R, R, R);
+  gr.addColorStop(0, 'rgba(0,0,0,1)'); gr.addColorStop(.52, 'rgba(0,0,0,1)'); gr.addColorStop(.78, 'rgba(0,0,0,.45)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, R*2, R*2); return HOLE;
+}
+// 구름: 물체보다 먼저(아래에) 그림. 드러난 칸은 구멍을 뚫어 두므로 사람·나무·바위가 구름에 가려지지 않음
 function renderFog(){
-  const w = world, b = cacheBox;
-  fogC = document.createElement('canvas');
-  fogC.width = Math.ceil(b.w*CS); fogC.height = Math.ceil(b.h*CS);
+  const w = world, home = w.home, pad = home ? 3 : FOG_PAD, b = fogBox = worldBox(w, pad);
+  fogC = fogC || document.createElement('canvas');
+  fogC.width = Math.ceil(b.w*FCS); fogC.height = Math.ceil(b.h*FCS);
   const c = fogC.getContext('2d');
-  c.setTransform(CS,0,0,CS,-b.x*CS,-b.y*CS);
-  const N = w.N, cloud = IMG.cloud, pad = 3;
-  const list = [];
+  c.setTransform(FCS,0,0,FCS,-b.x*FCS,-b.y*FCS);
+  const N = w.N, cloud = IMG.cloud, list = [];
   for (let y=-pad;y<N+pad;y++) for (let x=-pad;x<N+pad;x++){
-    const inside = x>=0&&y>=0&&x<N&&y<N;
+    const inside = x>=0 && y>=0 && x<N && y<N;
     if (inside && w.tiles[y*N+x].rev) continue;
-    list.push([x,y]);
+    list.push([x, y, inside ? 0 : Math.max(-x, -y, x-N+1, y-N+1)]);   // 섬 밖으로 몇 칸인지
   }
-  list.sort((a,b)=>(a[0]+a[1])-(b[0]+b[1]));
-  // 1) 바탕 안개(빈틈 없게)
+  list.sort((a,b2) => (a[0]+a[1]) - (b2[0]+b2[1]));
+  // 1) 바탕 안개(섬 위와 바로 바깥 한 줄만, 빈틈 없게)
   c.fillStyle = '#eef1fb';
-  for (const [x,y] of list){ const p = iso(x,y); diamond(c, p.x, p.y-6, 10); c.fill(); }
-  // 2) 뭉게구름
-  for (const [x,y] of list){ const r = cloudRect(x, y); c.drawImage(cloud, r.x, r.y, r.w, r.h); }
+  for (const [x,y,o] of list){ if (o > 1) continue; const p = iso(x,y); diamond(c, p.x, p.y-6, 10); c.fill(); }
+  // 2) 뭉게구름: 섬 밖으로 갈수록 옅어져 하늘과 자연스럽게 이어짐(곧은 가장자리 없음)
+  for (const [x,y,o] of list){ const a = o <= 1 ? 1 : Math.max(0, 1 - (o-1)/(pad-.6)); if (a <= .02) continue;
+    const r = cloudRect(x, y); c.globalAlpha = a; c.drawImage(cloud, r.x, r.y, r.w, r.h); }
+  c.globalAlpha = 1;
+  // 3) 드러난 칸에 부드러운 구멍(가장자리 칸 아래 섬 옆면도 보이게)
+  c.globalCompositeOperation = 'destination-out';
+  const H = holeImg(), hw = TW*1.7, hh = TH*1.7;
+  for (let y=0;y<N;y++) for (let x=0;x<N;x++){ if (!w.tiles[y*N+x].rev) continue; const p = iso(x,y);
+    c.drawImage(H, p.x - hw/2, p.y - hh/2, hw, hh);
+    if (x === N-1 || y === N-1 || (!home && (isVoid(w.tiles[y*N+x+1]) && x < N-1 || y < N-1 && isVoid(w.tiles[(y+1)*N+x])))) c.drawImage(H, p.x - hw/2, p.y + 46 - hh/2, hw, hh); }
+  c.globalCompositeOperation = 'source-over';
 }
 // 칸마다 정해진 뭉게구름 위치·크기(늘 같은 모양)
 function cloudRect(x, y){
   const cloud = IMG.cloud, p = iso(x,y), h = ((x*73856093) ^ (y*19349663)) >>> 0, j = (h%1000)/1000, k = ((h>>10)%1000)/1000;
   const cw = TW*(1.35 + j*.5), ch = cw * cloud.height / cloud.width;
-  return {x:p.x - cw/2 + (k-.5)*30, y:p.y - ch*.72 + (j-.5)*14, w:cw, h:ch};
+  return {x:p.x - cw/2 + (k-.5)*30, y:p.y - ch*.6 + (j-.5)*14, w:cw, h:ch};
+}
+
+/* ══════════ 절벽 블록·숲 벽 ══════════ */
+const CLIFF_H = {'#':46, '^':86};
+let CLIFF_CACHE = {}, DARK = {};
+// 절벽 한 칸(윗면은 그 지역 땅 무늬, 옆면은 바위색) — 지역·높이·무늬 위치마다 한 번만 그려 둠
+function cliffImg(w, kind, v){
+  const key = w.key + w.tex + kind + v;
+  if (CLIFF_CACHE[key]) return CLIFF_CACHE[key];
+  const H = CLIFF_H[kind], cw = TW + 4, ch = TH + H + 4, c = document.createElement('canvas');
+  c.width = cw; c.height = ch;
+  const g = c.getContext('2d'), ox = cw/2, top = 2, [lite, dark] = w.look.rock, hi = kind === '^';
+  const face = (sx, col, col2) => { g.beginPath(); g.moveTo(ox + sx*TW/2, top + TH/2); g.lineTo(ox, top + TH); g.lineTo(ox, top + TH + H); g.lineTo(ox + sx*TW/2, top + TH/2 + H); g.closePath();
+    const gr = g.createLinearGradient(0, top + TH/2, 0, top + TH + H); gr.addColorStop(0, col); gr.addColorStop(1, col2); g.fillStyle = gr; g.fill(); };
+  face(-1, shade(lite, hi ? -.05 : .05), shade(lite, -.4));
+  face(1, dark, shade(dark, -.45));
+  // 바위 결(가로 줄)과 돌 무늬
+  const rr = rng(hashKey(key));
+  g.lineWidth = 2;
+  for (let k=1; k < (hi ? 3 : 2); k++){ const yy = top + TH/2 + H*k/(hi ? 3 : 2);
+    g.strokeStyle = 'rgba(0,0,0,.13)'; g.beginPath(); g.moveTo(ox - TW/2 + 4, yy + rr()*6); g.lineTo(ox, yy + TH/2 + rr()*4 - 2); g.lineTo(ox + TW/2 - 4, yy + rr()*6); g.stroke(); }
+  for (let k=0;k<9;k++){ const sx = rr() < .5 ? -1 : 1, fx = .15 + rr()*.7, px = ox + sx*TW/2*fx, py = top + TH/2 + (1-fx)*TH/2 + 8 + rr()*(H-14);
+    g.fillStyle = rr() < .5 ? 'rgba(255,255,255,.13)' : 'rgba(0,0,0,.12)'; g.beginPath(); g.ellipse(px, py, 5 + rr()*6, 2.5 + rr()*2.5, 0, 0, 7); g.fill(); }
+  // 윗면: 땅 무늬(높은 절벽은 바위색을 섞음)
+  g.save(); g.beginPath(); g.moveTo(ox, top); g.lineTo(ox + TW/2, top + TH/2); g.lineTo(ox, top + TH); g.lineTo(ox - TW/2, top + TH/2); g.closePath(); g.clip();
+  g.translate(-v*41, -v*29); g.fillStyle = g.createPattern(IMG[w.tex], 'repeat'); g.fillRect(v*41 - 4, v*29 - 4, cw + 8, TH + 12); g.translate(v*41, v*29);
+  g.fillStyle = w.tint; g.fillRect(0, 0, cw, TH + 8);
+  if (hi){ g.fillStyle = shade(lite, -.1); g.globalAlpha = .38; g.fillRect(0, 0, cw, TH + 8); g.globalAlpha = 1; }
+  const tg = g.createLinearGradient(0, top, 0, top + TH); tg.addColorStop(0, 'rgba(255,255,255,.16)'); tg.addColorStop(1, 'rgba(0,0,0,.08)'); g.fillStyle = tg; g.fillRect(0, 0, cw, TH + 8);
+  g.restore();
+  CLIFF_CACHE[key] = c; return c;
+}
+const cellHash = (x, y) => ((x*73856093) ^ (y*19349663)) >>> 0;
+function drawCliff(it){
+  const w = world, N = w.N, t = w.tiles[it.i], H = CLIFF_H[t.hk], p = iso(it.x, it.y), h = cellHash(it.x, it.y);
+  ctx.drawImage(cliffImg(w, t.hk, h % 3), p.x - TW/2 - 2, p.y - TH/2 - H - 2);
+  // 같은 높이 절벽과 맞닿지 않은 윗면 모서리만 선을 그어 덩어리로 보이게
+  const same = (x, y) => { const n = (x>=0 && y>=0 && x<N && y<N) ? w.tiles[y*N+x] : null; return n && n.wall && n.wall !== 'T' && CLIFF_H[n.hk] === H; };
+  const tx = p.x, ty = p.y - H;
+  ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+  ctx.strokeStyle = 'rgba(255,255,255,.4)';
+  if (!same(it.x-1, it.y)){ ctx.beginPath(); ctx.moveTo(tx - TW/2, ty); ctx.lineTo(tx, ty - TH/2); ctx.stroke(); }
+  if (!same(it.x, it.y-1)){ ctx.beginPath(); ctx.moveTo(tx, ty - TH/2); ctx.lineTo(tx + TW/2, ty); ctx.stroke(); }
+  ctx.strokeStyle = 'rgba(40,25,10,.35)';
+  if (!same(it.x, it.y+1)){ ctx.beginPath(); ctx.moveTo(tx - TW/2, ty); ctx.lineTo(tx, ty + TH/2); ctx.stroke(); }
+  if (!same(it.x+1, it.y)){ ctx.beginPath(); ctx.moveTo(tx, ty + TH/2); ctx.lineTo(tx + TW/2, ty); ctx.stroke(); }
+  // 윗면 작은 장식(풀·돌·꽃 등, 칸마다 정해진 자리)
+  if (t.low && h % 8 < 2){ const name = w.look.deco[(h >> 4) % w.look.deco.length], d = OBJS[name], im = IMG[d ? d.img : name];
+    if (im){ const dw = TW * .38 * (d ? Math.min(1, d.w + .1) : 1), dh = dw * im.height / im.width, jx = ((h >> 8) % 30) - 15;
+      ctx.drawImage(im, tx - dw/2 + jx, ty + TH*.12 - dh, dw, dh); } }
+}
+// 어두운 숲 나무(밝은 장애물 나무와 구별되게 미리 어둡게 칠해 둠: iOS 사파리는 그리기 필터를 못 씀)
+function darkImg(name){
+  if (DARK[name]) return DARK[name];
+  const im = IMG[name], c = document.createElement('canvas'); c.width = im.width; c.height = im.height;
+  const g = c.getContext('2d'); g.drawImage(im, 0, 0); g.globalCompositeOperation = 'source-atop'; g.fillStyle = 'rgba(14,40,26,.34)'; g.fillRect(0, 0, c.width, c.height);
+  return DARK[name] = c;
+}
+function drawForest(it, T){
+  const w = world, p = iso(it.x, it.y), h = cellHash(it.x, it.y), list = w.look.forest;
+  const t = w.tiles[it.i], sc = [.92, .74, .56][t.low || 0];   // 길 바로 앞은 작은 나무(뒤쪽 길이 가려지지 않게)
+  for (let k=0;k<2;k++){ const name = list[(h >> (k*5 + 2)) % list.length], d = OBJS[name] || {img:name, w:.9}, im = darkImg(d.img);
+    const wpx = TW * Math.min(1, d.w + .1) * (k ? .88 : 1) * sc, hpx = wpx * im.height / im.width;
+    const ox = (k ? .17 : -.15) * TW + ((h >> 12) % 9 - 4), oy = (k ? .14 : -.12) * TH;
+    ctx.drawImage(im, p.x + ox - wpx/2, p.y + oy + TH*.28 - hpx, wpx, hpx); }
 }
 
 /* ══════════ 오브젝트 스프라이트 크기 ══════════ */
@@ -1530,7 +1693,9 @@ function fogPuffs(cells, cx, cy){
   const c0 = iso(cx, cy);
   for (const [x,y] of cells){
     const r = cloudRect(x, y), p = iso(x, y), dx = p.x - c0.x, dy = p.y - c0.y, d = Math.hypot(dx, dy) || 1;
-    fogFx.push({x, y, r, p, ux:dx/d, uy:dy/d, delay: Math.hypot(x-cx, y-cy) * .09, age:0, life:1.1});
+    const delay = Math.hypot(x-cx, y-cy) * .09;
+    fogFx.push({x, y, r, p, ux:dx/d, uy:dy/d, delay, age:0, life:1.1});
+    const t = world.tiles[y*world.N + x]; if (t && t.fadeAt) t.fadeAt = performance.now() + delay*1000 + 120;   // 그 칸 구름이 걷힐 때 물체가 나타남
   }
   fogFx.sort((a,b) => (a.x+a.y) - (b.x+b.y));
 }
@@ -1659,6 +1824,7 @@ function enter(key){
   world = key === 'home' ? buildHome() : buildRegion(key);
   S.where = key;
   player.x = world.start.x; player.y = world.start.y; player.path = []; player.work = 0; player.target = null;
+  if (!world.home) cascadeReveal(world, true);
   renderGround(); renderFog(); computeReach();
   const p = iso(player.x, player.y); cam.x = p.x; cam.y = p.y - (world.home ? 20 : 60);  cam.z = Math.max(cam.zMin || .35, Math.min(1, world.home ? (W < 700 ? W/900 : Math.min(H/1000, W/1500)) : (W < 700 ? W/680 : W/1100)));
   // 저장된 작업 줄 복구(에너지는 이미 사용됨)
@@ -1673,7 +1839,11 @@ function enter(key){
 function pickObject(wx, wy){
   const w = world, N = w.N, hits = [];
   for (let y=0;y<N;y++) for (let x=0;x<N;x++){
-    const t = w.tiles[y*N+x]; if (!t.o || !t.rev || OBJS[t.o].hidden) continue;
+    const t = w.tiles[y*N+x]; if (!t.o || !t.rev) continue;
+    if (t.wall){ const p = iso(x,y), H = t.wall === 'T' ? TH*1.6*[.92, .74, .56][t.low || 0] : CLIFF_H[t.hk];   // 절벽·숲 벽(앞에 있으면 뒤쪽 칸 대신 벽이 눌림)
+      if (Math.abs(wx - p.x) < TW*.42 && wy > p.y - H - TH*.45 && wy < p.y + TH*.4) hits.push({i:y*N+x, d:x+y-.5});
+      continue; }
+    if (OBJS[t.o].hidden) continue;
     const r = spriteRect(t.o, x, y);
     const mx = r.w*.14, my = r.h*.08;
     if (wx > r.x+mx && wx < r.x+r.w-mx && wy > r.y+my && wy < r.y+r.h) hits.push({i:y*N+x, d:x+y+(fpOf(t.o)-1)*2});
@@ -1689,6 +1859,7 @@ function onTap(sx, sy){
   const hit = pickObject(wx, wy); if (!hit) return;
   const w = world, t = w.tiles[hit.i], x = hit.i % w.N, y = (hit.i / w.N)|0;
   if (!t.rev){ toast('구름 너머는 아직 알 수 없어요'); return; }
+  if (t.o && OBJS[t.o].wall){ toast(t.wet ? (WATER_MSG[t.water] || '건널 수 없어요') : OBJS[t.o].msg); return; }   // 지나갈 수 없는 곳
   if (!t.o){ // 빈 땅: 걸어가기
     if (reach.has(hit.i) && !player.work && !queue.length){ const p = findPath(w, Math.round(player.x), Math.round(player.y), new Set([hit.i])); if (p) player.path = p; }
     return;
@@ -1766,7 +1937,7 @@ function finishWork(){
   floatText(x, y, lines.join('  '), d.rune ? '#ffd54a' : '#fff');
   t.o = null;
   w.region.cleared.push(i);
-  const cells = revealAround(w, x, y, 2.3);
+  const cells = revealAround(w, x, y, 2.3); cells.push(...cascadeReveal(w));
   if (cells.length){ renderFog(); fogPuffs(cells, x, y); }
   computeReach();
   if (d.rune){
@@ -1785,10 +1956,10 @@ function regionComplete(){
     <p><b>${R.name}</b>의 룬 석판 ${CONFIG.runesPerRegion}개를 모두 찾았어요!</p>
     <p><img src="${src('i_gem')}" style="width:26px;vertical-align:middle"> +${CONFIG.regionClearGems}
        &nbsp; <img src="${src('i_coin')}" style="width:26px;vertical-align:middle"> +${CONFIG.regionClearCoins}</p>
-    <p class="hint">계속 남은 곳을 치워도 되고, 새로운 모습의 지역으로 다시 탐험할 수도 있어요.</p>
+    <p class="hint">계속 남은 곳을 치워도 되고, 처음부터 다시 탐험할 수도 있어요(지도는 같고 장애물이 새로 바뀌어요).</p>
     <div class="row-btns"><button class="gbtn" data-close>계속 둘러보기</button><button class="gbtn blue" id="reroll">새 탐험 시작</button></div></div>`);
   document.getElementById('reroll').onclick = () => { const k = world.key; const c = S.regions[k].clears;
-    S.regions[k] = {seed:(Math.random()*1e9)|0, cleared:[], runes:0, clears:c, queue:[]}; closeModal(); enter(k); };
+    S.regions[k] = {layout:LAYOUT_V, cleared:[], runes:0, clears:c, queue:[], fixed:{}}; closeModal(); enter(k); };
 }
 const napLeft = () => S.napTs + napHoursOf(S.bld.tent)*3600e3 - Date.now();
 function nap(){
@@ -1882,8 +2053,11 @@ function draw(dt){
   const sky = ctx.createLinearGradient(0,0,0,H); sky.addColorStop(0,'#aad8f2'); sky.addColorStop(1,'#e6f2fb');
   ctx.fillStyle = sky; ctx.fillRect(0,0,W,H);
   ctx.setTransform(DPR*cam.z,0,0,DPR*cam.z, DPR*(W/2 - cam.x*cam.z), DPR*(H/2 - cam.y*cam.z));
-  const b = cacheBox;
+  const b = cacheBox, fb = fogBox, now = performance.now();
   ctx.drawImage(groundC, b.x, b.y, b.w, b.h);
+  // 구름은 물체보다 먼저(아래에) 그림: 드러난 칸에는 구멍이 뚫려 있어 사람·나무·바위가 구름에 가려지지 않음
+  ctx.drawImage(fogC, fb.x, fb.y, fb.w, fb.h);
+  drawFogFx(dt);
 
   // 화면에 보이는 범위만
   const vx0 = cam.x - W/2/cam.z - TW*1.5, vx1 = cam.x + W/2/cam.z + TW*1.5, vy0 = cam.y - H/2/cam.z - TH*6, vy1 = cam.y + H/2/cam.z + TH*3;
@@ -1901,7 +2075,12 @@ function draw(dt){
     ctx.fillStyle = 'rgba(110,224,74,.28)'; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke(); }
   const qIdx = new Map(queue.map((q,n)=>[q.i,n]));
   for (const it of items){
+    ctx.globalAlpha = 1;
     if (it.pl){ drawPlayer(T); continue; }
+    const tt = w.tiles[it.i];
+    if (tt.fadeAt){ const fa = (now - tt.fadeAt) / 550; if (fa >= 1) tt.fadeAt = 0; else ctx.globalAlpha = Math.max(0, fa); }   // 구름이 걷히며 서서히 나타남
+    if (it.o === '_cliff'){ drawCliff(it); continue; }
+    if (it.o === '_forest'){ drawForest(it, T); continue; }
     const d = OBJS[it.o], big = fpOf(it.o) === 2;
     if (it.o === 'field'){ drawField(it, T); continue; }
     const im = IMG[imgOf(it.o, it.x, it.y)];
@@ -1943,8 +2122,8 @@ function draw(dt){
     if (qIdx.has(it.i)) later(drawCostBubble, p.x, r.y + r.h*.35, d.cost, qIdx.get(it.i)+1, true);
     else if (hov) later(drawCostBubble, p.x, r.y + r.h*.35, d.cost, 0, S.energy >= d.cost && standSpots(it.i).size > 0);
   }
-  ctx.drawImage(fogC, b.x, b.y, b.w, b.h);
-  drawFogFx(dt);
+  ctx.globalAlpha = 1;
+  if (!w.home) drawPlayer(T, true);   // 절벽·나무 뒤에 있어도 흐린 모습으로 보이게
   // 수리 지점 표시(망치) + 돋보기 화살표
   for (const i of (w.spots||[])){ const t = w.tiles[i]; if (!t.rev || !OBJS[t.o].repair) continue;
     const p = iso(i%N, (i/N)|0); later(drawReady, p.x, p.y - TH*1.2, 'i_plank', 0, T); }
@@ -1955,18 +2134,21 @@ function draw(dt){
   const L = LATER; LATER = null; for (const f of L) f();
   drawFx(dt);
 }
-function drawPlayer(T){
+function drawPlayer(T, ghost){
   const im = IMG.explorer, p = iso(player.x, player.y);
-  const h = TH*2.25, w = h * im.width / im.height;
+  const h = TH*2.1, w = h * im.width / im.height;
   const moving = player.path.length > 0, working = player.work > 0;
-  const bob = moving ? Math.abs(Math.sin(T*12))*5 : 0;
-  ctx.fillStyle = 'rgba(20,30,10,.3)'; ctx.beginPath(); ctx.ellipse(p.x, p.y+4, w*.4, 8, 0, 0, 7); ctx.fill();
-  ctx.save(); ctx.translate(p.x, p.y + 6 - bob);
+  const ph = T*12, bob = moving ? Math.abs(Math.sin(ph))*7 : 0;
+  // 걸을 때 통통 튀며 살짝 눌렸다 늘어나고, 서 있을 때는 숨 쉬듯 움직임
+  const sq = moving ? 1 + Math.cos(ph*2)*.05 : 1 + Math.sin(T*2.6)*.018;
+  if (!ghost){ ctx.fillStyle = 'rgba(20,30,10,.3)'; ctx.beginPath(); ctx.ellipse(p.x, p.y+4, w*.36*(1 - bob/40), 8, 0, 0, 7); ctx.fill(); }
+  ctx.save(); if (ghost) ctx.globalAlpha = .3;
+  ctx.translate(p.x, p.y + 6 - bob);
   if (working) ctx.rotate(Math.sin(T*14)*.08*player.face);
-  ctx.scale(player.face, 1);
+  ctx.scale(player.face / Math.sqrt(sq), sq);
   ctx.drawImage(im, -w/2, -h, w, h);
   ctx.restore();
-  if (working){ // 작업 게이지
+  if (working && !ghost){ // 작업 게이지
     const pr = Math.min(1, player.workT/player.work);
     ctx.fillStyle = 'rgba(0,0,0,.55)'; roundRect(p.x-28, p.y-h-20, 56, 10, 5); ctx.fill();
     ctx.fillStyle = '#6ee04a'; roundRect(p.x-26, p.y-h-18, 52*pr, 6, 3); ctx.fill();
@@ -2158,7 +2340,7 @@ function updateQuest(){
   q.classList.toggle('hidden', !world || world.home);
   if (!world || world.home) return;
   const R = REGIONS[world.key], st = world.region;
-  const total = world.tiles.length, open = world.tiles.filter(t=>t.rev).length;
+  const total = world.landTotal || world.tiles.length, open = world.tiles.filter(t => t.rev && !t.wall && !t.wet).length;   // 탐험 %: 지나갈 수 있는 땅만 셈
   if (R.event){ q.innerHTML = `<h4>${R.name}</h4><div class="row"><img src="${src('i_medal')}"> 메달 <b>${S.event.medals}</b></div>
     <div class="row"><img src="${src('u_trophy')}"> 남은 ${fmtDays(evLeft())}</div><div class="row"><button class="gbtn gold" id="qFest" style="padding:3px 10px;font-size:13px">트로피 보기</button></div>`;
     document.getElementById('qFest').onclick = openEvent; return; }
@@ -2386,7 +2568,7 @@ function openRepair(sIdx){
     st.fixed = st.fixed || {}; st.fixed[sIdx] = 1;
     const ti = world.spots[sIdx], x = ti % world.N, y = (ti / world.N)|0;
     world.tiles[ti].o = 'done_' + rp.kind; burst(x, y, '#ffd23a', 30); sfx('build'); floatText(x, y, `${rp.name} 완성!`, '#ffe36a');
-    const cells = revealAround(world, x, y, 3.2); if (cells.length){ renderFog(); fogPuffs(cells, x, y); } computeReach();
+    const cells = revealAround(world, x, y, 3.2); cells.push(...cascadeReveal(world)); if (cells.length){ renderFog(); fogPuffs(cells, x, y); } computeReach();
     closeModal(); gainXP(25); checkQuestReady(); updateQuest(); save(); };
 }
 
@@ -2432,15 +2614,15 @@ function renderQuestBtns(){
    회차마다 주제가 차례로 바뀜: 달빛 → 벚꽃 → 여름 바다 → 가을 수확 → 겨울 눈꽃 → 다시 달빛 …
    extra = 그 주제에만 섞여 나오는 장애물(메달은 등불·선물 상자에서 나옴) */
 const FEST_THEMES = [
-  {key:'moon', decor:'moonarch',   name:'달빛 축제',      island:'달빛 축제 섬',   short:'달빛',   img:'m_fest',        tex:'t_meadow', tint:'rgba(120,80,200,.10)',
+  {key:'moon', forest:['oak','spruce','oak'], decor:'moonarch',   name:'달빛 축제',      island:'달빛 축제 섬',   short:'달빛',   img:'m_fest',        tex:'t_meadow', tint:'rgba(120,80,200,.10)',
    extra:{flowers:14, berrybush:10, oak:6, log:8}},
-  {key:'spring', decor:'pavilion', name:'벚꽃 축제',      island:'벚꽃 축제 섬',   short:'벚꽃',   img:'m_fest_spring', tex:'t_grass',  tint:'rgba(255,150,200,.12)',
+  {key:'spring', forest:['cherry','bamboo'], decor:'pavilion', name:'벚꽃 축제',      island:'벚꽃 축제 섬',   short:'벚꽃',   img:'m_fest_spring', tex:'t_grass',  tint:'rgba(255,150,200,.12)',
    extra:{cherry:16, flowers:14, bamboo:6}},
-  {key:'summer', decor:'sandcastle', name:'여름 바다 축제', island:'여름 바다 섬',   short:'파도',   img:'m_fest_summer', tex:'t_sand',   tint:'rgba(60,170,230,.08)',
+  {key:'summer', forest:['palm'], decor:'sandcastle', name:'여름 바다 축제', island:'여름 바다 섬',   short:'파도',   img:'m_fest_summer', tex:'t_sand',   tint:'rgba(60,170,230,.08)',
    extra:{palm:14, shells:12, driftwood:8}},
-  {key:'autumn', decor:'scarecrow', name:'가을 수확 축제', island:'가을 수확 섬',   short:'수확',   img:'m_fest_autumn', tex:'t_autumn', tint:'rgba(0,0,0,0)',
+  {key:'autumn', forest:['maple','maple','oak'], decor:'scarecrow', name:'가을 수확 축제', island:'가을 수확 섬',   short:'수확',   img:'m_fest_autumn', tex:'t_autumn', tint:'rgba(0,0,0,0)',
    extra:{maple:14, pumpkins:14, oak:4}},
-  {key:'winter', decor:'snowman', name:'겨울 눈꽃 축제', island:'겨울 눈꽃 섬',   short:'눈꽃',   img:'m_fest_winter', tex:'t_snow',   tint:'rgba(0,0,0,0)',
+  {key:'winter', forest:['spruce'], decor:'snowman', name:'겨울 눈꽃 축제', island:'겨울 눈꽃 섬',   short:'눈꽃',   img:'m_fest_winter', tex:'t_snow',   tint:'rgba(0,0,0,0)',
    extra:{spruce:14, icerock:12, log:6}},
 ];
 const FEST_BASE = {lantern:18, giftbox:5, twigpile:12, boulder:8};
@@ -2465,25 +2647,12 @@ function evCheck(){   // 새 회차가 되면 기록·섬 초기화
   if (S.event.w !== w){ S.event = {w, medals:0, claimed:[]}; delete S.regions.fest; save(); }
 }
 function fmtDays(ms){ const h = Math.floor(ms/3600e3), d = Math.floor(h/24); return d ? `${d}일 ${h%24}시간` : `${h}시간 ${Math.floor(ms/60000)%60}분`; }
-const FEST_STAGE = [11, 8];
 function buildFestival(){
   evCheck();
-  const R = REGIONS.fest, wk = S.event.w;
-  let st = S.regions.fest;
-  if (!st || st.wk !== wk) st = S.regions.fest = {wk, cleared:[], runes:0, clears:0, queue:[]};
-  const N = CONFIG.mapSize, r = rng((wk * 7919 + 13) >>> 0), tiles = [], start = {x:11, y:19};
-  for (let y=0;y<N;y++) for (let x=0;x<N;x++){ const d = Math.hypot(x-start.x, y-start.y);
-    tiles.push({o: d > 1.6 && r() < 0.86 ? pickW(R.mix, r) : null, rev:false, seed:r()}); }
-  tiles[19*N+9].o = 'tent_camp';
-  const w = {key:'fest', N, tiles, start, tex:R.tex, tint:R.tint, region:st, home:false, spots:[]};
-  // 출발점 → 축제 무대로 가는 흙길(무대는 섬 한가운데)
-  const light = ['lantern','flowers', null, null, null, null, null];
-  for (let y=start.y-2; y>=FEST_STAGE[1]+1; y--){ const t = tiles[y*N+start.x]; t.path = true; t.o = light[Math.floor(r()*light.length)]; }
-  const si = FEST_STAGE[1]*N + FEST_STAGE[0]; tiles[si].o = (st.fixed||{})[0] ? 'done_stage' : 'fix_stage'; tiles[si].spot = 0; w.spots[0] = si;
-  for (const i of st.cleared) if (!OBJS[tiles[i].o] || !OBJS[tiles[i].o].fixed) tiles[i].o = null;
-  revealAround(w, start.x, start.y, 3.2);
-  for (const i of st.cleared) revealAround(w, i % N, (i / N)|0, 2.3);
-  return w;
+  const R = REGIONS.fest, wk = S.event.w, th = festTheme();
+  if (S.regions.fest && S.regions.fest.wk !== wk) delete S.regions.fest;   // 새 회차는 처음부터
+  const st = regionState('fest', {wk});
+  return buildLayoutWorld('fest', LAYOUTS.fest, R, {...LOOK.fest, forest:th.forest || LOOK.fest.forest}, st, (wk * 7919 + 13) >>> 0);
 }
 function festComplete(rw){
   sfx('level'); updateHUD();
