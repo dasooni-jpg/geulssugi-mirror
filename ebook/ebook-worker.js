@@ -244,6 +244,17 @@ body.nopv .pv,body.pane-cover .pv{display:none}
 .sw.pick{overflow:hidden;background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red)}
 .sw.pick input{opacity:0;width:100%;height:100%;cursor:pointer}
 .sizedot{display:inline-block;border-radius:50%;background:var(--ink);vertical-align:middle;margin-left:6px}
+.pens.sh{grid-template-columns:repeat(3,1fr)}
+.pen svg{width:22px;height:22px}
+.studio{position:fixed;inset:0;z-index:95;background:var(--bg);display:flex;flex-direction:column}
+.st-h{height:58px;flex:none;display:flex;align-items:center;gap:10px;padding:0 16px;background:var(--surface);border-bottom:1px solid var(--line);overflow-x:auto}
+.st-h b{font-size:15px;white-space:nowrap}
+.st-h .nm{color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:26vw}
+.st-b{flex:1;display:grid;grid-template-columns:288px minmax(0,1fr);min-height:0}
+.st-tools{background:var(--surface);border-right:1px solid var(--line);padding:16px;overflow:auto}
+.st-stage{display:flex;align-items:center;justify-content:center;padding:20px;min-height:0;background:radial-gradient(circle at 50% 40%,#eceae4,#dedad2)}
+#stCanvas{display:block;max-width:100%;max-height:100%;background:#fff;box-shadow:0 6px 14px rgba(0,0,0,.12),0 20px 44px rgba(30,25,15,.22);touch-action:none;cursor:crosshair;border-radius:3px}
+@media (max-width:820px){.st-b{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}.st-tools{max-height:36vh;border-right:none;border-bottom:1px solid var(--line)}}
 .bigpick{flex-direction:column!important;gap:4px!important;height:118px!important;margin-top:0!important}
 .bigpick b{font-size:14px;color:var(--ink)}
 .bigpick small{font-size:12px}
@@ -484,12 +495,7 @@ body.nopv .pv,body.pane-cover .pv{display:none}
               <input type="file" id="fileCover" accept="image/*" hidden>
             </div>
             <div class="cd-sec" id="cd-draw">
-              <div class="lbl">도구</div>
-              <div class="pens" id="pens"></div>
-              <div class="lbl" style="margin-top:16px">색</div>
-              <div class="swatches" id="penColors"></div>
-              <div class="field" style="margin-top:16px"><label>굵기 <span class="sizedot" id="penDot"></span></label><input type="range" class="range" id="penSize" min="2" max="120"></div>
-              <div class="row"><button class="btn sm" id="btnUndo" data-i="undo">되돌리기</button><button class="btn sm" id="btnRedo" data-i="redo">다시</button><button class="btn sm danger" id="btnClearDraw" data-i="trash">모두 지우기</button></div>
+              <div id="coverTools"></div>
               <label class="check" style="margin-top:12px"><input type="checkbox" id="drawTop"><span>제목·스티커 위에 그리기<small>끄면 그림이 글자 뒤로 들어감</small></span></label>
               <div class="help">이 탭이 열려 있는 동안 표지 위에 손가락이나 펜슬로 그림. 펜슬을 쓰면 손바닥이 화면에 닿아도 선이 그어지지 않음. 넓게 그리려면 레이아웃에서 <b>도화지</b>를 고름.</div>
             </div>
@@ -525,7 +531,7 @@ body.nopv .pv,body.pane-cover .pv{display:none}
           <button class="tb" data-fmt="quote" title="인용">인용</button>
           <button class="tb" data-fmt="hr" title="장면 나눔">✱✱✱</button>
         </div>
-        <div class="grp"><button class="tb" id="tbImg" data-i="image" title="그림 넣기">그림</button></div>
+        <div class="grp"><button class="tb" id="tbImg" data-i="image" title="그림 넣기">그림</button><button class="tb" id="tbDraw" data-i="pen" title="이 장의 그림을 직접 그리기">그리기</button></div>
       </div>
       <div class="paper">
         <div class="kind" id="msKind"></div>
@@ -630,6 +636,24 @@ body.nopv .pv,body.pane-cover .pv{display:none}
   <p class="mbox-sub">이 기기에서 만든 책을 문집에 넣음.</p>
   <div class="mbox-b"><div id="pickList"></div><div class="row" style="margin-top:16px;justify-content:flex-end"><button class="btn primary" id="btnPickOk">넣기</button></div></div>
 </div></div>
+
+<!-- 그림판: 본문 장 그림을 직접 그림 -->
+<div class="studio" id="studio" hidden>
+  <div class="st-h">
+    <b>그림판</b><span class="nm" id="stName"></span><span class="spacer"></span>
+    <div class="seg" id="stSize"><button data-sz="land">가로</button><button data-sz="port">세로</button><button data-sz="sq">정사각</button></div>
+    <button class="btn" id="stPhoto" data-i="camera">사진 깔기</button>
+    <button class="btn danger" id="stPhotoDel" hidden>사진 빼기</button>
+    <button class="btn" id="stCancel">취소</button>
+    <button class="btn primary" id="stSave" data-i="download">그림 넣기</button>
+  </div>
+  <div class="st-b">
+    <aside class="st-tools"><div id="studioTools"></div>
+      <div class="help" style="margin-top:12px">손가락·펜슬·마우스로 그림. <b>사진 깔기</b>로 패드 사진을 밑그림으로 깔고 그 위에 그릴 수 있음. 다 그리면 <b>그림 넣기</b>를 누름. 나중에 다시 열어 고칠 수 있음.</div></aside>
+    <div class="st-stage"><canvas id="stCanvas" width="1200" height="900"></canvas></div>
+  </div>
+  <input type="file" id="stFile" accept="image/*" hidden>
+</div>
 
 <div class="toast" id="toast"></div>
 <iframe id="printFrame" style="position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden" title="인쇄용"></iframe>
@@ -794,7 +818,20 @@ const THEMES = {
   berry:  { name:'자두',  c1:'#9b4f96', c2:'#4e2155', ink:'#ffffff', accent:'#7c3a7a', paper:'#fdfafd', desk:'#3e2a40' }
 };
 const LAYOUTS = { band:'그림 + 띠', full:'그림 가득', frame:'액자', split:'위아래 나눔', minimal:'미니멀', plain:'글자만', paper:'도화지' };
-const PENS = { pencil:{ name:'연필', w:5, a:.9 }, pen:{ name:'펜', w:12, a:1 }, marker:{ name:'마커', w:40, a:.45 }, eraser:{ name:'지우개', w:44, a:1 } };
+const TOOLS = {
+  pencil:{ name:'연필', kind:'free', w:5, a:.9 }, pen:{ name:'펜', kind:'free', w:12, a:1 },
+  marker:{ name:'마커', kind:'free', w:40, a:.45 }, eraser:{ name:'지우개', kind:'free', w:44, a:1 },
+  fill:{ name:'채우기', kind:'fill' }, line:{ name:'직선', kind:'shape', w:10 }, rect:{ name:'네모', kind:'shape', w:10 },
+  ellipse:{ name:'동그라미', kind:'shape', w:10 }, star:{ name:'별', kind:'shape', w:10 }, heart:{ name:'하트', kind:'shape', w:10 }
+};
+const TOOL_SVG = {
+  fill:'<path d="M19 11l-8-8-8.5 8.5a2 2 0 0 0 0 2.8l5.2 5.2a2 2 0 0 0 2.8 0L19 11z"/><path d="M20 15s2 2.2 2 3.5a2 2 0 0 1-4 0c0-1.3 2-3.5 2-3.5z"/>',
+  line:'<line x1="4" y1="20" x2="20" y2="4"/>', rect:'<rect x="4" y="6" width="16" height="12" rx="1"/>',
+  ellipse:'<ellipse cx="12" cy="12" rx="9" ry="7"/>',
+  star:'<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+  heart:'<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>'
+};
+const STUDIO_SIZES = { land:[1200, 900], port:[900, 1200], sq:[1000, 1000] };
 const PEN_COLORS = ['#1c1f24','#ffffff','#868e96','#8b4513','#c92a2a','#e8590c','#f59f00','#ffd43b','#2b8a3e','#82c91e','#1c7ed6','#4dabf7','#7048e8','#d6336c','#f783ac','#e9c46a'];
 const PHOTO_FRAMES = { none:'그대로', round:'둥근', white:'흰 테두리', polaroid:'폴라로이드', circle:'동그라미' };
 const PATTERNS = { none:'없음', dots:'물방울', stripes:'사선', grid:'모눈', waves:'물결', confetti:'색종이', stars:'별' };
@@ -1338,7 +1375,7 @@ async function drawCover(b, canvas, opt = {}) {
       A = { x: W / 2, y: H - 120, align: 'center', color: th.ink };
     }
   }
-  if (!dr.top) renderDrawing(ctx, dr, opt.live);
+  if (!dr.top) renderDrawing(ctx, dr, opt.live, W, H);
   // 사용자 설정 덮어쓰기
   const al = cv.titleAlign;
   if (al && al !== 'auto') {
@@ -1383,7 +1420,7 @@ async function drawCover(b, canvas, opt = {}) {
 
   // 스티커
   for (const s of cv.stickers) drawSticker(ctx, s, photoIms.get(s.id));
-  if (dr.top) renderDrawing(ctx, dr, opt.live);
+  if (dr.top) renderDrawing(ctx, dr, opt.live, W, H);
   // 책등 그림자
   const sp = ctx.createLinearGradient(0, 0, 36, 0); sp.addColorStop(0, 'rgba(0,0,0,.22)'); sp.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = sp; ctx.fillRect(0, 0, 36, H);
@@ -1405,27 +1442,97 @@ async function drawCover(b, canvas, opt = {}) {
   canvas._hits = hits;
   return canvas;
 }
-/* 그리기 층: 지우개가 배경을 지우지 않도록 따로 그린 뒤 얹음 */
+/* ═══ 그리기 엔진 (표지·그림판 공용) ═══
+   획 종류: 자유선(연필·펜·마커·지우개) / 도형(shape) / 채우기(fill)
+   지우개가 배경을 지우지 않도록 그림은 따로 된 층에 그린 뒤 얹음 */
 const drawLayer = document.createElement('canvas');
-function renderDrawing(ctx, dr, live) {
-  const strokes = live ? dr.strokes.concat([live]) : dr.strokes;
-  if (!strokes.length) return;
-  drawLayer.width = 1000; drawLayer.height = 1414;
-  const x = drawLayer.getContext('2d');
-  x.lineCap = 'round'; x.lineJoin = 'round';
-  for (const s of strokes) {
-    const p = s.p, n = p.length / 2; if (!n) continue;
-    x.globalCompositeOperation = s.t === 'eraser' ? 'destination-out' : 'source-over';
-    x.globalAlpha = (PENS[s.t] || PENS.pen).a;
-    x.strokeStyle = x.fillStyle = s.c; x.lineWidth = s.w;
-    x.beginPath();
-    if (n === 1) { x.arc(p[0], p[1], s.w / 2, 0, 7); x.fill(); continue; }
-    x.moveTo(p[0], p[1]);
-    for (let i = 1; i < n - 1; i++) x.quadraticCurveTo(p[2 * i], p[2 * i + 1], (p[2 * i] + p[2 * i + 2]) / 2, (p[2 * i + 1] + p[2 * i + 3]) / 2);
-    x.lineTo(p[2 * n - 2], p[2 * n - 1]);
-    x.stroke();
+const layerCache = [];
+function freePath(x, p) {
+  const n = p.length / 2;
+  x.beginPath();
+  if (n === 1) { x.arc(p[0], p[1], x.lineWidth / 2, 0, 7); return true; }
+  x.moveTo(p[0], p[1]);
+  for (let i = 1; i < n - 1; i++) x.quadraticCurveTo(p[2 * i], p[2 * i + 1], (p[2 * i] + p[2 * i + 2]) / 2, (p[2 * i + 1] + p[2 * i + 3]) / 2);
+  x.lineTo(p[2 * n - 2], p[2 * n - 1]);
+  return false;
+}
+function shapePath(x, s) {
+  const [x1, y1, x2, y2] = s.a, cx = (x1 + x2) / 2, cy = (y1 + y2) / 2;
+  const rx = Math.max(1, Math.abs(x2 - x1) / 2), ry = Math.max(1, Math.abs(y2 - y1) / 2);
+  x.beginPath();
+  if (s.k === 'line') { x.moveTo(x1, y1); x.lineTo(x2, y2); return; }
+  if (s.k === 'rect') { x.rect(Math.min(x1, x2), Math.min(y1, y2), rx * 2, ry * 2); return; }
+  if (s.k === 'ellipse') { x.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); return; }
+  x.save(); x.translate(cx, cy); x.scale(rx, ry);
+  if (s.k === 'star') { x.translate(0, 0.1); starPath(x, 0, 0, 1.05, 0.45, 5); }
+  else { // heart
+    x.moveTo(0, 1); x.bezierCurveTo(-0.15, 0.82, -1, 0.3, -1, -0.3); x.bezierCurveTo(-1, -0.85, -0.35, -1.05, 0, -0.55);
+    x.bezierCurveTo(0.35, -1.05, 1, -0.85, 1, -0.3); x.bezierCurveTo(1, 0.3, 0.15, 0.82, 0, 1); x.closePath();
   }
-  x.globalCompositeOperation = 'source-over'; x.globalAlpha = 1;
+  x.restore();
+}
+/* 채우기 통: 그린 선으로 둘러싸인 곳을 칠함(그림 층 기준) */
+function floodFill(x, sx, sy, hex, W, H) {
+  sx = Math.round(sx); sy = Math.round(sy);
+  if (sx < 0 || sy < 0 || sx >= W || sy >= H) return;
+  const img = x.getImageData(0, 0, W, H), d = img.data;
+  const n = parseInt(hex.slice(1), 16), R = n >> 16 & 255, G = n >> 8 & 255, B = n & 255;
+  const i0 = (sy * W + sx) * 4, tr = d[i0], tg = d[i0 + 1], tb = d[i0 + 2], ta = d[i0 + 3];
+  if (ta > 250 && Math.abs(tr - R) + Math.abs(tg - G) + Math.abs(tb - B) < 6) return;
+  const clear = ta < 128;
+  const ok = (q) => { const i = q * 4, a = d[i + 3]; return clear ? a < 128 : (a >= 128 && Math.abs(d[i] - tr) + Math.abs(d[i + 1] - tg) + Math.abs(d[i + 2] - tb) < 100); };
+  const mark = new Uint8Array(W * H), stack = [sy * W + sx];
+  while (stack.length) {
+    const q = stack.pop(); if (mark[q] || !ok(q)) continue;
+    const y = (q / W) | 0, row = y * W; let l = q, r = q;
+    while (l > row && !mark[l - 1] && ok(l - 1)) l--;
+    while (r < row + W - 1 && !mark[r + 1] && ok(r + 1)) r++;
+    for (let k = l; k <= r; k++) {
+      mark[k] = 1;
+      if (y > 0 && !mark[k - W] && ok(k - W)) stack.push(k - W);
+      if (y < H - 1 && !mark[k + W] && ok(k + W)) stack.push(k + W);
+    }
+  }
+  for (let q = 0; q < W * H; q++) if (mark[q] === 1) { const i = q * 4; d[i] = R; d[i + 1] = G; d[i + 2] = B; d[i + 3] = 255; }
+  // 선 가장자리(반투명 테두리)와 칠 사이 빈틈을 메움
+  for (let q = 0; q < W * H; q++) {
+    if (mark[q] !== 1) continue;
+    for (const v of [q - 1, q + 1, q - W, q + W]) {
+      if (v < 0 || v >= W * H || mark[v]) continue;
+      const i = v * 4, a = d[i + 3] / 255; if (a >= 1) continue;
+      d[i] = d[i] * a + R * (1 - a); d[i + 1] = d[i + 1] * a + G * (1 - a); d[i + 2] = d[i + 2] * a + B * (1 - a); d[i + 3] = 255; mark[v] = 2;
+    }
+  }
+  x.putImageData(img, 0, 0);
+}
+function drawStroke(x, s, W, H) {
+  if (s.t === 'fill') return floodFill(x, s.x, s.y, s.c, W, H);
+  x.save(); x.lineCap = 'round'; x.lineJoin = 'round';
+  x.globalCompositeOperation = s.t === 'eraser' ? 'destination-out' : 'source-over';
+  x.globalAlpha = s.t === 'shape' ? 1 : (TOOLS[s.t] || TOOLS.pen).a;
+  x.strokeStyle = x.fillStyle = s.c; x.lineWidth = s.w;
+  if (s.t === 'shape') { shapePath(x, s); if (s.f && s.k !== 'line') x.fill(); x.stroke(); }
+  else if (s.p && s.p.length) { if (freePath(x, s.p)) x.fill(); else x.stroke(); }
+  x.restore();
+}
+/* 다 그린 획은 한 번만 그려 두고(캐시) 다시 씀 — 채우기가 많아도 빠르게 */
+function committedLayer(dr, W, H) {
+  const arr = dr.strokes, n = arr.length, last = arr[n - 1];
+  let e = layerCache.find(c => c.dr === dr);
+  if (e && e.arr === arr && e.n === n && e.last === last && e.W === W && e.H === H) return e.cv;
+  if (!e) { e = { dr, cv: document.createElement('canvas') }; layerCache.unshift(e); if (layerCache.length > 3) layerCache.pop(); }
+  e.cv.width = W; e.cv.height = H;
+  const x = e.cv.getContext('2d', { willReadFrequently: true });
+  for (const st of arr) drawStroke(x, st, W, H);
+  Object.assign(e, { arr, n, last, W, H });
+  return e.cv;
+}
+function renderDrawing(ctx, dr, live, W = 1000, H = 1414) {
+  if (!dr || (!dr.strokes.length && !live)) return;
+  const L = committedLayer(dr, W, H);
+  if (!live) { ctx.drawImage(L, 0, 0); return; }
+  drawLayer.width = W; drawLayer.height = H;
+  const x = drawLayer.getContext('2d'); x.drawImage(L, 0, 0); drawStroke(x, live, W, H);
   ctx.drawImage(drawLayer, 0, 0);
 }
 /* 뒤표지: 책 소개 */
@@ -1741,7 +1848,7 @@ function setPane(p) {
   $$('.pane').forEach(x => x.classList.toggle('on', x.id === 'pane-' + p));
   document.body.classList.toggle('pane-cover', p === 'cover');
   renderChList();
-  if (p === 'cover') { redoStack = []; renderCoverTools(); setCdTab(cdTab); }
+  if (p === 'cover') { coverCtl.redo = []; renderCoverTools(); setCdTab(cdTab); }
   if (p === 'write') renderWriter();
   if (p === 'style') renderStyle();
   if (p === 'info') renderInfo();
@@ -1892,8 +1999,8 @@ function renderWriter() {
   $('#layGrp').innerHTML = isPart ? '<span class="tb" style="cursor:default;color:var(--muted)">구분 쪽</span>' :
     Object.entries(CH_LAYOUTS).map(([k, n]) => \`<button class="tb \${(c.layout || 'normal') === k ? 'on' : ''}" data-lay="\${k}">\${n}</button>\`).join('');
   $('#msImgBox').innerHTML = c.image
-    ? \`<div class="ms-img"><img src="\${c.image}" alt=""><div class="ops"><button class="btn sm" data-img="change">바꾸기</button><button class="btn sm danger" data-img="del">지우기</button></div></div>\`
-    : \`<button class="ms-addimg" data-img="add">\${icon('image')} \${isPart ? '구분 쪽 그림 넣기 (선택)' : '그림 넣기 (선택)'}</button>\`;
+    ? \`<div class="ms-img"><img src="\${c.image}" alt=""><div class="ops"><button class="btn sm" data-img="draw">\${icon('pen', 's')}\${c.drawing ? '그림 고치기' : '위에 그리기'}</button><button class="btn sm" data-img="change">바꾸기</button><button class="btn sm danger" data-img="del">지우기</button></div></div>\`
+    : \`<div class="row" style="flex-wrap:nowrap;gap:10px"><button class="ms-addimg" data-img="add">\${icon('image')} \${isPart ? '구분 쪽 그림 넣기' : '사진·그림 넣기'}</button><button class="ms-addimg" data-img="draw">\${icon('pen')} 직접 그리기</button></div>\`;
   updateStatus(); autosize();
 }
 function updateStatus() {
@@ -1909,12 +2016,96 @@ $('#chBody').addEventListener('input', e => { book.chapters[curCh].body = e.targ
 $('#layGrp').addEventListener('click', e => { const b = e.target.closest('[data-lay]'); if (!b) return; book.chapters[curCh].layout = b.dataset.lay; renderWriter(); touch({ cover: false }); });
 $('#msImgBox').addEventListener('click', e => {
   const b = e.target.closest('[data-img]'); if (!b) return;
-  if (b.dataset.img === 'del') { book.chapters[curCh].image = null; renderWriter(); touch({ cover: false }); }
+  if (b.dataset.img === 'del') { const c = book.chapters[curCh]; c.image = null; delete c.drawing; renderWriter(); touch({ cover: false }); }
+  else if (b.dataset.img === 'draw') openStudio(curCh);
   else $('#fileCh').click();
 });
 $('#tbImg').onclick = () => $('#fileCh').click();
+$('#tbDraw').onclick = () => openStudio(curCh);
+
+/* ═══════════ 그림판 (본문 장 그림 직접 그리기) ═══════════ */
+const st = { i: -1, dr: null, dirty: false };
+const stCanvas = $('#stCanvas');
+const stSize = () => [st.dr.w, st.dr.h];
+let stRaf = 0;
+function stDraw() {
+  if (stRaf) return;
+  stRaf = requestAnimationFrame(async () => { stRaf = 0; await paintStudio(stCanvas, studioCtl.live); });
+}
+async function paintStudio(cv, live) {
+  const { w: W, h: H, bg } = st.dr;
+  if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+  const x = cv.getContext('2d');
+  x.fillStyle = '#fff'; x.fillRect(0, 0, W, H);
+  const im = await loadImg(bg);
+  if (im) { const r = Math.min(W / im.width, H / im.height); x.drawImage(im, (W - im.width * r) / 2, (H - im.height * r) / 2, im.width * r, im.height * r); }
+  renderDrawing(x, st.dr, live, W, H);
+  return cv;
+}
+const studioCtl = makeDrawCtl({
+  root: $('#studioTools'), canvas: stCanvas, size: stSize, dr: () => st.dr,
+  live: stDraw, commit: () => { st.dirty = true; stDraw(); }
+});
+function renderStudioBar() {
+  const k = Object.entries(STUDIO_SIZES).find(([, v]) => v[0] === st.dr.w && v[1] === st.dr.h);
+  $$('#stSize button').forEach(b => b.classList.toggle('on', k && b.dataset.sz === k[0]));
+  $('#stPhotoDel').hidden = !st.dr.bg;
+  $('#stPhoto').lastChild.textContent = st.dr.bg ? '사진 바꾸기' : '사진 깔기';
+}
+async function openStudio(i) {
+  const c = book.chapters[i]; if (!c) return;
+  st.i = i; st.dirty = false; studioCtl.redo = []; studioCtl.live = null;
+  if (c.drawing && Array.isArray(c.drawing.strokes)) st.dr = clone(c.drawing);
+  else {
+    st.dr = { w: 1200, h: 900, bg: c.image || null, strokes: [] };
+    const im = await loadImg(c.image);
+    if (im) { const r = im.width / im.height; [st.dr.w, st.dr.h] = STUDIO_SIZES[r > 1.15 ? 'land' : r < 0.87 ? 'port' : 'sq']; }
+    else if (c.layout === 'picture') [st.dr.w, st.dr.h] = STUDIO_SIZES.land;
+  }
+  if (pen.t === 'eraser' || pen.t === 'fill') pen.t = 'pen';
+  $('#stName').textContent = '· ' + chLabel(c, i);
+  $('#studio').hidden = false;
+  renderStudioBar(); studioCtl.render(); stDraw();
+}
+function closeStudio(force) {
+  if (!force && st.dirty && !confirm('그린 그림을 넣지 않고 닫을까요?')) return;
+  $('#studio').hidden = true; st.i = -1;
+}
+$('#stCancel').onclick = () => closeStudio(false);
+$('#stSave').onclick = async () => {
+  const c = book.chapters[st.i]; if (!c) return closeStudio(true);
+  if (!st.dr.strokes.length && !st.dr.bg) { toast('아직 그린 것이 없음'); return; }
+  const out = await paintStudio(document.createElement('canvas'), null);
+  c.image = out.toDataURL('image/jpeg', 0.9);
+  c.drawing = clone(st.dr);
+  closeStudio(true); renderWriter(); touch({ cover: false });
+  toast('그림을 이 장에 넣음. "그림 고치기"로 다시 열 수 있음');
+};
+$('#stSize').addEventListener('click', e => {
+  const b = e.target.closest('[data-sz]'); if (!b) return;
+  if (st.dr.strokes.length) return toast('그린 것이 있으면 크기를 바꿀 수 없음 (모두 지운 뒤 가능)');
+  [st.dr.w, st.dr.h] = STUDIO_SIZES[b.dataset.sz]; renderStudioBar(); stDraw();
+});
+$('#stPhoto').onclick = () => $('#stFile').click();
+$('#stFile').onchange = async e => {
+  try { st.dr.bg = await readImage(e.target.files[0], 1600); st.dirty = true; renderStudioBar(); stDraw(); }
+  catch (err) { toast(err.message); }
+  e.target.value = '';
+};
+$('#stPhotoDel').onclick = () => { st.dr.bg = null; st.dirty = true; renderStudioBar(); stDraw(); };
+stCanvas.addEventListener('pointerdown', e => { e.preventDefault(); studioCtl.down(e); });
+stCanvas.addEventListener('pointermove', e => studioCtl.move(e));
+stCanvas.addEventListener('pointerup', () => studioCtl.up());
+stCanvas.addEventListener('pointercancel', () => studioCtl.up());
+addEventListener('keydown', e => {
+  if ($('#studio').hidden) return;
+  const k = e.key.toLowerCase();
+  if ((e.ctrlKey || e.metaKey) && k === 'z') { e.preventDefault(); e.shiftKey ? studioCtl.redoOne() : studioCtl.undo(); }
+  else if ((e.ctrlKey || e.metaKey) && k === 'y') { e.preventDefault(); studioCtl.redoOne(); }
+  else if (e.key === 'Escape') { e.stopImmediatePropagation(); closeStudio(false); }
+}, true);
 $('#fileCh').onchange = async e => {
-  try { book.chapters[curCh].image = await readImage(e.target.files[0]); renderWriter(); touch({ cover: false }); }
+  try { const c = book.chapters[curCh]; c.image = await readImage(e.target.files[0]); delete c.drawing; renderWriter(); touch({ cover: false }); }
   catch (err) { toast(err.message); }
   e.target.value = '';
 };
@@ -1977,7 +2168,7 @@ $('#themeSw2').addEventListener('click', e => { const b = e.target.closest('[dat
 let sel = null, drag = null, stageRaf = 0;
 function drawStage() {
   if (stageRaf) return;
-  stageRaf = requestAnimationFrame(async () => { stageRaf = 0; if (book) await drawCover(book, $('#coverStage'), { edit: true, sel, live: liveStroke }); });
+  stageRaf = requestAnimationFrame(async () => { stageRaf = 0; if (book) await drawCover(book, $('#coverStage'), { edit: true, sel, live: coverCtl.live }); });
 }
 let layoutThumbSeq = 0;
 async function drawLayoutThumbs() {
@@ -2028,7 +2219,7 @@ let cdTab = 'layout';
 function setCdTab(t) {
   cdTab = t;
   if (t === 'layout') drawLayoutThumbs();
-  if (t === 'draw') { sel = null; renderSelbar(); renderDrawTools(); }
+  if (t === 'draw') { sel = null; renderSelbar(); coverCtl.render(); }
   $('.cd-stage').classList.toggle('drawing', t === 'draw');
   $('#stageHint').textContent = t === 'draw'
     ? '표지 위에 손가락·펜슬·마우스로 그림 · Ctrl+Z 되돌리기'
@@ -2082,51 +2273,97 @@ addEventListener('paste', e => {
   if (fs.length) { e.preventDefault(); addPhotos(fs); }
 });
 
-/* ── 그리기 도구 ── */
-const pen = { t: 'pen', c: '#1c1f24', w: { pencil: 5, pen: 12, marker: 40, eraser: 44 } };
-let liveStroke = null, redoStack = [], penSeenAt = 0;
-function renderDrawTools() {
-  $('#pens').innerHTML = Object.entries(PENS).map(([k, p]) => \`<button class="pen \${pen.t === k ? 'on' : ''}" data-pen="\${k}"><i style="height:\${Math.max(2, Math.min(14, p.w / 3))}px;\${k === 'eraser' ? 'background:repeating-linear-gradient(45deg,#ccc 0 4px,#fff 4px 8px);border:1px solid #ccc' : k === 'marker' ? 'opacity:.45' : ''}"></i>\${p.name}</button>\`).join('');
-  $('#penColors').innerHTML = PEN_COLORS.map(c => \`<button class="sw \${pen.c === c ? 'on' : ''}" data-pc="\${c}" style="background:\${c}"></button>\`).join('') +
-    \`<label class="sw pick \${PEN_COLORS.includes(pen.c) ? '' : 'on'}" title="다른 색"><input type="color" id="penPick" value="\${pen.c}"></label>\`;
-  $('#penSize').value = pen.w[pen.t];
-  const d = Math.max(4, Math.min(30, pen.w[pen.t] / 2));
-  $('#penDot').style.cssText = \`width:\${d}px;height:\${d}px;background:\${pen.t === 'eraser' ? '#ccc' : pen.c}\`;
-  $('#drawTop').checked = !!book.cover.drawing.top;
-  $('#btnUndo').disabled = !book.cover.drawing.strokes.length;
-  $('#btnRedo').disabled = !redoStack.length;
+/* ── 그리기 조종기 (표지·그림판 공용) ── */
+const pen = { t: 'pen', c: '#1c1f24', f: false, w: { pencil: 5, pen: 12, marker: 40, eraser: 44, line: 10, rect: 10, ellipse: 10, star: 10, heart: 10 } };
+let penSeenAt = 0;
+function toolPanelHTML() {
+  return \`<div class="lbl">그리기</div><div class="pens" data-role="free"></div>
+<div class="lbl" style="margin-top:12px">도형 · 채우기</div><div class="pens sh" data-role="shapes"></div>
+<label class="check" style="padding-top:8px"><input type="checkbox" data-role="sfill"><span>도형 속 채우기<small>Shift를 누른 채 그리면 반듯한 정사각형·원</small></span></label>
+<div class="lbl" style="margin-top:12px">색</div><div class="swatches" data-role="colors"></div>
+<div class="field" style="margin-top:14px" data-role="sizebox"><label>굵기 <span class="sizedot" data-role="dot"></span></label><input type="range" class="range" data-role="size" min="2" max="120"></div>
+<div class="row"><button class="btn sm" data-role="undo">\${icon('undo', 's')}되돌리기</button><button class="btn sm" data-role="redo">\${icon('redo', 's')}다시</button><button class="btn sm danger" data-role="clear">\${icon('trash', 's')}모두 지우기</button></div>\`;
 }
-$('#pens').addEventListener('click', e => { const b = e.target.closest('[data-pen]'); if (!b) return; pen.t = b.dataset.pen; renderDrawTools(); });
-$('#penColors').addEventListener('click', e => { const b = e.target.closest('[data-pc]'); if (!b) return; pen.c = b.dataset.pc; if (pen.t === 'eraser') pen.t = 'pen'; renderDrawTools(); });
-$('#penColors').addEventListener('input', e => { if (e.target.id !== 'penPick') return; pen.c = e.target.value; if (pen.t === 'eraser') pen.t = 'pen'; const d = $('#penDot'); d.style.background = pen.c; });
-$('#penColors').addEventListener('change', e => { if (e.target.id === 'penPick') renderDrawTools(); });
-$('#penSize').addEventListener('input', e => { pen.w[pen.t] = +e.target.value; const d = Math.max(4, Math.min(30, pen.w[pen.t] / 2)); Object.assign($('#penDot').style, { width: d + 'px', height: d + 'px' }); });
-function drawUndo() { const s = book.cover.drawing.strokes.pop(); if (s) { redoStack.push(s); renderDrawTools(); coverChanged(); } }
-function drawRedo() { const s = redoStack.pop(); if (s) { book.cover.drawing.strokes.push(s); renderDrawTools(); coverChanged(); } }
-$('#btnUndo').onclick = drawUndo;
-$('#btnRedo').onclick = drawRedo;
-$('#btnClearDraw').onclick = () => { if (!book.cover.drawing.strokes.length || !confirm('표지에 그린 그림을 모두 지울까요?')) return; redoStack = book.cover.drawing.strokes.slice().reverse(); book.cover.drawing.strokes = []; renderDrawTools(); coverChanged(); toast('그림을 모두 지움 (되돌리기는 "다시"로 가능)'); };
+/* opts: root(도구판), canvas, size()→[W,H], dr()→그림 자료, live(), commit(), extra() */
+function makeDrawCtl(opts) {
+  const ctl = { live: null, redo: [] };
+  const root = opts.root; root.innerHTML = toolPanelHTML();
+  const q = (r) => root.querySelector(\`[data-role=\${r}]\`);
+  ctl.render = () => {
+    const tb = (k, t) => \`<button class="pen \${pen.t === k ? 'on' : ''}" data-pen="\${k}">\${t.kind === 'free'
+      ? \`<i style="height:\${Math.max(2, Math.min(14, t.w / 3))}px;\${k === 'eraser' ? 'background:repeating-linear-gradient(45deg,#ccc 0 4px,#fff 4px 8px);border:1px solid #ccc' : k === 'marker' ? 'opacity:.45' : ''}"></i>\`
+      : \`<svg viewBox="0 0 24 24" fill="\${k === 'fill' ? 'none' : (pen.f && k !== 'line' ? 'currentColor' : 'none')}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">\${TOOL_SVG[k]}</svg>\`}\${t.name}</button>\`;
+    q('free').innerHTML = Object.entries(TOOLS).filter(([, t]) => t.kind === 'free').map(([k, t]) => tb(k, t)).join('');
+    q('shapes').innerHTML = Object.entries(TOOLS).filter(([, t]) => t.kind !== 'free').map(([k, t]) => tb(k, t)).join('');
+    q('sfill').checked = pen.f;
+    q('colors').innerHTML = PEN_COLORS.map(c => \`<button class="sw \${pen.c === c ? 'on' : ''}" data-pc="\${c}" style="background:\${c}"></button>\`).join('') +
+      \`<label class="sw pick \${PEN_COLORS.includes(pen.c) ? '' : 'on'}" title="다른 색"><input type="color" data-role="pick" value="\${pen.c}"></label>\`;
+    const hasW = pen.t !== 'fill';
+    q('sizebox').style.display = hasW ? '' : 'none';
+    if (hasW) { q('size').value = pen.w[pen.t]; const d = Math.max(4, Math.min(30, pen.w[pen.t] / 2)); q('dot').style.cssText = \`width:\${d}px;height:\${d}px;background:\${pen.t === 'eraser' ? '#ccc' : pen.c}\`; }
+    q('undo').disabled = !opts.dr().strokes.length; q('redo').disabled = !ctl.redo.length;
+    if (opts.extra) opts.extra();
+  };
+  root.addEventListener('click', e => {
+    const pb = e.target.closest('[data-pen]'); if (pb) { pen.t = pb.dataset.pen; return ctl.render(); }
+    const cb = e.target.closest('[data-pc]'); if (cb) { pen.c = cb.dataset.pc; if (pen.t === 'eraser') pen.t = 'pen'; return ctl.render(); }
+    const rb = e.target.closest('[data-role]'); if (!rb) return;
+    if (rb.dataset.role === 'undo') ctl.undo(); else if (rb.dataset.role === 'redo') ctl.redoOne(); else if (rb.dataset.role === 'clear') ctl.clear();
+  });
+  root.addEventListener('input', e => {
+    const r = e.target.dataset.role;
+    if (r === 'pick') { pen.c = e.target.value; if (pen.t === 'eraser') pen.t = 'pen'; q('dot').style.background = pen.c; }
+    if (r === 'size') { pen.w[pen.t] = +e.target.value; const d = Math.max(4, Math.min(30, pen.w[pen.t] / 2)); Object.assign(q('dot').style, { width: d + 'px', height: d + 'px' }); }
+  });
+  root.addEventListener('change', e => { const r = e.target.dataset.role; if (r === 'pick') ctl.render(); if (r === 'sfill') { pen.f = e.target.checked; ctl.render(); } });
+  const pt = (e) => { const r = opts.canvas.getBoundingClientRect(), [W, H] = opts.size(); return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H }; };
+  ctl.down = (e) => {
+    if (e.pointerType === 'pen') penSeenAt = Date.now();
+    else if (e.pointerType === 'touch' && Date.now() - penSeenAt < 4000) return; // 펜슬 쓰는 중 손바닥 닿음 무시
+    const p = pt(e), kind = TOOLS[pen.t].kind;
+    if (kind === 'fill') { opts.dr().strokes.push({ t: 'fill', c: pen.c, x: Math.round(p.x), y: Math.round(p.y) }); ctl.redo = []; ctl.render(); opts.commit(); return; }
+    ctl.live = kind === 'shape'
+      ? { t: 'shape', k: pen.t, c: pen.c, w: pen.w[pen.t], f: pen.f, a: [p.x, p.y, p.x, p.y].map(Math.round) }
+      : { t: pen.t, c: pen.c, w: pen.w[pen.t], p: [Math.round(p.x), Math.round(p.y)] };
+    try { opts.canvas.setPointerCapture(e.pointerId); } catch (err) {}
+    opts.live();
+  };
+  ctl.move = (e) => {
+    const L = ctl.live; if (!L) return false;
+    if (L.t === 'shape') {
+      const p = pt(e); let dx = p.x - L.a[0], dy = p.y - L.a[1];
+      if (e.shiftKey && L.k !== 'line') { const m = Math.max(Math.abs(dx), Math.abs(dy)); dx = Math.sign(dx || 1) * m; dy = Math.sign(dy || 1) * m; }
+      L.a[2] = Math.round(L.a[0] + dx); L.a[3] = Math.round(L.a[1] + dy);
+    } else {
+      const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [];
+      for (const ev of (evs.length ? evs : [e])) {
+        const p = pt(ev), a = L.p, lx = a[a.length - 2], ly = a[a.length - 1];
+        if (Math.hypot(p.x - lx, p.y - ly) > 1.5) a.push(Math.round(p.x), Math.round(p.y));
+      }
+    }
+    opts.live(); return true;
+  };
+  ctl.up = () => {
+    const L = ctl.live; if (!L) return false;
+    ctl.live = null;
+    if (!(L.t === 'shape' && Math.abs(L.a[2] - L.a[0]) + Math.abs(L.a[3] - L.a[1]) < 6)) { opts.dr().strokes.push(L); ctl.redo = []; }
+    ctl.render(); opts.commit(); return true;
+  };
+  ctl.undo = () => { const st = opts.dr().strokes.pop(); if (st) { ctl.redo.push(st); ctl.render(); opts.commit(); } };
+  ctl.redoOne = () => { const st = ctl.redo.pop(); if (st) { opts.dr().strokes.push(st); ctl.render(); opts.commit(); } };
+  ctl.clear = () => {
+    const dr = opts.dr(); if (!dr.strokes.length || !confirm('그린 그림을 모두 지울까요?')) return;
+    ctl.redo = dr.strokes.slice().reverse(); dr.strokes = []; ctl.render(); opts.commit();
+    toast('모두 지움 ("다시"를 누르면 되살아남)');
+  };
+  return ctl;
+}
+const coverCtl = makeDrawCtl({
+  root: $('#coverTools'), canvas: $('#coverStage'), size: () => [1000, 1414], dr: () => book.cover.drawing,
+  live: () => drawStage(), commit: () => { drawStage(); touch(); },
+  extra: () => { $('#drawTop').checked = !!book.cover.drawing.top; }
+});
 $('#drawTop').addEventListener('change', e => { book.cover.drawing.top = e.target.checked; coverChanged(); });
-function strokeDown(e) {
-  if (e.pointerType === 'pen') penSeenAt = Date.now();
-  else if (e.pointerType === 'touch' && Date.now() - penSeenAt < 4000) return; // 펜슬 쓰는 중 손바닥 닿음 무시
-  const p = stagePt(e);
-  liveStroke = { t: pen.t, c: pen.c, w: pen.w[pen.t], p: [Math.round(p.x), Math.round(p.y)] };
-  stage.setPointerCapture(e.pointerId); drawStage();
-}
-function strokeMove(e) {
-  const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
-  for (const ev of (evs.length ? evs : [e])) {
-    const p = stagePt(ev), a = liveStroke.p, lx = a[a.length - 2], ly = a[a.length - 1];
-    if (Math.hypot(p.x - lx, p.y - ly) > 1.5) a.push(Math.round(p.x), Math.round(p.y));
-  }
-  drawStage();
-}
-function strokeUp() {
-  if (!liveStroke) return;
-  book.cover.drawing.strokes.push(liveStroke); liveStroke = null; redoStack = [];
-  renderDrawTools(); drawStage(); touch();
-}
 function addSticker(s) {
   const st = Object.assign({ id: uid(), x: 500 + (Math.random() - .5) * 200, y: 560 + (Math.random() - .5) * 200, s: s.type === 'emoji' ? 150 : 210, r: s.type === 'badge' ? -12 : 0 }, s);
   book.cover.stickers.push(st); sel = { type: 'sticker', id: st.id };
@@ -2183,7 +2420,7 @@ const stage = $('#coverStage');
 function stagePt(e) { const r = stage.getBoundingClientRect(); return { x: (e.clientX - r.left) / r.width * 1000, y: (e.clientY - r.top) / r.height * 1414 }; }
 const inBox = (p, b, pad = 16) => b && p.x >= b.x - pad && p.x <= b.x + b.w + pad && p.y >= b.y - pad && p.y <= b.y + b.h + pad;
 stage.addEventListener('pointerdown', e => {
-  if (cdTab === 'draw') return strokeDown(e);
+  if (cdTab === 'draw') return coverCtl.down(e);
   const p = stagePt(e), h = stage._hits || {};
   let hit = null;
   for (let i = (h.stickers || []).length - 1; i >= 0; i--) if (inBox(p, h.stickers[i].box)) { hit = { type: 'sticker', id: h.stickers[i].id }; break; }
@@ -2196,7 +2433,7 @@ stage.addEventListener('pointerdown', e => {
   stage.setPointerCapture(e.pointerId); stage.style.cursor = 'grabbing';
 });
 stage.addEventListener('pointermove', e => {
-  if (liveStroke) return strokeMove(e);
+  if (coverCtl.move(e)) return;
   if (cdTab === 'draw') return;
   const p = stagePt(e), h = stage._hits || {};
   if (!drag) {
@@ -2211,12 +2448,12 @@ stage.addEventListener('pointermove', e => {
   else { cv.ax = Math.round(drag.o.x + dx); cv.ay = Math.round(drag.o.y + dy); }
   drawStage();
 });
-const endDrag = () => { if (liveStroke) return strokeUp(); if (drag && drag.moved) touch(); drag = null; stage.style.cursor = ''; };
+const endDrag = () => { if (coverCtl.up()) return; if (drag && drag.moved) touch(); drag = null; stage.style.cursor = ''; };
 stage.addEventListener('pointerup', endDrag); stage.addEventListener('pointercancel', endDrag);
 addEventListener('keydown', e => {
-  if (pane !== 'cover' || cdTab !== 'draw' || document.body.dataset.view !== 'editor' || /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? drawRedo() : drawUndo(); }
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') { e.preventDefault(); drawRedo(); }
+  if (!$('#studio').hidden || pane !== 'cover' || cdTab !== 'draw' || document.body.dataset.view !== 'editor' || /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? coverCtl.redoOne() : coverCtl.undo(); }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') { e.preventDefault(); coverCtl.redoOne(); }
 });
 addEventListener('keydown', e => {
   if (pane !== 'cover' || !sel || document.body.dataset.view !== 'editor' || /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
