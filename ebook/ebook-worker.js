@@ -244,7 +244,7 @@ body.nopv .pv,body.pane-cover .pv{display:none}
 .sw.pick{overflow:hidden;background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red)}
 .sw.pick input{opacity:0;width:100%;height:100%;cursor:pointer}
 .sizedot{display:inline-block;border-radius:50%;background:var(--ink);vertical-align:middle;margin-left:6px}
-.pens.sh{grid-template-columns:repeat(3,1fr)}
+.pens.sh{grid-template-columns:repeat(4,1fr)}
 .pen svg{width:22px;height:22px}
 .studio{position:fixed;inset:0;z-index:95;background:var(--bg);display:flex;flex-direction:column}
 .st-h{height:58px;flex:none;display:flex;align-items:center;gap:10px;padding:0 16px;background:var(--surface);border-bottom:1px solid var(--line);overflow-x:auto}
@@ -252,8 +252,21 @@ body.nopv .pv,body.pane-cover .pv{display:none}
 .st-h .nm{color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:26vw}
 .st-b{flex:1;display:grid;grid-template-columns:288px minmax(0,1fr);min-height:0}
 .st-tools{background:var(--surface);border-right:1px solid var(--line);padding:16px;overflow:auto}
-.st-stage{display:flex;align-items:center;justify-content:center;padding:20px;min-height:0;background:radial-gradient(circle at 50% 40%,#eceae4,#dedad2)}
-#stCanvas{display:block;max-width:100%;max-height:100%;background:#fff;box-shadow:0 6px 14px rgba(0,0,0,.12),0 20px 44px rgba(30,25,15,.22);touch-action:none;cursor:crosshair;border-radius:3px}
+.st-stage{position:relative;overflow:hidden;min-height:0;touch-action:none;background:radial-gradient(circle at 50% 40%,#eceae4,#dedad2)}
+.st-stage.panning,.st-stage.panning #stCanvas{cursor:grab}
+.zoombar{position:absolute;right:14px;bottom:14px;display:flex;align-items:center;gap:2px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:4px 6px;box-shadow:var(--shadow-lg);z-index:2}
+#zoomVal{min-width:48px;text-align:center;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--ink2)}
+.lys{border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.ly{display:flex;align-items:center;gap:8px;padding:6px 8px;border-bottom:1px solid var(--line2);cursor:pointer;background:var(--surface)}
+.ly:last-child{border-bottom:none}
+.ly.on{background:var(--accent-bg);box-shadow:inset 3px 0 0 var(--accent)}
+.ly canvas{width:46px;height:auto;border:1px solid var(--line);border-radius:3px;background:#fff;flex:none}
+.ly .ln{flex:1;font-size:13px;font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ly .lc{font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
+.ly.off .ln,.ly.off canvas{opacity:.4}
+.ly.bgrow{cursor:default;background:var(--surface2)}
+.ly.bgrow input{width:84px;accent-color:var(--accent)}
+#stCanvas{position:absolute;display:block;background:#fff;box-shadow:0 6px 14px rgba(0,0,0,.12),0 20px 44px rgba(30,25,15,.22);touch-action:none;cursor:crosshair;border-radius:3px}
 @media (max-width:820px){.st-b{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}.st-tools{max-height:36vh;border-right:none;border-bottom:1px solid var(--line)}}
 .bigpick{flex-direction:column!important;gap:4px!important;height:118px!important;margin-top:0!important}
 .bigpick b{font-size:14px;color:var(--ink)}
@@ -649,8 +662,16 @@ body.nopv .pv,body.pane-cover .pv{display:none}
   </div>
   <div class="st-b">
     <aside class="st-tools"><div id="studioTools"></div>
-      <div class="help" style="margin-top:12px">손가락·펜슬·마우스로 그림. <b>사진 깔기</b>로 패드 사진을 밑그림으로 깔고 그 위에 그릴 수 있음. 다 그리면 <b>그림 넣기</b>를 누름. 나중에 다시 열어 고칠 수 있음.</div></aside>
-    <div class="st-stage"><canvas id="stCanvas" width="1200" height="900"></canvas></div>
+      <div class="ms-rule" style="margin:16px 0"></div>
+      <div class="lbl">층 (레이어) <small style="font-weight:400;color:var(--muted)">위쪽 층이 앞에 보임</small></div>
+      <div class="lys" id="stLayers"></div>
+      <div class="row" style="margin-top:8px"><button class="btn sm" id="lyAdd" data-i="plus">새 층</button><span class="spacer"></span>
+        <button class="iconbtn" id="lyUp" title="층을 위로" data-i="up"></button><button class="iconbtn" id="lyDown" title="층을 아래로" data-i="down"></button><button class="iconbtn" id="lyDel" title="층 지우기" data-i="trash" style="color:var(--danger)"></button></div>
+      <div class="field" style="margin:10px 0 0"><label>이 층 투명도 <small id="lyOpVal"></small></label><input type="range" class="range" id="lyOpacity" min="0.1" max="1" step="0.05"></div>
+      <div class="help" style="margin-top:12px">선은 아래 층, 색칠은 위 층에 나눠 그리면 고치기 쉬움. <b>채우기</b>는 모든 보이는 층의 선을 경계로 삼음.<br>두 손가락으로 벌리면 확대, 끌면 이동. 컴퓨터는 Ctrl+휠 확대, 스페이스+끌기 이동.</div></aside>
+    <div class="st-stage" id="stStage"><canvas id="stCanvas" width="1200" height="900"></canvas>
+      <div class="zoombar"><button class="iconbtn" id="zOut" title="축소" data-i="minus"></button><span id="zoomVal">100%</span><button class="iconbtn" id="zIn" title="확대" data-i="plus"></button><button class="btn sm ghost" id="zFit">맞춤</button></div>
+    </div>
   </div>
   <input type="file" id="stFile" accept="image/*" hidden>
 </div>
@@ -797,6 +818,8 @@ const ICONS = {
   undo:'<path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>',
   redo:'<path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13"/>',
   camera:'<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',
+  minus:'<line x1="5" y1="12" x2="19" y2="12"/>',
+  eyeOff:'<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>',
   layers:'<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>'
 };
 const icon = (n, cls = '') => \`<svg class="ic \${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">\${ICONS[n] || ''}</svg>\`;
@@ -820,11 +843,22 @@ const THEMES = {
 const LAYOUTS = { band:'그림 + 띠', full:'그림 가득', frame:'액자', split:'위아래 나눔', minimal:'미니멀', plain:'글자만', paper:'도화지' };
 const TOOLS = {
   pencil:{ name:'연필', kind:'free', w:5, a:.9 }, pen:{ name:'펜', kind:'free', w:12, a:1 },
-  marker:{ name:'마커', kind:'free', w:40, a:.45 }, eraser:{ name:'지우개', kind:'free', w:44, a:1 },
-  fill:{ name:'채우기', kind:'fill' }, line:{ name:'직선', kind:'shape', w:10 }, rect:{ name:'네모', kind:'shape', w:10 },
+  brush:{ name:'붓', kind:'free', w:18, a:1 }, marker:{ name:'마커', kind:'free', w:40, a:.45 },
+  crayon:{ name:'크레파스', kind:'free', w:22, a:1 }, watercolor:{ name:'수채', kind:'free', w:40, a:1 },
+  spray:{ name:'스프레이', kind:'free', w:50, a:1 }, eraser:{ name:'지우개', kind:'free', w:44, a:1 },
+  fill:{ name:'채우기', kind:'fill' }, pick:{ name:'스포이트', kind:'pick' }, hand:{ name:'손(이동)', kind:'hand' },
+  line:{ name:'직선', kind:'shape', w:10 }, rect:{ name:'네모', kind:'shape', w:10 },
   ellipse:{ name:'동그라미', kind:'shape', w:10 }, star:{ name:'별', kind:'shape', w:10 }, heart:{ name:'하트', kind:'shape', w:10 }
 };
+const FREE_LOOK = {
+  pencil:'height:2px', pen:'height:4px', brush:'height:9px;border-radius:60% 20% 60% 20%',
+  marker:'height:11px;opacity:.45', crayon:'height:10px;background:radial-gradient(#333 45%,transparent 46%) 0 0/4px 4px',
+  watercolor:'height:13px;opacity:.35;box-shadow:0 0 5px #333', spray:'height:13px;background:radial-gradient(#333 28%,transparent 30%) 0 0/3px 3px',
+  eraser:'height:9px;background:repeating-linear-gradient(45deg,#ccc 0 4px,#fff 4px 8px);border:1px solid #ccc'
+};
 const TOOL_SVG = {
+  pick:'<path d="M2 22l1-1h3l9-9"/><path d="M3 21v-3l9-9"/><path d="M15 6l3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.4.4a2.1 2.1 0 1 1-3 3l-3.8-3.8a2.1 2.1 0 1 1 3-3l.4.4z"/>',
+  hand:'<path d="M18 11V6a2 2 0 0 0-4 0v5"/><path d="M14 10V4a2 2 0 0 0-4 0v6"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-6-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>',
   fill:'<path d="M19 11l-8-8-8.5 8.5a2 2 0 0 0 0 2.8l5.2 5.2a2 2 0 0 0 2.8 0L19 11z"/><path d="M20 15s2 2.2 2 3.5a2 2 0 0 1-4 0c0-1.3 2-3.5 2-3.5z"/>',
   line:'<line x1="4" y1="20" x2="20" y2="4"/>', rect:'<rect x="4" y="6" width="16" height="12" rx="1"/>',
   ellipse:'<ellipse cx="12" cy="12" rx="9" ry="7"/>',
@@ -1439,6 +1473,7 @@ async function drawCover(b, canvas, opt = {}) {
       ctx.restore();
     }
   }
+  if (opt.guide) { ctx.save(); ctx.strokeStyle = 'rgba(54,81,184,.55)'; ctx.lineWidth = 3; ctx.setLineDash([16, 12]); ctx.beginPath(); ctx.moveTo(W / 2, 0); ctx.lineTo(W / 2, H); ctx.stroke(); ctx.restore(); }
   canvas._hits = hits;
   return canvas;
 }
@@ -1505,22 +1540,119 @@ function floodFill(x, sx, sy, hex, W, H) {
   }
   x.putImageData(img, 0, 0);
 }
-function drawStroke(x, s, W, H) {
-  if (s.t === 'fill') return floodFill(x, s.x, s.y, s.c, W, H);
+/* 붓 질감용 작업 종이(한 장을 계속 다시 씀) */
+const brushCv = document.createElement('canvas');
+function brushScratch(W, H) { if (brushCv.width < W || brushCv.height < H) { brushCv.width = Math.max(W, brushCv.width); brushCv.height = Math.max(H, brushCv.height); } return brushCv; }
+function grainPattern(c) {
+  if (!c._grain) {
+    const g = document.createElement('canvas'); g.width = g.height = 64;
+    const gx = g.getContext('2d'), id = gx.createImageData(64, 64), Rn = rng(42);
+    for (let i = 0; i < 64 * 64; i++) { const v = Rn(); id.data[i * 4 + 3] = v < 0.36 ? 255 : v < 0.5 ? 120 : 0; }
+    gx.putImageData(id, 0, 0); c._grain = c.createPattern(g, 'repeat');
+  }
+  return c._grain;
+}
+function strokeBox(s, W, H) {
+  const p = s.p; let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
+  for (let i = 0; i < p.length; i += 2) { if (p[i] < a) a = p[i]; if (p[i] > c) c = p[i]; if (p[i + 1] < b) b = p[i + 1]; if (p[i + 1] > d) d = p[i + 1]; }
+  const pad = s.w + 4, x = Math.max(0, Math.floor(a - pad)), y = Math.max(0, Math.floor(b - pad));
+  return { x, y, w: Math.min(W, Math.ceil(c + pad)) - x, h: Math.min(H, Math.ceil(d + pad)) - y };
+}
+/* 크레파스(종이 결 무늬) · 수채(가장자리가 진한 반투명) */
+function drawTextured(x, s, W, H) {
+  const b = strokeBox(s, W, H); if (b.w <= 0 || b.h <= 0) return;
+  const sc = brushScratch(W, H), c = sc.getContext('2d');
+  c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(b.x, b.y, b.w, b.h);
+  c.lineCap = 'round'; c.lineJoin = 'round'; c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+  c.strokeStyle = c.fillStyle = s.c; c.lineWidth = s.w;
+  if (freePath(c, s.p)) c.fill(); else c.stroke();
+  c.globalCompositeOperation = 'destination-out';
+  if (s.t === 'crayon') { c.fillStyle = grainPattern(c); c.fillRect(b.x, b.y, b.w, b.h); x.globalAlpha = 0.95; }
+  else { c.globalAlpha = 0.5; c.lineWidth = s.w * 0.6; if (freePath(c, s.p)) c.fill(); else c.stroke(); x.globalAlpha = 0.45; }
+  c.restore();
+  x.drawImage(sc, b.x, b.y, b.w, b.h, b.x, b.y, b.w, b.h);
+}
+/* 붓: 펜슬 필압(없으면 빠르기)에 따라 굵기가 변함 */
+function drawBrush(x, s) {
+  const p = s.p, n = p.length / 2;
+  if (n === 1) { x.beginPath(); x.arc(p[0], p[1], s.w * 0.4, 0, 7); x.fill(); return; }
+  let fw = 0.3;
+  for (let i = 1; i < n; i++) {
+    const dist = Math.hypot(p[2 * i] - p[2 * i - 2], p[2 * i + 1] - p[2 * i - 1]);
+    const target = s.pr ? 0.2 + (s.pr[i] ?? 0.5) * 1.15 : Math.max(0.3, Math.min(1.25, 1.3 - dist / 28));
+    fw = fw * 0.55 + target * 0.45;
+    x.lineWidth = Math.max(1, s.w * fw);
+    x.beginPath(); x.moveTo(p[2 * i - 2], p[2 * i - 1]); x.lineTo(p[2 * i], p[2 * i + 1]); x.stroke();
+  }
+}
+/* 스프레이: 점마다 같은 무늬가 나오도록 고정된 난수 사용 */
+function drawSpray(x, s) {
+  const p = s.p, n = p.length / 2, cnt = Math.max(6, Math.round(s.w / 2.2)), r = s.w / 2;
+  x.globalAlpha = 0.85;
+  for (let i = 0; i < n; i++) {
+    const Rn = rng(i * 7919 + ((p[0] * 31 + p[1]) | 0));
+    for (let k = 0; k < cnt; k++) { const a = Rn() * 6.2832, d = Math.sqrt(Rn()) * r; x.fillRect(p[2 * i] + Math.cos(a) * d, p[2 * i + 1] + Math.sin(a) * d, 1.8, 1.8); }
+  }
+}
+function drawOne(x, s, W, H) {
   x.save(); x.lineCap = 'round'; x.lineJoin = 'round';
   x.globalCompositeOperation = s.t === 'eraser' ? 'destination-out' : 'source-over';
-  x.globalAlpha = s.t === 'shape' ? 1 : (TOOLS[s.t] || TOOLS.pen).a;
   x.strokeStyle = x.fillStyle = s.c; x.lineWidth = s.w;
   if (s.t === 'shape') { shapePath(x, s); if (s.f && s.k !== 'line') x.fill(); x.stroke(); }
-  else if (s.p && s.p.length) { if (freePath(x, s.p)) x.fill(); else x.stroke(); }
+  else if (!s.p || !s.p.length) { /* 빈 획 */ }
+  else if (s.t === 'brush') drawBrush(x, s);
+  else if (s.t === 'spray') drawSpray(x, s);
+  else if (s.t === 'crayon' || s.t === 'watercolor') drawTextured(x, s, W, H);
+  else { x.globalAlpha = (TOOLS[s.t] || TOOLS.pen).a; if (freePath(x, s.p)) x.fill(); else x.stroke(); }
   x.restore();
+}
+function drawStroke(x, s, W, H) {
+  if (s.t === 'fill') {
+    if (!s.s) return floodFill(x, s.x, s.y, s.c, W, H); // 예전 형식
+    // 칠은 이미 그린 선 '밑'으로 들어가게 해 선 가장자리가 깨끗하게 남음
+    x.save(); x.globalCompositeOperation = 'destination-over'; x.fillStyle = s.c;
+    const a = s.s; for (let i = 0; i < a.length; i += 3) x.fillRect(a[i + 1], a[i], a[i + 2] - a[i + 1] + 1, 1);
+    x.restore(); return;
+  }
+  drawOne(x, s, W, H);
+  if (s.sym) { x.save(); x.translate(W, 0); x.scale(-1, 1); drawOne(x, s, W, H); x.restore(); }
+}
+/* 채우기 영역 계산: 누른 순간의 '보이는 선'을 경계로 구간(y, x1, x2)들을 저장 */
+function computeFillSpans(src, sx, sy, W, H) {
+  sx = Math.round(sx); sy = Math.round(sy);
+  if (sx < 0 || sy < 0 || sx >= W || sy >= H) return null;
+  const d = src.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, W, H).data;
+  const i0 = (sy * W + sx) * 4, tr = d[i0], tg = d[i0 + 1], tb = d[i0 + 2], clear = d[i0 + 3] < 128;
+  const ok = (q) => { const i = q * 4, a = d[i + 3]; return clear ? a < 128 : (a >= 128 && Math.abs(d[i] - tr) + Math.abs(d[i + 1] - tg) + Math.abs(d[i + 2] - tb) < 100); };
+  const mark = new Uint8Array(W * H), stack = [sy * W + sx];
+  while (stack.length) {
+    const q = stack.pop(); if (mark[q] || !ok(q)) continue;
+    const y = (q / W) | 0, row = y * W; let l = q, r = q;
+    while (l > row && !mark[l - 1] && ok(l - 1)) l--;
+    while (r < row + W - 1 && !mark[r + 1] && ok(r + 1)) r++;
+    for (let k = l; k <= r; k++) { mark[k] = 1; if (y > 0 && !mark[k - W] && ok(k - W)) stack.push(k - W); if (y < H - 1 && !mark[k + W] && ok(k + W)) stack.push(k + W); }
+  }
+  for (let pass = 0; pass < 2; pass++) { // 선 가장자리까지 2px 넓혀 빈틈 없앰
+    const add = [];
+    for (let q = 0; q < W * H; q++) {
+      if (!mark[q]) continue; const qx = q % W;
+      if (qx > 0 && !mark[q - 1] && d[(q - 1) * 4 + 3] < 250) add.push(q - 1);
+      if (qx < W - 1 && !mark[q + 1] && d[(q + 1) * 4 + 3] < 250) add.push(q + 1);
+      if (q >= W && !mark[q - W] && d[(q - W) * 4 + 3] < 250) add.push(q - W);
+      if (q < W * (H - 1) && !mark[q + W] && d[(q + W) * 4 + 3] < 250) add.push(q + W);
+    }
+    for (const v of add) mark[v] = 1;
+  }
+  const out = [];
+  for (let y = 0; y < H; y++) { const row = y * W; let x = 0; while (x < W) { if (mark[row + x]) { const a = x; while (x < W && mark[row + x]) x++; out.push(y, a, x - 1); } else x++; } }
+  return out.length ? out : null;
 }
 /* 다 그린 획은 한 번만 그려 두고(캐시) 다시 씀 — 채우기가 많아도 빠르게 */
 function committedLayer(dr, W, H) {
   const arr = dr.strokes, n = arr.length, last = arr[n - 1];
   let e = layerCache.find(c => c.dr === dr);
   if (e && e.arr === arr && e.n === n && e.last === last && e.W === W && e.H === H) return e.cv;
-  if (!e) { e = { dr, cv: document.createElement('canvas') }; layerCache.unshift(e); if (layerCache.length > 3) layerCache.pop(); }
+  if (!e) { e = { dr, cv: document.createElement('canvas') }; layerCache.unshift(e); if (layerCache.length > 12) layerCache.pop(); }
   e.cv.width = W; e.cv.height = H;
   const x = e.cv.getContext('2d', { willReadFrequently: true });
   for (const st of arr) drawStroke(x, st, W, H);
@@ -2023,59 +2155,190 @@ $('#msImgBox').addEventListener('click', e => {
 $('#tbImg').onclick = () => $('#fileCh').click();
 $('#tbDraw').onclick = () => openStudio(curCh);
 
-/* ═══════════ 그림판 (본문 장 그림 직접 그리기) ═══════════ */
+/* ═══════════ 그림판 (본문 장 그림 직접 그리기) ═══════════
+   층(레이어) · 확대/이동 · 밑그림 사진 · 붓 질감 */
 const st = { i: -1, dr: null, dirty: false };
-const stCanvas = $('#stCanvas');
+const stCanvas = $('#stCanvas'), stStage = $('#stStage');
+const view = { z: 1, px: 0, py: 0 };
 const stSize = () => [st.dr.w, st.dr.h];
-let stRaf = 0;
-function stDraw() {
-  if (stRaf) return;
-  stRaf = requestAnimationFrame(async () => { stRaf = 0; await paintStudio(stCanvas, studioCtl.live); });
+const curLayer = () => st.dr.layers[st.dr.active];
+const totalStrokes = () => st.dr.layers.reduce((n, l) => n + l.strokes.length, 0);
+const newLayer = (name) => ({ id: uid(), name, visible: true, opacity: 1, strokes: [] });
+function normStudio(d) {
+  if (!Array.isArray(d.layers)) { d.layers = [Object.assign(newLayer('층 1'), { strokes: d.strokes || [] })]; delete d.strokes; }
+  if (!d.layers.length) d.layers.push(newLayer('층 1'));
+  d.active = Math.max(0, Math.min(d.active || 0, d.layers.length - 1));
+  if (d.bgOpacity == null) d.bgOpacity = 1;
+  if (d.bgVisible == null) d.bgVisible = true;
+  return d;
 }
-async function paintStudio(cv, live) {
-  const { w: W, h: H, bg } = st.dr;
-  if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+let stRaf = 0;
+function stDraw() { if (stRaf) return; stRaf = requestAnimationFrame(async () => { stRaf = 0; if (st.dr) await paintStudio(stCanvas, studioCtl.live, true); }); }
+async function paintStudio(cv, live, guide) {
+  const d = st.dr, W = d.w, H = d.h;
+  if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; if (cv === stCanvas) layoutCanvas(); }
   const x = cv.getContext('2d');
-  x.fillStyle = '#fff'; x.fillRect(0, 0, W, H);
-  const im = await loadImg(bg);
-  if (im) { const r = Math.min(W / im.width, H / im.height); x.drawImage(im, (W - im.width * r) / 2, (H - im.height * r) / 2, im.width * r, im.height * r); }
-  renderDrawing(x, st.dr, live, W, H);
+  x.globalAlpha = 1; x.fillStyle = '#fff'; x.fillRect(0, 0, W, H);
+  const im = await loadImg(d.bg);
+  if (im && d.bgVisible) { const r = Math.min(W / im.width, H / im.height); x.globalAlpha = d.bgOpacity; x.drawImage(im, (W - im.width * r) / 2, (H - im.height * r) / 2, im.width * r, im.height * r); }
+  d.layers.forEach((L, i) => { if (!L.visible) return; x.globalAlpha = L.opacity; renderDrawing(x, L, i === d.active ? live : null, W, H); });
+  x.globalAlpha = 1;
+  if (guide && pen.sym) { x.save(); x.strokeStyle = 'rgba(54,81,184,.55)'; x.lineWidth = 2; x.setLineDash([14, 10]); x.beginPath(); x.moveTo(W / 2, 0); x.lineTo(W / 2, H); x.stroke(); x.restore(); }
   return cv;
 }
+function studioBoundary() {
+  const [W, H] = stSize(), c = document.createElement('canvas'); c.width = W; c.height = H;
+  const x = c.getContext('2d', { willReadFrequently: true });
+  st.dr.layers.forEach(L => { if (L.visible && L.strokes.length) x.drawImage(committedLayer(L, W, H), 0, 0); });
+  return c;
+}
 const studioCtl = makeDrawCtl({
-  root: $('#studioTools'), canvas: stCanvas, size: stSize, dr: () => st.dr,
-  live: stDraw, commit: () => { st.dirty = true; stDraw(); }
+  root: $('#studioTools'), canvas: stCanvas, capture: stStage, hand: true, size: stSize, dr: curLayer,
+  boundary: studioBoundary, pick: () => stCanvas,
+  live: stDraw, commit: () => { st.dirty = true; stDraw(); renderLayers(); },
+  extra: () => { stStage.classList.toggle('panning', pen.t === 'hand'); }
 });
+/* 층 목록 */
+function renderLayers() {
+  const d = st.dr, [W, H] = stSize();
+  const rows = d.layers.map((L, i) => ({ L, i })).reverse().map(({ L, i }) =>
+    \`<div class="ly \${i === d.active ? 'on' : ''} \${L.visible ? '' : 'off'}" data-li="\${i}"><button class="iconbtn" data-lv="\${i}" title="보이기·숨기기">\${icon(L.visible ? 'eye' : 'eyeOff', 's')}</button><canvas width="92" height="\${Math.round(92 * H / W)}"></canvas><span class="ln">\${esc(L.name)}</span><span class="lc">\${L.strokes.length}획</span></div>\`).join('');
+  const bg = d.bg ? \`<div class="ly bgrow"><button class="iconbtn" data-bgv title="밑그림 보이기·숨기기">\${icon(d.bgVisible ? 'eye' : 'eyeOff', 's')}</button><span class="ln">밑그림 사진</span><input type="range" data-bgo min="0.1" max="1" step="0.05" value="\${d.bgOpacity}" title="밑그림 진하기"></div>\` : '';
+  $('#stLayers').innerHTML = rows + bg;
+  $$('#stLayers .ly[data-li] canvas').forEach(cv => {
+    const L = d.layers[+cv.closest('.ly').dataset.li], x = cv.getContext('2d');
+    x.fillStyle = '#fff'; x.fillRect(0, 0, cv.width, cv.height);
+    if (L.strokes.length) x.drawImage(committedLayer(L, W, H), 0, 0, cv.width, cv.height);
+  });
+  const L = curLayer();
+  $('#lyOpacity').value = L.opacity; $('#lyOpVal').textContent = Math.round(L.opacity * 100) + '%';
+  $('#lyAdd').disabled = d.layers.length >= 6; $('#lyUp').disabled = d.active >= d.layers.length - 1;
+  $('#lyDown').disabled = d.active <= 0; $('#lyDel').disabled = d.layers.length <= 1;
+}
+function layersChanged(resetRedo) { st.dirty = true; if (resetRedo) studioCtl.redo = []; renderLayers(); studioCtl.render(); stDraw(); }
+$('#stLayers').addEventListener('click', e => {
+  const d = st.dr;
+  const v = e.target.closest('[data-lv]'); if (v) { const L = d.layers[+v.dataset.lv]; L.visible = !L.visible; return layersChanged(false); }
+  if (e.target.closest('[data-bgv]')) { d.bgVisible = !d.bgVisible; return layersChanged(false); }
+  const row = e.target.closest('.ly[data-li]'); if (row && +row.dataset.li !== d.active) { d.active = +row.dataset.li; layersChanged(true); }
+});
+$('#stLayers').addEventListener('input', e => { if (e.target.matches('[data-bgo]')) { st.dr.bgOpacity = +e.target.value; st.dirty = true; stDraw(); } });
+$('#lyAdd').onclick = () => {
+  const d = st.dr, n = Math.max(0, ...d.layers.map(l => +(/\\d+/.exec(l.name) || [0])[0])) + 1;
+  d.layers.splice(d.active + 1, 0, newLayer('층 ' + n)); d.active++; layersChanged(true);
+  toast(\`'층 \${n}'을 만듦. 지금부터 이 층에 그려짐\`);
+};
+$('#lyUp').onclick = () => { const d = st.dr, a = d.active; if (a >= d.layers.length - 1) return; [d.layers[a], d.layers[a + 1]] = [d.layers[a + 1], d.layers[a]]; d.active++; layersChanged(false); };
+$('#lyDown').onclick = () => { const d = st.dr, a = d.active; if (a <= 0) return; [d.layers[a], d.layers[a - 1]] = [d.layers[a - 1], d.layers[a]]; d.active--; layersChanged(false); };
+$('#lyDel').onclick = () => {
+  const d = st.dr; if (d.layers.length <= 1) return;
+  const L = curLayer(); if (L.strokes.length && !confirm(\`'\${L.name}'을 지울까요? 이 층의 그림이 사라짐.\`)) return;
+  d.layers.splice(d.active, 1); d.active = Math.max(0, d.active - 1); layersChanged(true);
+};
+$('#lyOpacity').addEventListener('input', e => { curLayer().opacity = +e.target.value; $('#lyOpVal').textContent = Math.round(+e.target.value * 100) + '%'; st.dirty = true; stDraw(); });
+$('#lyOpacity').addEventListener('change', () => renderLayers());
+
+/* 확대 · 이동 */
+function stFit() { const r = stStage.getBoundingClientRect(), [W, H] = stSize(); return { r, W, H, fit: Math.max(0.05, Math.min((r.width - 48) / W, (r.height - 48) / H)) }; }
+function layoutCanvas() {
+  if (!st.dr || $('#studio').hidden) return;
+  const { r, W, H, fit } = stFit(), s = fit * view.z, dw = W * s, dh = H * s;
+  Object.assign(stCanvas.style, { width: dw + 'px', height: dh + 'px', left: ((r.width - dw) / 2 + view.px) + 'px', top: ((r.height - dh) / 2 + view.py) + 'px' });
+  $('#zoomVal').textContent = Math.round(view.z * 100) + '%';
+}
+function zoomTo(z, cx, cy) {
+  const { r, W, H, fit } = stFit();
+  if (cx == null) { cx = r.width / 2; cy = r.height / 2; }
+  const s0 = fit * view.z, l0 = (r.width - W * s0) / 2 + view.px, t0 = (r.height - H * s0) / 2 + view.py;
+  const u = (cx - l0) / s0, v = (cy - t0) / s0;
+  z = Math.max(0.5, Math.min(6, z)); const s1 = fit * z;
+  view.px = cx - u * s1 - (r.width - W * s1) / 2; view.py = cy - v * s1 - (r.height - H * s1) / 2; view.z = z;
+  layoutCanvas();
+}
+function zoomFit() { view.z = 1; view.px = view.py = 0; layoutCanvas(); }
+$('#zIn').onclick = () => zoomTo(view.z * 1.25);
+$('#zOut').onclick = () => zoomTo(view.z / 1.25);
+$('#zFit').onclick = zoomFit;
+stStage.addEventListener('wheel', e => {
+  e.preventDefault(); const r = stStage.getBoundingClientRect();
+  if (e.ctrlKey || e.metaKey) zoomTo(view.z * Math.exp(-e.deltaY * 0.01), e.clientX - r.left, e.clientY - r.top);
+  else { view.px -= e.deltaX; view.py -= e.deltaY; layoutCanvas(); }
+}, { passive: false });
+addEventListener('resize', () => layoutCanvas());
+const ptrs = new Map(); let pinch = null, panning = null, spaceDown = false;
+const touchList = () => [...ptrs.values()].filter(p => p.t === 'touch');
+function startPinch() {
+  const [a, b] = touchList(), { r, W, H, fit } = stFit();
+  const mx = (a.x + b.x) / 2 - r.left, my = (a.y + b.y) / 2 - r.top, s0 = fit * view.z;
+  pinch = { d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, z0: view.z,
+    u: (mx - ((r.width - W * s0) / 2 + view.px)) / s0, v: (my - ((r.height - H * s0) / 2 + view.py)) / s0 };
+}
+function movePinch() {
+  const [a, b] = touchList(); if (!b) return;
+  const { r, W, H, fit } = stFit();
+  const z = Math.max(0.5, Math.min(6, pinch.z0 * Math.hypot(a.x - b.x, a.y - b.y) / pinch.d0)), s1 = fit * z;
+  const mx = (a.x + b.x) / 2 - r.left, my = (a.y + b.y) / 2 - r.top;
+  view.z = z; view.px = mx - pinch.u * s1 - (r.width - W * s1) / 2; view.py = my - pinch.v * s1 - (r.height - H * s1) / 2;
+  layoutCanvas();
+}
+stStage.addEventListener('pointerdown', e => {
+  if (e.target.closest('.zoombar')) return;
+  ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY, t: e.pointerType });
+  if (e.pointerType === 'touch' && touchList().length >= 2) { studioCtl.cancel(); panning = null; startPinch(); return; }
+  if (pinch) return;
+  if (pen.t === 'hand' || spaceDown || e.button === 1) {
+    e.preventDefault(); panning = { x: e.clientX, y: e.clientY, px: view.px, py: view.py };
+    try { stStage.setPointerCapture(e.pointerId); } catch (err) {} return;
+  }
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  studioCtl.down(e);
+});
+stStage.addEventListener('pointermove', e => {
+  if (ptrs.has(e.pointerId)) Object.assign(ptrs.get(e.pointerId), { x: e.clientX, y: e.clientY });
+  if (pinch) { movePinch(); return; }
+  if (panning) { view.px = panning.px + e.clientX - panning.x; view.py = panning.py + e.clientY - panning.y; layoutCanvas(); return; }
+  studioCtl.move(e);
+});
+const stUp = e => {
+  ptrs.delete(e.pointerId);
+  if (pinch) { if (touchList().length < 2) pinch = null; return; }
+  if (panning) { panning = null; return; }
+  studioCtl.up();
+};
+stStage.addEventListener('pointerup', stUp); stStage.addEventListener('pointercancel', stUp);
+
+/* 열기 · 닫기 · 저장 */
 function renderStudioBar() {
   const k = Object.entries(STUDIO_SIZES).find(([, v]) => v[0] === st.dr.w && v[1] === st.dr.h);
-  $$('#stSize button').forEach(b => b.classList.toggle('on', k && b.dataset.sz === k[0]));
+  $$('#stSize button').forEach(b => b.classList.toggle('on', !!k && b.dataset.sz === k[0]));
   $('#stPhotoDel').hidden = !st.dr.bg;
   $('#stPhoto').lastChild.textContent = st.dr.bg ? '사진 바꾸기' : '사진 깔기';
 }
 async function openStudio(i) {
   const c = book.chapters[i]; if (!c) return;
   st.i = i; st.dirty = false; studioCtl.redo = []; studioCtl.live = null;
-  if (c.drawing && Array.isArray(c.drawing.strokes)) st.dr = clone(c.drawing);
+  if (c.drawing) st.dr = normStudio(clone(c.drawing));
   else {
-    st.dr = { w: 1200, h: 900, bg: c.image || null, strokes: [] };
+    st.dr = normStudio({ w: 1200, h: 900, bg: c.image || null });
     const im = await loadImg(c.image);
     if (im) { const r = im.width / im.height; [st.dr.w, st.dr.h] = STUDIO_SIZES[r > 1.15 ? 'land' : r < 0.87 ? 'port' : 'sq']; }
-    else if (c.layout === 'picture') [st.dr.w, st.dr.h] = STUDIO_SIZES.land;
   }
-  if (pen.t === 'eraser' || pen.t === 'fill') pen.t = 'pen';
+  if (['eraser', 'fill', 'pick', 'hand'].includes(pen.t)) pen.t = 'pen';
+  view.z = 1; view.px = view.py = 0;
   $('#stName').textContent = '· ' + chLabel(c, i);
   $('#studio').hidden = false;
-  renderStudioBar(); studioCtl.render(); stDraw();
+  renderStudioBar(); renderLayers(); studioCtl.render();
+  requestAnimationFrame(() => { layoutCanvas(); stDraw(); });
 }
 function closeStudio(force) {
   if (!force && st.dirty && !confirm('그린 그림을 넣지 않고 닫을까요?')) return;
-  $('#studio').hidden = true; st.i = -1;
+  $('#studio').hidden = true; st.i = -1; ptrs.clear(); pinch = panning = null;
 }
 $('#stCancel').onclick = () => closeStudio(false);
 $('#stSave').onclick = async () => {
   const c = book.chapters[st.i]; if (!c) return closeStudio(true);
-  if (!st.dr.strokes.length && !st.dr.bg) { toast('아직 그린 것이 없음'); return; }
-  const out = await paintStudio(document.createElement('canvas'), null);
+  if (!totalStrokes() && !st.dr.bg) { toast('아직 그린 것이 없음'); return; }
+  const out = await paintStudio(document.createElement('canvas'), null, false);
   c.image = out.toDataURL('image/jpeg', 0.9);
   c.drawing = clone(st.dr);
   closeStudio(true); renderWriter(); touch({ cover: false });
@@ -2083,27 +2346,28 @@ $('#stSave').onclick = async () => {
 };
 $('#stSize').addEventListener('click', e => {
   const b = e.target.closest('[data-sz]'); if (!b) return;
-  if (st.dr.strokes.length) return toast('그린 것이 있으면 크기를 바꿀 수 없음 (모두 지운 뒤 가능)');
-  [st.dr.w, st.dr.h] = STUDIO_SIZES[b.dataset.sz]; renderStudioBar(); stDraw();
+  if (totalStrokes()) return toast('그린 것이 있으면 크기를 바꿀 수 없음 (모두 지운 뒤 가능)');
+  [st.dr.w, st.dr.h] = STUDIO_SIZES[b.dataset.sz]; renderStudioBar(); renderLayers(); zoomFit(); stDraw();
 });
 $('#stPhoto').onclick = () => $('#stFile').click();
 $('#stFile').onchange = async e => {
-  try { st.dr.bg = await readImage(e.target.files[0], 1600); st.dirty = true; renderStudioBar(); stDraw(); }
+  try { st.dr.bg = await readImage(e.target.files[0], 1600); st.dr.bgVisible = true; st.dirty = true; renderStudioBar(); renderLayers(); stDraw(); }
   catch (err) { toast(err.message); }
   e.target.value = '';
 };
-$('#stPhotoDel').onclick = () => { st.dr.bg = null; st.dirty = true; renderStudioBar(); stDraw(); };
-stCanvas.addEventListener('pointerdown', e => { e.preventDefault(); studioCtl.down(e); });
-stCanvas.addEventListener('pointermove', e => studioCtl.move(e));
-stCanvas.addEventListener('pointerup', () => studioCtl.up());
-stCanvas.addEventListener('pointercancel', () => studioCtl.up());
+$('#stPhotoDel').onclick = () => { st.dr.bg = null; st.dirty = true; renderStudioBar(); renderLayers(); stDraw(); };
 addEventListener('keydown', e => {
   if ($('#studio').hidden) return;
-  const k = e.key.toLowerCase();
+  const k = e.key.toLowerCase(), typing = /INPUT|TEXTAREA/.test(document.activeElement.tagName) && document.activeElement.type !== 'range' && document.activeElement.type !== 'checkbox';
   if ((e.ctrlKey || e.metaKey) && k === 'z') { e.preventDefault(); e.shiftKey ? studioCtl.redoOne() : studioCtl.undo(); }
   else if ((e.ctrlKey || e.metaKey) && k === 'y') { e.preventDefault(); studioCtl.redoOne(); }
+  else if ((e.ctrlKey || e.metaKey) && (k === '=' || k === '+')) { e.preventDefault(); zoomTo(view.z * 1.25); }
+  else if ((e.ctrlKey || e.metaKey) && k === '-') { e.preventDefault(); zoomTo(view.z / 1.25); }
+  else if ((e.ctrlKey || e.metaKey) && k === '0') { e.preventDefault(); zoomFit(); }
+  else if (e.key === ' ' && !typing) { e.preventDefault(); if (!spaceDown) { spaceDown = true; stStage.classList.add('panning'); } }
   else if (e.key === 'Escape') { e.stopImmediatePropagation(); closeStudio(false); }
 }, true);
+addEventListener('keyup', e => { if (e.key === ' ' && spaceDown) { spaceDown = false; stStage.classList.toggle('panning', pen.t === 'hand'); } }, true);
 $('#fileCh').onchange = async e => {
   try { const c = book.chapters[curCh]; c.image = await readImage(e.target.files[0]); delete c.drawing; renderWriter(); touch({ cover: false }); }
   catch (err) { toast(err.message); }
@@ -2168,7 +2432,7 @@ $('#themeSw2').addEventListener('click', e => { const b = e.target.closest('[dat
 let sel = null, drag = null, stageRaf = 0;
 function drawStage() {
   if (stageRaf) return;
-  stageRaf = requestAnimationFrame(async () => { stageRaf = 0; if (book) await drawCover(book, $('#coverStage'), { edit: true, sel, live: coverCtl.live }); });
+  stageRaf = requestAnimationFrame(async () => { stageRaf = 0; if (book) await drawCover(book, $('#coverStage'), { edit: true, sel, live: coverCtl.live, guide: cdTab === 'draw' && pen.sym }); });
 }
 let layoutThumbSeq = 0;
 async function drawLayoutThumbs() {
@@ -2274,58 +2538,87 @@ addEventListener('paste', e => {
 });
 
 /* ── 그리기 조종기 (표지·그림판 공용) ── */
-const pen = { t: 'pen', c: '#1c1f24', f: false, w: { pencil: 5, pen: 12, marker: 40, eraser: 44, line: 10, rect: 10, ellipse: 10, star: 10, heart: 10 } };
+const pen = { t: 'pen', c: '#1c1f24', f: false, sym: false,
+  w: { pencil: 5, pen: 12, brush: 18, marker: 40, crayon: 22, watercolor: 40, spray: 50, eraser: 44, line: 10, rect: 10, ellipse: 10, star: 10, heart: 10 } };
 let penSeenAt = 0;
 function toolPanelHTML() {
   return \`<div class="lbl">그리기</div><div class="pens" data-role="free"></div>
-<div class="lbl" style="margin-top:12px">도형 · 채우기</div><div class="pens sh" data-role="shapes"></div>
+<div class="lbl" style="margin-top:12px">도형 · 채우기 · 도우미</div><div class="pens sh" data-role="shapes"></div>
 <label class="check" style="padding-top:8px"><input type="checkbox" data-role="sfill"><span>도형 속 채우기<small>Shift를 누른 채 그리면 반듯한 정사각형·원</small></span></label>
+<label class="check" style="padding-top:2px"><input type="checkbox" data-role="sym"><span>좌우 대칭 그리기<small>한쪽에 그리면 반대쪽에 거울처럼 그려짐</small></span></label>
 <div class="lbl" style="margin-top:12px">색</div><div class="swatches" data-role="colors"></div>
-<div class="field" style="margin-top:14px" data-role="sizebox"><label>굵기 <span class="sizedot" data-role="dot"></span></label><input type="range" class="range" data-role="size" min="2" max="120"></div>
+<div class="field" style="margin-top:14px" data-role="sizebox"><label>굵기 <span class="sizedot" data-role="dot"></span></label><input type="range" class="range" data-role="size" min="2" max="140"></div>
 <div class="row"><button class="btn sm" data-role="undo">\${icon('undo', 's')}되돌리기</button><button class="btn sm" data-role="redo">\${icon('redo', 's')}다시</button><button class="btn sm danger" data-role="clear">\${icon('trash', 's')}모두 지우기</button></div>\`;
 }
-/* opts: root(도구판), canvas, size()→[W,H], dr()→그림 자료, live(), commit(), extra() */
+const toHex = (d) => '#' + [d[0], d[1], d[2]].map(v => v.toString(16).padStart(2, '0')).join('');
+const r2 = (v) => Math.round(v * 100) / 100;
+/* opts: root(도구판), canvas, capture(포인터 잡을 곳), hand(손 도구 표시), size()→[W,H], dr()→지금 층,
+         boundary()→채우기 경계 캔버스, pick()→스포이트로 읽을 캔버스, live(), commit(), extra() */
 function makeDrawCtl(opts) {
-  const ctl = { live: null, redo: [] };
+  const ctl = { live: null, redo: [], prev: 'pen' };
   const root = opts.root; root.innerHTML = toolPanelHTML();
   const q = (r) => root.querySelector(\`[data-role=\${r}]\`);
+  const tb = (k) => {
+    const t = TOOLS[k];
+    const ic = t.kind === 'free' ? \`<i style="\${FREE_LOOK[k]}"></i>\`
+      : \`<svg viewBox="0 0 24 24" fill="\${pen.f && t.kind === 'shape' && k !== 'line' ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">\${TOOL_SVG[k]}</svg>\`;
+    return \`<button class="pen \${pen.t === k ? 'on' : ''}" data-pen="\${k}" title="\${t.name}">\${ic}\${t.name}</button>\`;
+  };
   ctl.render = () => {
-    const tb = (k, t) => \`<button class="pen \${pen.t === k ? 'on' : ''}" data-pen="\${k}">\${t.kind === 'free'
-      ? \`<i style="height:\${Math.max(2, Math.min(14, t.w / 3))}px;\${k === 'eraser' ? 'background:repeating-linear-gradient(45deg,#ccc 0 4px,#fff 4px 8px);border:1px solid #ccc' : k === 'marker' ? 'opacity:.45' : ''}"></i>\`
-      : \`<svg viewBox="0 0 24 24" fill="\${k === 'fill' ? 'none' : (pen.f && k !== 'line' ? 'currentColor' : 'none')}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">\${TOOL_SVG[k]}</svg>\`}\${t.name}</button>\`;
-    q('free').innerHTML = Object.entries(TOOLS).filter(([, t]) => t.kind === 'free').map(([k, t]) => tb(k, t)).join('');
-    q('shapes').innerHTML = Object.entries(TOOLS).filter(([, t]) => t.kind !== 'free').map(([k, t]) => tb(k, t)).join('');
-    q('sfill').checked = pen.f;
+    if (pen.t === 'hand' && !opts.hand) pen.t = 'pen';
+    q('free').innerHTML = ['pencil', 'pen', 'brush', 'marker', 'crayon', 'watercolor', 'spray', 'eraser'].map(tb).join('');
+    q('shapes').innerHTML = ['fill', 'pick', ...(opts.hand ? ['hand'] : []), 'line', 'rect', 'ellipse', 'star', 'heart'].map(tb).join('');
+    q('sfill').checked = pen.f; q('sym').checked = pen.sym;
     q('colors').innerHTML = PEN_COLORS.map(c => \`<button class="sw \${pen.c === c ? 'on' : ''}" data-pc="\${c}" style="background:\${c}"></button>\`).join('') +
-      \`<label class="sw pick \${PEN_COLORS.includes(pen.c) ? '' : 'on'}" title="다른 색"><input type="color" data-role="pick" value="\${pen.c}"></label>\`;
-    const hasW = pen.t !== 'fill';
+      \`<label class="sw pick \${PEN_COLORS.includes(pen.c) ? '' : 'on'}" title="다른 색"><input type="color" data-role="pickc" value="\${pen.c}"></label>\`;
+    const hasW = pen.w[pen.t] != null;
     q('sizebox').style.display = hasW ? '' : 'none';
     if (hasW) { q('size').value = pen.w[pen.t]; const d = Math.max(4, Math.min(30, pen.w[pen.t] / 2)); q('dot').style.cssText = \`width:\${d}px;height:\${d}px;background:\${pen.t === 'eraser' ? '#ccc' : pen.c}\`; }
     q('undo').disabled = !opts.dr().strokes.length; q('redo').disabled = !ctl.redo.length;
     if (opts.extra) opts.extra();
   };
   root.addEventListener('click', e => {
-    const pb = e.target.closest('[data-pen]'); if (pb) { pen.t = pb.dataset.pen; return ctl.render(); }
-    const cb = e.target.closest('[data-pc]'); if (cb) { pen.c = cb.dataset.pc; if (pen.t === 'eraser') pen.t = 'pen'; return ctl.render(); }
-    const rb = e.target.closest('[data-role]'); if (!rb) return;
+    const pb = e.target.closest('[data-pen]');
+    if (pb) { if (pb.dataset.pen === 'pick' && pen.t !== 'pick') ctl.prev = pen.t; pen.t = pb.dataset.pen; return ctl.render(); }
+    const cb = e.target.closest('[data-pc]'); if (cb) { pen.c = cb.dataset.pc; if (['eraser', 'pick', 'hand'].includes(pen.t)) pen.t = 'pen'; return ctl.render(); }
+    const rb = e.target.closest('button[data-role]'); if (!rb) return;
     if (rb.dataset.role === 'undo') ctl.undo(); else if (rb.dataset.role === 'redo') ctl.redoOne(); else if (rb.dataset.role === 'clear') ctl.clear();
   });
   root.addEventListener('input', e => {
     const r = e.target.dataset.role;
-    if (r === 'pick') { pen.c = e.target.value; if (pen.t === 'eraser') pen.t = 'pen'; q('dot').style.background = pen.c; }
+    if (r === 'pickc') { pen.c = e.target.value; if (['eraser', 'pick', 'hand'].includes(pen.t)) pen.t = 'pen'; const d = q('dot'); if (d) d.style.background = pen.c; }
     if (r === 'size') { pen.w[pen.t] = +e.target.value; const d = Math.max(4, Math.min(30, pen.w[pen.t] / 2)); Object.assign(q('dot').style, { width: d + 'px', height: d + 'px' }); }
   });
-  root.addEventListener('change', e => { const r = e.target.dataset.role; if (r === 'pick') ctl.render(); if (r === 'sfill') { pen.f = e.target.checked; ctl.render(); } });
+  root.addEventListener('change', e => {
+    const r = e.target.dataset.role;
+    if (r === 'pickc') ctl.render();
+    if (r === 'sfill') { pen.f = e.target.checked; ctl.render(); }
+    if (r === 'sym') { pen.sym = e.target.checked; ctl.render(); opts.live(); }
+  });
   const pt = (e) => { const r = opts.canvas.getBoundingClientRect(), [W, H] = opts.size(); return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H }; };
   ctl.down = (e) => {
     if (e.pointerType === 'pen') penSeenAt = Date.now();
     else if (e.pointerType === 'touch' && Date.now() - penSeenAt < 4000) return; // 펜슬 쓰는 중 손바닥 닿음 무시
-    const p = pt(e), kind = TOOLS[pen.t].kind;
-    if (kind === 'fill') { opts.dr().strokes.push({ t: 'fill', c: pen.c, x: Math.round(p.x), y: Math.round(p.y) }); ctl.redo = []; ctl.render(); opts.commit(); return; }
+    const p = pt(e), kind = TOOLS[pen.t].kind, [W, H] = opts.size();
+    if (kind === 'hand') return;
+    if (kind === 'pick') {
+      const cv = opts.pick(), px = Math.round(p.x), py = Math.round(p.y);
+      if (px < 0 || py < 0 || px >= cv.width || py >= cv.height) return;
+      pen.c = toHex(cv.getContext('2d').getImageData(px, py, 1, 1).data);
+      pen.t = (ctl.prev && TOOLS[ctl.prev] && !['pick', 'hand', 'eraser'].includes(ctl.prev)) ? ctl.prev : 'pen';
+      ctl.render(); toast('색을 뽑음: ' + pen.c); return;
+    }
+    if (kind === 'fill') {
+      const src = opts.boundary ? opts.boundary() : committedLayer(opts.dr(), W, H);
+      const spans = computeFillSpans(src, p.x, p.y, W, H); if (!spans) return;
+      opts.dr().strokes.push({ t: 'fill', c: pen.c, s: spans }); ctl.redo = []; ctl.render(); opts.commit(); return;
+    }
     ctl.live = kind === 'shape'
       ? { t: 'shape', k: pen.t, c: pen.c, w: pen.w[pen.t], f: pen.f, a: [p.x, p.y, p.x, p.y].map(Math.round) }
       : { t: pen.t, c: pen.c, w: pen.w[pen.t], p: [Math.round(p.x), Math.round(p.y)] };
-    try { opts.canvas.setPointerCapture(e.pointerId); } catch (err) {}
+    if (pen.sym) ctl.live.sym = 1;
+    if (kind === 'free' && e.pointerType === 'pen' && e.pressure > 0) ctl.live.pr = [r2(e.pressure)];
+    try { (opts.capture || opts.canvas).setPointerCapture(e.pointerId); } catch (err) {}
     opts.live();
   };
   ctl.move = (e) => {
@@ -2338,7 +2631,7 @@ function makeDrawCtl(opts) {
       const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [];
       for (const ev of (evs.length ? evs : [e])) {
         const p = pt(ev), a = L.p, lx = a[a.length - 2], ly = a[a.length - 1];
-        if (Math.hypot(p.x - lx, p.y - ly) > 1.5) a.push(Math.round(p.x), Math.round(p.y));
+        if (Math.hypot(p.x - lx, p.y - ly) > 1.5) { a.push(Math.round(p.x), Math.round(p.y)); if (L.pr) L.pr.push(r2(ev.pressure || 0.5)); }
       }
     }
     opts.live(); return true;
@@ -2349,17 +2642,18 @@ function makeDrawCtl(opts) {
     if (!(L.t === 'shape' && Math.abs(L.a[2] - L.a[0]) + Math.abs(L.a[3] - L.a[1]) < 6)) { opts.dr().strokes.push(L); ctl.redo = []; }
     ctl.render(); opts.commit(); return true;
   };
+  ctl.cancel = () => { if (ctl.live) { ctl.live = null; opts.live(); } };
   ctl.undo = () => { const st = opts.dr().strokes.pop(); if (st) { ctl.redo.push(st); ctl.render(); opts.commit(); } };
   ctl.redoOne = () => { const st = ctl.redo.pop(); if (st) { opts.dr().strokes.push(st); ctl.render(); opts.commit(); } };
   ctl.clear = () => {
-    const dr = opts.dr(); if (!dr.strokes.length || !confirm('그린 그림을 모두 지울까요?')) return;
+    const dr = opts.dr(); if (!dr.strokes.length || !confirm('이 층에 그린 그림을 모두 지울까요?')) return;
     ctl.redo = dr.strokes.slice().reverse(); dr.strokes = []; ctl.render(); opts.commit();
     toast('모두 지움 ("다시"를 누르면 되살아남)');
   };
   return ctl;
 }
 const coverCtl = makeDrawCtl({
-  root: $('#coverTools'), canvas: $('#coverStage'), size: () => [1000, 1414], dr: () => book.cover.drawing,
+  root: $('#coverTools'), canvas: $('#coverStage'), size: () => [1000, 1414], dr: () => book.cover.drawing, pick: () => $('#coverStage'),
   live: () => drawStage(), commit: () => { drawStage(); touch(); },
   extra: () => { $('#drawTop').checked = !!book.cover.drawing.top; }
 });
