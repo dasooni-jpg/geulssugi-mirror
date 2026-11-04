@@ -208,7 +208,7 @@ body.nopv .pv,body.pane-cover .pv{display:none}
 /* 표지 디자인 */
 .cd{display:grid;grid-template-columns:300px minmax(0,1fr);height:100%;min-height:calc(100vh - 56px)}
 .cd-tools{background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
-.cd-tabs{display:grid;grid-template-columns:repeat(5,1fr);border-bottom:1px solid var(--line)}
+.cd-tabs{display:grid;grid-template-columns:repeat(6,1fr);border-bottom:1px solid var(--line)}
 .cd-tabs button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 0 8px;font-size:11.5px;color:var(--muted);border-bottom:2px solid transparent}
 .cd-tabs button.on{color:var(--accent);border-bottom-color:var(--accent)}
 .cd-body{padding:16px;overflow:auto;flex:1}
@@ -234,12 +234,26 @@ body.nopv .pv,body.pane-cover .pv{display:none}
 .cd-stage{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:radial-gradient(circle at 50% 40%,#eceae4,#dedad2)}
 .stage-wrap{position:relative;height:min(78vh,860px);aspect-ratio:1000/1414;max-width:100%}
 #coverStage{width:100%;height:100%;display:block;border-radius:3px 6px 6px 3px;box-shadow:0 6px 14px rgba(0,0,0,.14),0 24px 50px rgba(30,25,15,.25);touch-action:none;cursor:default}
-.stage-hint{margin-top:14px;font-size:12px;color:var(--muted)}
+.stage-hint{margin-top:14px;font-size:12px;color:var(--muted);text-align:center}
+.cd-stage.drawing #coverStage{cursor:crosshair}
+.cd-stage.dropping .stage-wrap::after{content:"여기에 놓으면 사진이 들어감";position:absolute;inset:0;display:grid;place-items:center;background:rgba(54,81,184,.18);border:3px dashed var(--accent);border-radius:6px;color:var(--accent);font-weight:700;font-size:16px}
+.pens{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.pen{height:62px;border:1.5px solid var(--line);border-radius:9px;background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:11.5px;color:var(--ink2)}
+.pen i{display:block;width:34px;border-radius:9px;background:var(--ink)}
+.pen.on{border-color:var(--accent);box-shadow:0 0 0 2px rgba(54,81,184,.15);color:var(--accent)}
+.sw.pick{overflow:hidden;background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red)}
+.sw.pick input{opacity:0;width:100%;height:100%;cursor:pointer}
+.sizedot{display:inline-block;border-radius:50%;background:var(--ink);vertical-align:middle;margin-left:6px}
+.bigpick{flex-direction:column!important;gap:4px!important;height:118px!important;margin-top:0!important}
+.bigpick b{font-size:14px;color:var(--ink)}
+.bigpick small{font-size:12px}
 .selbar{position:absolute;top:16px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow-lg);border-radius:10px;padding:6px 8px;display:flex;align-items:center;gap:8px;z-index:4;white-space:nowrap;max-width:calc(100% - 24px);overflow-x:auto}
 .selbar label{font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:6px}
 .selbar input[type=range]{width:90px;accent-color:var(--accent)}
 .selbar input[type=text]{height:28px;width:120px;border:1px solid var(--line);border-radius:6px;padding:0 8px}
 .selbar .sw{width:22px;height:22px}
+.selbar .seg{flex-wrap:nowrap;flex:none}
+.selbar .seg button{height:26px;padding:0 9px;font-size:12px}
 .selbar .sw.on::after{inset:-3px}
 
 /* 미리보기 */
@@ -424,7 +438,8 @@ body.nopv .pv,body.pane-cover .pv{display:none}
             <button data-cd="layout" class="on"><span data-i="grid"></span>레이아웃</button>
             <button data-cd="bg"><span data-i="droplet"></span>배경</button>
             <button data-cd="text"><span data-i="type"></span>글자</button>
-            <button data-cd="img"><span data-i="image"></span>그림</button>
+            <button data-cd="img"><span data-i="camera"></span>사진</button>
+            <button data-cd="draw"><span data-i="pen"></span>그리기</button>
             <button data-cd="stk"><span data-i="smile"></span>스티커</button>
           </div>
           <div class="cd-body">
@@ -449,9 +464,15 @@ body.nopv .pv,body.pane-cover .pv{display:none}
               <div class="help">표지에서 제목·지은이를 직접 끌어 옮길 수 있음.</div>
             </div>
             <div class="cd-sec" id="cd-img">
+              <div class="lbl">사진·그림 붙이기 <small style="font-weight:400;color:var(--muted)">자유롭게 옮기고 꾸밈</small></div>
+              <button class="ms-addimg bigpick" id="btnPhoto"><span data-i="camera"></span><b>패드·컴퓨터에서 사진 고르기</b><small>여러 장을 한꺼번에 고를 수 있음</small></button>
+              <div class="help">패드에서 누르면 <b>사진 보관함</b>(앨범) · <b>사진 찍기</b>(카메라) · <b>파일 선택</b>이 나옴. 표지 위로 그림 파일을 끌어다 놓거나 붙여넣기(Ctrl+V)해도 들어감.</div>
+              <div class="help">붙인 사진을 누르면 크기·회전·테두리(폴라로이드·동그라미 등)를 바꿀 수 있음. 🔒 얼굴이 나온 사진은 넣지 않음.</div>
+              <input type="file" id="filePhoto" accept="image/*" multiple hidden>
+              <div class="ms-rule" style="margin:18px 0"></div>
+              <div class="lbl">배경 그림 <small style="font-weight:400;color:var(--muted)">레이아웃의 그림 칸을 가득 채움</small></div>
               <div id="imgNone">
-                <button class="ms-addimg" id="btnCoverImg" style="margin-top:0;height:120px"><span data-i="upload"></span>표지 그림 올리기</button>
-                <div class="help">직접 그린 그림을 사진으로 찍어 올리면 좋음. 얼굴이 나온 사진은 올리지 않음.</div>
+                <button class="ms-addimg" id="btnCoverImg" style="margin-top:0;height:64px"><span data-i="upload"></span>배경 그림 고르기</button>
               </div>
               <div id="imgSome">
                 <div class="row" style="margin-bottom:16px"><button class="btn sm" id="btnCoverImg2" data-i="upload">바꾸기</button><button class="btn sm danger" id="btnCoverImgDel" data-i="trash">지우기</button></div>
@@ -462,13 +483,23 @@ body.nopv .pv,body.pane-cover .pv{display:none}
               </div>
               <input type="file" id="fileCover" accept="image/*" hidden>
             </div>
+            <div class="cd-sec" id="cd-draw">
+              <div class="lbl">도구</div>
+              <div class="pens" id="pens"></div>
+              <div class="lbl" style="margin-top:16px">색</div>
+              <div class="swatches" id="penColors"></div>
+              <div class="field" style="margin-top:16px"><label>굵기 <span class="sizedot" id="penDot"></span></label><input type="range" class="range" id="penSize" min="2" max="120"></div>
+              <div class="row"><button class="btn sm" id="btnUndo" data-i="undo">되돌리기</button><button class="btn sm" id="btnRedo" data-i="redo">다시</button><button class="btn sm danger" id="btnClearDraw" data-i="trash">모두 지우기</button></div>
+              <label class="check" style="margin-top:12px"><input type="checkbox" id="drawTop"><span>제목·스티커 위에 그리기<small>끄면 그림이 글자 뒤로 들어감</small></span></label>
+              <div class="help">이 탭이 열려 있는 동안 표지 위에 손가락이나 펜슬로 그림. 펜슬을 쓰면 손바닥이 화면에 닿아도 선이 그어지지 않음. 넓게 그리려면 레이아웃에서 <b>도화지</b>를 고름.</div>
+            </div>
             <div class="cd-sec" id="cd-stk"><div id="stkPanel"></div></div>
           </div>
         </div>
         <div class="cd-stage">
           <div class="selbar" id="selbar" hidden></div>
-          <div class="stage-wrap"><canvas id="coverStage" width="1000" height="1414"></canvas></div>
-          <div class="stage-hint">제목·지은이·스티커를 끌어서 옮김 · 스티커를 누르면 크기·회전 조절 · Delete 키로 지움</div>
+          <div class="stage-wrap" id="stageWrap"><canvas id="coverStage" width="1000" height="1414"></canvas></div>
+          <div class="stage-hint" id="stageHint"></div>
         </div>
       </div>
     </div>
@@ -738,6 +769,10 @@ const ICONS = {
   reset:'<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>',
   maximize:'<path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>',
   rotate:'<polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>',
+  pen:'<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+  undo:'<path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>',
+  redo:'<path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13"/>',
+  camera:'<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',
   layers:'<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>'
 };
 const icon = (n, cls = '') => \`<svg class="ic \${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">\${ICONS[n] || ''}</svg>\`;
@@ -758,7 +793,10 @@ const THEMES = {
   ink:    { name:'먹색',  c1:'#3b3f46', c2:'#16181c', ink:'#f4efe6', accent:'#33373e', paper:'#fbfaf7', desk:'#2a2c30' },
   berry:  { name:'자두',  c1:'#9b4f96', c2:'#4e2155', ink:'#ffffff', accent:'#7c3a7a', paper:'#fdfafd', desk:'#3e2a40' }
 };
-const LAYOUTS = { band:'그림 + 띠', full:'그림 가득', frame:'액자', split:'위아래 나눔', minimal:'미니멀', plain:'글자만' };
+const LAYOUTS = { band:'그림 + 띠', full:'그림 가득', frame:'액자', split:'위아래 나눔', minimal:'미니멀', plain:'글자만', paper:'도화지' };
+const PENS = { pencil:{ name:'연필', w:5, a:.9 }, pen:{ name:'펜', w:12, a:1 }, marker:{ name:'마커', w:40, a:.45 }, eraser:{ name:'지우개', w:44, a:1 } };
+const PEN_COLORS = ['#1c1f24','#ffffff','#868e96','#8b4513','#c92a2a','#e8590c','#f59f00','#ffd43b','#2b8a3e','#82c91e','#1c7ed6','#4dabf7','#7048e8','#d6336c','#f783ac','#e9c46a'];
+const PHOTO_FRAMES = { none:'그대로', round:'둥근', white:'흰 테두리', polaroid:'폴라로이드', circle:'동그라미' };
 const PATTERNS = { none:'없음', dots:'물방울', stripes:'사선', grid:'모눈', waves:'물결', confetti:'색종이', stars:'별' };
 const TITLE_FONTS = {
   serif:  { name:'명조',     css:"'Noto Serif KR',serif", w:700 },
@@ -882,7 +920,7 @@ const store = (() => {
 
 /* ─── 책 자료 구조 ─── */
 const defaultCover = () => ({ layout:'band', pattern:'none', titleFont:'serif', titleSize:1, titleColor:'auto', titleAlign:'auto', titleShadow:false,
-  tx:0, ty:0, ax:0, ay:0, image:null, zoom:1, fx:0, fy:0, stickers:[] });
+  tx:0, ty:0, ax:0, ay:0, image:null, zoom:1, fx:0, fy:0, stickers:[], drawing:{ strokes:[], top:false } });
 const newChapter = (o = {}) => Object.assign({ id: uid(), kind: 'chapter', title: '', author: '', body: '', hint: '', image: null, layout: 'normal' }, o);
 function newBook(tplId = 'blank') {
   const t = TEMPLATES.find(x => x.id === tplId) || TEMPLATES[0];
@@ -904,6 +942,7 @@ function migrate(b) {
   if (!b.cover) b.cover = { layout: ({ band:'band', full:'full', frame:'frame', plain:'plain' })[b.coverStyle] || 'band', image: b.coverImage || null };
   b.cover = Object.assign(defaultCover(), b.cover);
   if (!Array.isArray(b.cover.stickers)) b.cover.stickers = [];
+  if (!b.cover.drawing || !Array.isArray(b.cover.drawing.strokes)) b.cover.drawing = { strokes: [], top: false };
   if (!BODY_FONTS[b.font]) b.font = 'serif';
   delete b.coverImage; delete b.coverStyle;
   b.chapters = (Array.isArray(b.chapters) && b.chapters.length ? b.chapters : [{ title: '1장' }]).map(c => newChapter(Object.assign({}, c, { id: c.id || uid() })));
@@ -1163,14 +1202,39 @@ function drawPattern(ctx, kind, x, y, w, h, color) {
   ctx.restore();
 }
 function stickerFont(s) { return s.type === 'tag' ? \`700 \${Math.round(s.s * 0.32)}px 'Noto Sans KR',sans-serif\` : \`\${Math.round(s.s)}px \${EMOJI_FONT}\`; }
+/* 사진 스티커의 바깥 크기와 안쪽 사진 칸 */
+function photoGeom(s) {
+  const a = s.a || 0.75, f = s.frame || 'none';
+  if (f === 'circle') return { W: s.s, H: s.s };
+  if (f === 'polaroid') { const p = s.s * 0.05, iw = s.s - 2 * p, ih = iw * a; return { W: s.s, H: p + ih + s.s * 0.2, p, iw, ih }; }
+  if (f === 'white') { const p = s.s * 0.035, iw = s.s - 2 * p, ih = iw * a; return { W: s.s, H: ih + 2 * p, p, iw, ih }; }
+  return { W: s.s, H: s.s * a };
+}
 function stickerBox(ctx, s) {
+  if (s.type === 'photo') { const g = photoGeom(s); return { x: s.x - g.W / 2, y: s.y - g.H / 2, w: g.W, h: g.H }; }
   if (s.type === 'tag') { ctx.font = stickerFont(s); const w = ctx.measureText(s.v).width + s.s * 0.5, h = s.s * 0.62; return { x: s.x - w / 2, y: s.y - h / 2, w, h }; }
   return { x: s.x - s.s / 2, y: s.y - s.s / 2, w: s.s, h: s.s };
 }
-function drawSticker(ctx, s) {
+function drawSticker(ctx, s, im) {
   ctx.save(); ctx.translate(s.x, s.y); ctx.rotate((s.r || 0) * Math.PI / 180);
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   if (s.type === 'emoji') { ctx.font = stickerFont(s); ctx.fillText(s.v, 0, s.s * 0.06); }
+  else if (s.type === 'photo') {
+    const g = photoGeom(s), f = s.frame || 'none', x0 = -g.W / 2, y0 = -g.H / 2;
+    ctx.shadowColor = 'rgba(0,0,0,.28)'; ctx.shadowBlur = 20; ctx.shadowOffsetY = 7;
+    if (f === 'circle') {
+      const r = s.s / 2; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.fill();
+      ctx.shadowColor = 'transparent'; ctx.save(); ctx.beginPath(); ctx.arc(0, 0, r * 0.93, 0, 7); ctx.clip();
+      if (im) coverFit(ctx, im, -r, -r, 2 * r, 2 * r); ctx.restore();
+    } else if (f === 'polaroid' || f === 'white') {
+      ctx.fillStyle = '#fff'; ctx.fillRect(x0, y0, g.W, g.H); ctx.shadowColor = 'transparent';
+      if (im) ctx.drawImage(im, x0 + g.p, y0 + g.p, g.iw, g.ih);
+    } else if (f === 'round') {
+      ctx.fillStyle = '#fff'; roundRect(ctx, x0, y0, g.W, g.H, g.W * 0.08); ctx.fill(); ctx.shadowColor = 'transparent';
+      ctx.save(); roundRect(ctx, x0, y0, g.W, g.H, g.W * 0.08); ctx.clip(); if (im) ctx.drawImage(im, x0, y0, g.W, g.H); ctx.restore();
+    } else if (im) { ctx.shadowBlur = 12; ctx.shadowOffsetY = 4; ctx.drawImage(im, x0, y0, g.W, g.H); }
+    ctx.shadowColor = 'transparent';
+  }
   else if (s.type === 'badge') {
     const R = s.s / 2;
     ctx.shadowColor = 'rgba(0,0,0,.25)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 4;
@@ -1204,6 +1268,9 @@ async function drawCover(b, canvas, opt = {}) {
   const tf = TITLE_FONTS[cv.titleFont] || TITLE_FONTS.serif;
   await ensureFont(tf);
   const im = await loadImg(cv.image);
+  const photoIms = new Map();
+  for (const s of cv.stickers) if (s.type === 'photo') photoIms.set(s.id, await loadImg(s.v));
+  const dr = cv.drawing || { strokes: [], top: false };
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, W, H);
   ctx.shadowColor = 'transparent';
   let lay = opt.layout || cv.layout;
@@ -1256,6 +1323,14 @@ async function drawCover(b, canvas, opt = {}) {
       A = { x: W / 2, y: H - 230, align: 'center', color: th.ink };
       break;
     }
+    case 'paper': {
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+      if (im) pic(0, 0, W, H);
+      drawPattern(ctx, cv.pattern, 0, 0, W, H, 'rgba(0,0,0,.05)');
+      T = { x: W / 2, y: 110, align: 'center', maxW: W - 200, size: 96, lines: 2, color: th.accent };
+      A = { x: W / 2, y: H - 120, align: 'center', color: '#40444c' };
+      break;
+    }
     default: { // band
       grad(0, 0, W, H); drawPattern(ctx, cv.pattern, 0, 0, W, H, patColor);
       if (im) pic(60, 60, W - 120, 820, 18); else placeholder(60, 60, W - 120, 820, 18);
@@ -1263,6 +1338,7 @@ async function drawCover(b, canvas, opt = {}) {
       A = { x: W / 2, y: H - 120, align: 'center', color: th.ink };
     }
   }
+  if (!dr.top) renderDrawing(ctx, dr, opt.live);
   // 사용자 설정 덮어쓰기
   const al = cv.titleAlign;
   if (al && al !== 'auto') {
@@ -1306,7 +1382,8 @@ async function drawCover(b, canvas, opt = {}) {
   shadowOn(false);
 
   // 스티커
-  for (const s of cv.stickers) drawSticker(ctx, s);
+  for (const s of cv.stickers) drawSticker(ctx, s, photoIms.get(s.id));
+  if (dr.top) renderDrawing(ctx, dr, opt.live);
   // 책등 그림자
   const sp = ctx.createLinearGradient(0, 0, 36, 0); sp.addColorStop(0, 'rgba(0,0,0,.22)'); sp.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = sp; ctx.fillRect(0, 0, 36, H);
@@ -1327,6 +1404,29 @@ async function drawCover(b, canvas, opt = {}) {
   }
   canvas._hits = hits;
   return canvas;
+}
+/* 그리기 층: 지우개가 배경을 지우지 않도록 따로 그린 뒤 얹음 */
+const drawLayer = document.createElement('canvas');
+function renderDrawing(ctx, dr, live) {
+  const strokes = live ? dr.strokes.concat([live]) : dr.strokes;
+  if (!strokes.length) return;
+  drawLayer.width = 1000; drawLayer.height = 1414;
+  const x = drawLayer.getContext('2d');
+  x.lineCap = 'round'; x.lineJoin = 'round';
+  for (const s of strokes) {
+    const p = s.p, n = p.length / 2; if (!n) continue;
+    x.globalCompositeOperation = s.t === 'eraser' ? 'destination-out' : 'source-over';
+    x.globalAlpha = (PENS[s.t] || PENS.pen).a;
+    x.strokeStyle = x.fillStyle = s.c; x.lineWidth = s.w;
+    x.beginPath();
+    if (n === 1) { x.arc(p[0], p[1], s.w / 2, 0, 7); x.fill(); continue; }
+    x.moveTo(p[0], p[1]);
+    for (let i = 1; i < n - 1; i++) x.quadraticCurveTo(p[2 * i], p[2 * i + 1], (p[2 * i] + p[2 * i + 2]) / 2, (p[2 * i + 1] + p[2 * i + 3]) / 2);
+    x.lineTo(p[2 * n - 2], p[2 * n - 1]);
+    x.stroke();
+  }
+  x.globalCompositeOperation = 'source-over'; x.globalAlpha = 1;
+  ctx.drawImage(drawLayer, 0, 0);
 }
 /* 뒤표지: 책 소개 */
 async function drawBackCover(b) {
@@ -1593,7 +1693,9 @@ async function printPDF(b, sizeKey) {
 }
 
 /* ═══════════ 그림 올리기 (크기 줄여서 저장) ═══════════ */
-function readImage(file, maxSide = 1400) {
+async function readImage(file, maxSide = 1400) { return (await readImageInfo(file, maxSide)).url; }
+/* keepAlpha: PNG·GIF·WEBP 처럼 투명한 부분이 있는 그림은 투명함을 살려 저장함 */
+function readImageInfo(file, maxSide = 1400, keepAlpha = false) {
   return new Promise((res, rej) => {
     if (!file || !/^image\\//.test(file.type)) return rej(new Error('그림 파일이 아님'));
     const fr = new FileReader();
@@ -1603,9 +1705,11 @@ function readImage(file, maxSide = 1400) {
         const r = Math.min(1, maxSide / Math.max(im.width, im.height));
         const c = document.createElement('canvas');
         c.width = Math.round(im.width * r); c.height = Math.round(im.height * r);
-        const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height);
+        const alpha = keepAlpha && /png|gif|webp/i.test(file.type);
+        const x = c.getContext('2d');
+        if (!alpha) { x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); }
         x.drawImage(im, 0, 0, c.width, c.height);
-        res(c.toDataURL('image/jpeg', 0.85));
+        res({ url: alpha ? c.toDataURL('image/png') : c.toDataURL('image/jpeg', 0.86), w: c.width, h: c.height });
       };
       im.onerror = () => rej(new Error('그림을 열 수 없음'));
       im.src = fr.result;
@@ -1637,7 +1741,7 @@ function setPane(p) {
   $$('.pane').forEach(x => x.classList.toggle('on', x.id === 'pane-' + p));
   document.body.classList.toggle('pane-cover', p === 'cover');
   renderChList();
-  if (p === 'cover') { renderCoverTools(); drawStage(); }
+  if (p === 'cover') { redoStack = []; renderCoverTools(); setCdTab(cdTab); }
   if (p === 'write') renderWriter();
   if (p === 'style') renderStyle();
   if (p === 'info') renderInfo();
@@ -1873,7 +1977,7 @@ $('#themeSw2').addEventListener('click', e => { const b = e.target.closest('[dat
 let sel = null, drag = null, stageRaf = 0;
 function drawStage() {
   if (stageRaf) return;
-  stageRaf = requestAnimationFrame(async () => { stageRaf = 0; if (book) await drawCover(book, $('#coverStage'), { edit: true, sel }); });
+  stageRaf = requestAnimationFrame(async () => { stageRaf = 0; if (book) await drawCover(book, $('#coverStage'), { edit: true, sel, live: liveStroke }); });
 }
 let layoutThumbSeq = 0;
 async function drawLayoutThumbs() {
@@ -1918,8 +2022,19 @@ $('#cdTabs').addEventListener('click', e => {
   const b = e.target.closest('[data-cd]'); if (!b) return;
   $$('#cdTabs button').forEach(x => x.classList.toggle('on', x === b));
   $$('.cd-sec').forEach(x => x.classList.toggle('on', x.id === 'cd-' + b.dataset.cd));
-  if (b.dataset.cd === 'layout') drawLayoutThumbs();
+  setCdTab(b.dataset.cd);
 });
+let cdTab = 'layout';
+function setCdTab(t) {
+  cdTab = t;
+  if (t === 'layout') drawLayoutThumbs();
+  if (t === 'draw') { sel = null; renderSelbar(); renderDrawTools(); }
+  $('.cd-stage').classList.toggle('drawing', t === 'draw');
+  $('#stageHint').textContent = t === 'draw'
+    ? '표지 위에 손가락·펜슬·마우스로 그림 · Ctrl+Z 되돌리기'
+    : '제목·지은이·스티커·사진을 끌어서 옮김 · 누르면 크기·회전 조절 · Delete 키로 지움';
+  drawStage();
+}
 function coverChanged(redrawTools) { if (redrawTools) renderCoverTools(); drawStage(); touch(); }
 $('#lays').addEventListener('click', e => { const b = e.target.closest('[data-lay]'); if (!b) return; book.cover.layout = b.dataset.lay; book.cover.tx = book.cover.ty = book.cover.ax = book.cover.ay = 0; $$('.lay').forEach(x => x.classList.toggle('on', x === b)); drawStage(); touch(); });
 $('#themeSw').addEventListener('click', e => { const b = e.target.closest('[data-theme]'); if (!b) return; book.theme = b.dataset.theme; coverChanged(true); });
@@ -1940,6 +2055,78 @@ $('#fileCover').onchange = async e => {
   e.target.value = '';
 };
 $('#btnCoverImgDel').onclick = () => { book.cover.image = null; coverChanged(true); };
+/* ── 패드·컴퓨터 사진 붙이기 ── */
+async function addPhotos(files) {
+  const imgs = Array.from(files || []).filter(f => /^image\\//.test(f.type));
+  if (!imgs.length) return toast('그림 파일이 아님');
+  let n = 0, last = null;
+  for (const f of imgs) {
+    try {
+      const info = await readImageInfo(f, 1200, true);
+      const k = book.cover.stickers.filter(s => s.type === 'photo').length;
+      last = { id: uid(), type: 'photo', v: info.url, a: info.h / info.w, frame: /^data:image\\/png/.test(info.url) ? 'none' : 'white', s: 460, r: (k % 2 ? 4 : -4), x: 500 + (k % 4) * 40 - 60, y: 640 + (k % 4) * 40 - 60 };
+      book.cover.stickers.push(last); n++;
+    } catch (err) { toast(err.message); }
+  }
+  if (last) { sel = { type: 'sticker', id: last.id }; renderSelbar(); coverChanged(); toast(\`사진 \${n}장을 붙임. 끌어서 옮길 수 있음\`); }
+}
+$('#btnPhoto').onclick = () => $('#filePhoto').click();
+$('#filePhoto').onchange = e => { const f = Array.from(e.target.files); e.target.value = ''; addPhotos(f); };
+const cdStage = $('.cd-stage');
+['dragenter', 'dragover'].forEach(t => cdStage.addEventListener(t, e => { if (e.dataTransfer && Array.from(e.dataTransfer.types).includes('Files')) { e.preventDefault(); cdStage.classList.add('dropping'); } }));
+cdStage.addEventListener('dragleave', e => { if (e.target === cdStage || !cdStage.contains(e.relatedTarget)) cdStage.classList.remove('dropping'); });
+cdStage.addEventListener('drop', e => { e.preventDefault(); cdStage.classList.remove('dropping'); addPhotos(e.dataTransfer.files); });
+addEventListener('paste', e => {
+  if (pane !== 'cover' || document.body.dataset.view !== 'editor' || /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
+  const fs = Array.from((e.clipboardData && e.clipboardData.files) || []).filter(f => /^image\\//.test(f.type));
+  if (fs.length) { e.preventDefault(); addPhotos(fs); }
+});
+
+/* ── 그리기 도구 ── */
+const pen = { t: 'pen', c: '#1c1f24', w: { pencil: 5, pen: 12, marker: 40, eraser: 44 } };
+let liveStroke = null, redoStack = [], penSeenAt = 0;
+function renderDrawTools() {
+  $('#pens').innerHTML = Object.entries(PENS).map(([k, p]) => \`<button class="pen \${pen.t === k ? 'on' : ''}" data-pen="\${k}"><i style="height:\${Math.max(2, Math.min(14, p.w / 3))}px;\${k === 'eraser' ? 'background:repeating-linear-gradient(45deg,#ccc 0 4px,#fff 4px 8px);border:1px solid #ccc' : k === 'marker' ? 'opacity:.45' : ''}"></i>\${p.name}</button>\`).join('');
+  $('#penColors').innerHTML = PEN_COLORS.map(c => \`<button class="sw \${pen.c === c ? 'on' : ''}" data-pc="\${c}" style="background:\${c}"></button>\`).join('') +
+    \`<label class="sw pick \${PEN_COLORS.includes(pen.c) ? '' : 'on'}" title="다른 색"><input type="color" id="penPick" value="\${pen.c}"></label>\`;
+  $('#penSize').value = pen.w[pen.t];
+  const d = Math.max(4, Math.min(30, pen.w[pen.t] / 2));
+  $('#penDot').style.cssText = \`width:\${d}px;height:\${d}px;background:\${pen.t === 'eraser' ? '#ccc' : pen.c}\`;
+  $('#drawTop').checked = !!book.cover.drawing.top;
+  $('#btnUndo').disabled = !book.cover.drawing.strokes.length;
+  $('#btnRedo').disabled = !redoStack.length;
+}
+$('#pens').addEventListener('click', e => { const b = e.target.closest('[data-pen]'); if (!b) return; pen.t = b.dataset.pen; renderDrawTools(); });
+$('#penColors').addEventListener('click', e => { const b = e.target.closest('[data-pc]'); if (!b) return; pen.c = b.dataset.pc; if (pen.t === 'eraser') pen.t = 'pen'; renderDrawTools(); });
+$('#penColors').addEventListener('input', e => { if (e.target.id !== 'penPick') return; pen.c = e.target.value; if (pen.t === 'eraser') pen.t = 'pen'; const d = $('#penDot'); d.style.background = pen.c; });
+$('#penColors').addEventListener('change', e => { if (e.target.id === 'penPick') renderDrawTools(); });
+$('#penSize').addEventListener('input', e => { pen.w[pen.t] = +e.target.value; const d = Math.max(4, Math.min(30, pen.w[pen.t] / 2)); Object.assign($('#penDot').style, { width: d + 'px', height: d + 'px' }); });
+function drawUndo() { const s = book.cover.drawing.strokes.pop(); if (s) { redoStack.push(s); renderDrawTools(); coverChanged(); } }
+function drawRedo() { const s = redoStack.pop(); if (s) { book.cover.drawing.strokes.push(s); renderDrawTools(); coverChanged(); } }
+$('#btnUndo').onclick = drawUndo;
+$('#btnRedo').onclick = drawRedo;
+$('#btnClearDraw').onclick = () => { if (!book.cover.drawing.strokes.length || !confirm('표지에 그린 그림을 모두 지울까요?')) return; redoStack = book.cover.drawing.strokes.slice().reverse(); book.cover.drawing.strokes = []; renderDrawTools(); coverChanged(); toast('그림을 모두 지움 (되돌리기는 "다시"로 가능)'); };
+$('#drawTop').addEventListener('change', e => { book.cover.drawing.top = e.target.checked; coverChanged(); });
+function strokeDown(e) {
+  if (e.pointerType === 'pen') penSeenAt = Date.now();
+  else if (e.pointerType === 'touch' && Date.now() - penSeenAt < 4000) return; // 펜슬 쓰는 중 손바닥 닿음 무시
+  const p = stagePt(e);
+  liveStroke = { t: pen.t, c: pen.c, w: pen.w[pen.t], p: [Math.round(p.x), Math.round(p.y)] };
+  stage.setPointerCapture(e.pointerId); drawStage();
+}
+function strokeMove(e) {
+  const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+  for (const ev of (evs.length ? evs : [e])) {
+    const p = stagePt(ev), a = liveStroke.p, lx = a[a.length - 2], ly = a[a.length - 1];
+    if (Math.hypot(p.x - lx, p.y - ly) > 1.5) a.push(Math.round(p.x), Math.round(p.y));
+  }
+  drawStage();
+}
+function strokeUp() {
+  if (!liveStroke) return;
+  book.cover.drawing.strokes.push(liveStroke); liveStroke = null; redoStack = [];
+  renderDrawTools(); drawStage(); touch();
+}
 function addSticker(s) {
   const st = Object.assign({ id: uid(), x: 500 + (Math.random() - .5) * 200, y: 560 + (Math.random() - .5) * 200, s: s.type === 'emoji' ? 150 : 210, r: s.type === 'badge' ? -12 : 0 }, s);
   book.cover.stickers.push(st); sel = { type: 'sticker', id: st.id };
@@ -1960,9 +2147,11 @@ function renderSelbar() {
     return;
   }
   const s = selSticker(); if (!s) { sel = null; bar.hidden = true; return; }
-  bar.innerHTML = \`\${s.type !== 'emoji' ? \`<input type="text" data-sb="text" value="\${esc(s.v)}" maxlength="14">\` : ''}
-\${s.type !== 'emoji' ? ['#c92a2a', '#e8590c', '#2b8a3e', '#3651b8', '#7c3a7a', '#9a6b14', '#1c1f24'].map(c => \`<button class="sw \${s.color === c ? 'on' : ''}" data-sbc="\${c}" style="background:\${c}"></button>\`).join('') : ''}
-<label>크기<input type="range" data-sb="size" min="50" max="520" value="\${s.s}"></label>
+  const isTxt = s.type === 'badge' || s.type === 'tag', isPh = s.type === 'photo';
+  bar.innerHTML = \`\${isPh ? \`<div class="seg">\${Object.entries(PHOTO_FRAMES).map(([k, n]) => \`<button data-sbf="\${k}" class="\${(s.frame || 'none') === k ? 'on' : ''}">\${n}</button>\`).join('')}</div><button class="btn sm" data-sb="asbg" title="이 사진을 배경 그림으로">배경으로</button>\` : ''}
+\${isTxt ? \`<input type="text" data-sb="text" value="\${esc(s.v)}" maxlength="14">\` : ''}
+\${isTxt ? ['#c92a2a', '#e8590c', '#2b8a3e', '#3651b8', '#7c3a7a', '#9a6b14', '#1c1f24'].map(c => \`<button class="sw \${s.color === c ? 'on' : ''}" data-sbc="\${c}" style="background:\${c}"></button>\`).join('') : ''}
+<label>크기<input type="range" data-sb="size" min="\${isPh ? 80 : 50}" max="\${isPh ? 1000 : 520}" value="\${s.s}"></label>
 <label>회전<input type="range" data-sb="rot" min="-180" max="180" value="\${s.r || 0}"></label>
 <button class="iconbtn" data-sb="front" title="맨 앞으로">\${icon('layers', 's')}</button>
 <button class="iconbtn" data-sb="dup" title="복제">\${icon('copy', 's')}</button>
@@ -1978,12 +2167,15 @@ $('#selbar').addEventListener('change', () => touch());
 $('#selbar').addEventListener('click', e => {
   const c = e.target.closest('[data-sbc]'); const s = selSticker();
   if (c && s) { s.color = c.dataset.sbc; renderSelbar(); return coverChanged(); }
+  const fb = e.target.closest('[data-sbf]');
+  if (fb && s) { s.frame = fb.dataset.sbf; renderSelbar(); return coverChanged(); }
   const b = e.target.closest('button[data-sb]'); if (!b) return;
   const k = b.dataset.sb, arr = book.cover.stickers;
   if (k === 'reset') { if (sel.type === 'title') book.cover.tx = book.cover.ty = 0; else book.cover.ax = book.cover.ay = 0; }
   else if (k === 'front' && s) { arr.splice(arr.indexOf(s), 1); arr.push(s); }
   else if (k === 'dup' && s) { const n = Object.assign(clone(s), { id: uid(), x: s.x + 40, y: s.y + 40 }); arr.push(n); sel = { type: 'sticker', id: n.id }; renderSelbar(); }
   else if (k === 'del' && s) { arr.splice(arr.indexOf(s), 1); sel = null; renderSelbar(); }
+  else if (k === 'asbg' && s) { book.cover.image = s.v; Object.assign(book.cover, { zoom: 1, fx: 0, fy: 0 }); arr.splice(arr.indexOf(s), 1); sel = null; renderSelbar(); renderCoverTools(); toast('배경 그림으로 바꿈. 레이아웃에 따라 그림 칸이 달라짐'); }
   coverChanged();
 });
 /* 표지 위에서 끌기 */
@@ -1991,6 +2183,7 @@ const stage = $('#coverStage');
 function stagePt(e) { const r = stage.getBoundingClientRect(); return { x: (e.clientX - r.left) / r.width * 1000, y: (e.clientY - r.top) / r.height * 1414 }; }
 const inBox = (p, b, pad = 16) => b && p.x >= b.x - pad && p.x <= b.x + b.w + pad && p.y >= b.y - pad && p.y <= b.y + b.h + pad;
 stage.addEventListener('pointerdown', e => {
+  if (cdTab === 'draw') return strokeDown(e);
   const p = stagePt(e), h = stage._hits || {};
   let hit = null;
   for (let i = (h.stickers || []).length - 1; i >= 0; i--) if (inBox(p, h.stickers[i].box)) { hit = { type: 'sticker', id: h.stickers[i].id }; break; }
@@ -2003,10 +2196,12 @@ stage.addEventListener('pointerdown', e => {
   stage.setPointerCapture(e.pointerId); stage.style.cursor = 'grabbing';
 });
 stage.addEventListener('pointermove', e => {
+  if (liveStroke) return strokeMove(e);
+  if (cdTab === 'draw') return;
   const p = stagePt(e), h = stage._hits || {};
   if (!drag) {
     const over = (h.stickers || []).some(x => inBox(p, x.box)) || inBox(p, h.title) || inBox(p, h.author);
-    stage.style.cursor = over ? 'grab' : 'default'; return;
+    stage.style.cursor = over ? 'grab' : ''; return;
   }
   const dx = p.x - drag.p.x, dy = p.y - drag.p.y, cv = book.cover;
   if (Math.abs(dx) + Math.abs(dy) > 2) drag.moved = true;
@@ -2016,8 +2211,13 @@ stage.addEventListener('pointermove', e => {
   else { cv.ax = Math.round(drag.o.x + dx); cv.ay = Math.round(drag.o.y + dy); }
   drawStage();
 });
-const endDrag = () => { if (drag && drag.moved) touch(); drag = null; stage.style.cursor = 'default'; };
+const endDrag = () => { if (liveStroke) return strokeUp(); if (drag && drag.moved) touch(); drag = null; stage.style.cursor = ''; };
 stage.addEventListener('pointerup', endDrag); stage.addEventListener('pointercancel', endDrag);
+addEventListener('keydown', e => {
+  if (pane !== 'cover' || cdTab !== 'draw' || document.body.dataset.view !== 'editor' || /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? drawRedo() : drawUndo(); }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') { e.preventDefault(); drawRedo(); }
+});
 addEventListener('keydown', e => {
   if (pane !== 'cover' || !sel || document.body.dataset.view !== 'editor' || /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
   const s = selSticker(), cv = book.cover;
