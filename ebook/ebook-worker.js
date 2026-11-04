@@ -245,6 +245,16 @@ body.nopv .pv,body.pane-cover .pv{display:none}
 .sw.pick input{opacity:0;width:100%;height:100%;cursor:pointer}
 .sizedot{display:inline-block;border-radius:50%;background:var(--ink);vertical-align:middle;margin-left:6px}
 .pens.sh{grid-template-columns:repeat(4,1fr)}
+.txed{position:fixed;z-index:120;width:min(392px,calc(100vw - 24px));background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-lg);padding:10px;display:flex;flex-direction:column;gap:8px}
+.txed textarea{width:100%;min-height:58px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:16px;line-height:1.5;resize:vertical;outline:none}
+.txed textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(54,81,184,.14)}
+.txed .seg{flex-wrap:nowrap}
+.txed .seg button{height:28px;padding:0 9px;font-size:12px}
+.txed select{height:30px;border:1px solid var(--line);border-radius:7px;padding:0 6px;font-size:13px;background:var(--surface)}
+.txed .sw{width:22px;height:22px}
+.txed .sw.on::after{inset:-3px}
+.txed .k{font-size:11.5px;color:var(--muted);white-space:nowrap}
+.txed input[type=range]{flex:1;min-width:80px;accent-color:var(--accent)}
 .pen svg{width:22px;height:22px}
 .studio{position:fixed;inset:0;z-index:95;background:var(--bg);display:flex;flex-direction:column}
 .st-h{height:58px;flex:none;display:flex;align-items:center;gap:10px;padding:0 16px;background:var(--surface);border-bottom:1px solid var(--line);overflow-x:auto}
@@ -676,6 +686,16 @@ body.nopv .pv,body.pane-cover .pv{display:none}
   <input type="file" id="stFile" accept="image/*" hidden>
 </div>
 
+<!-- 글자·말풍선 편집 창 (표지·그림판 공용) -->
+<div class="txed" id="txEd" hidden>
+  <textarea id="txVal" rows="2" placeholder="글자를 입력함 (엔터로 줄 바꿈)"></textarea>
+  <div class="row" id="txBubRow" style="flex-wrap:nowrap;overflow-x:auto"><span class="k">모양</span><div class="seg" id="txKind"></div></div>
+  <div class="row" id="txTailRow" style="flex-wrap:nowrap;overflow-x:auto"><span class="k">꼬리</span><div class="seg" id="txTail"></div></div>
+  <div class="row" style="flex-wrap:nowrap"><select id="txFont" title="글꼴"></select><span class="k">크기</span><input type="range" id="txSize" min="16" max="220"></div>
+  <div class="row"><div class="swatches" id="txColors"></div><label class="check" id="txOlBox" style="padding:0;font-size:12.5px"><input type="checkbox" id="txOl">흰 테두리</label></div>
+  <div class="row"><button class="btn sm danger" id="txDel" data-i="trash">지우기</button><span class="spacer"></span><span class="k">글자를 누르면 다시 고침 · 끌면 옮김</span><button class="btn sm primary" id="txDone">완료</button></div>
+</div>
+
 <div class="toast" id="toast"></div>
 <iframe id="printFrame" style="position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden" title="인쇄용"></iframe>
 
@@ -846,7 +866,7 @@ const TOOLS = {
   brush:{ name:'붓', kind:'free', w:18, a:1 }, marker:{ name:'마커', kind:'free', w:40, a:.45 },
   crayon:{ name:'크레파스', kind:'free', w:22, a:1 }, watercolor:{ name:'수채', kind:'free', w:40, a:1 },
   spray:{ name:'스프레이', kind:'free', w:50, a:1 }, eraser:{ name:'지우개', kind:'free', w:44, a:1 },
-  fill:{ name:'채우기', kind:'fill' }, pick:{ name:'스포이트', kind:'pick' }, hand:{ name:'손(이동)', kind:'hand' },
+  fill:{ name:'채우기', kind:'fill' }, text:{ name:'글자', kind:'text' }, bubble:{ name:'말풍선', kind:'bubble' }, pick:{ name:'스포이트', kind:'pick' }, hand:{ name:'손(이동)', kind:'hand' },
   line:{ name:'직선', kind:'shape', w:10 }, rect:{ name:'네모', kind:'shape', w:10 },
   ellipse:{ name:'동그라미', kind:'shape', w:10 }, star:{ name:'별', kind:'shape', w:10 }, heart:{ name:'하트', kind:'shape', w:10 }
 };
@@ -857,6 +877,8 @@ const FREE_LOOK = {
   eraser:'height:9px;background:repeating-linear-gradient(45deg,#ccc 0 4px,#fff 4px 8px);border:1px solid #ccc'
 };
 const TOOL_SVG = {
+  text:'<polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/>',
+  bubble:'<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>',
   pick:'<path d="M2 22l1-1h3l9-9"/><path d="M3 21v-3l9-9"/><path d="M15 6l3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.4.4a2.1 2.1 0 1 1-3 3l-3.8-3.8a2.1 2.1 0 1 1 3-3l.4.4z"/>',
   hand:'<path d="M18 11V6a2 2 0 0 0-4 0v5"/><path d="M14 10V4a2 2 0 0 0-4 0v6"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-6-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>',
   fill:'<path d="M19 11l-8-8-8.5 8.5a2 2 0 0 0 0 2.8l5.2 5.2a2 2 0 0 0 2.8 0L19 11z"/><path d="M20 15s2 2.2 2 3.5a2 2 0 0 1-4 0c0-1.3 2-3.5 2-3.5z"/>',
@@ -1342,6 +1364,7 @@ async function drawCover(b, canvas, opt = {}) {
   const photoIms = new Map();
   for (const s of cv.stickers) if (s.type === 'photo') photoIms.set(s.id, await loadImg(s.v));
   const dr = cv.drawing || { strokes: [], top: false };
+  await preloadStrokeFonts([dr]);
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, W, H);
   ctx.shadowColor = 'transparent';
   let lay = opt.layout || cv.layout;
@@ -1473,6 +1496,7 @@ async function drawCover(b, canvas, opt = {}) {
       ctx.restore();
     }
   }
+  if (opt.edit) editOverlay(ctx, canvas);
   if (opt.guide) { ctx.save(); ctx.strokeStyle = 'rgba(54,81,184,.55)'; ctx.lineWidth = 3; ctx.setLineDash([16, 12]); ctx.beginPath(); ctx.moveTo(W / 2, 0); ctx.lineTo(W / 2, H); ctx.stroke(); ctx.restore(); }
   canvas._hits = hits;
   return canvas;
@@ -1614,8 +1638,74 @@ function drawStroke(x, s, W, H) {
     const a = s.s; for (let i = 0; i < a.length; i += 3) x.fillRect(a[i + 1], a[i], a[i + 2] - a[i + 1] + 1, 1);
     x.restore(); return;
   }
+  if (s.t === 'text') return drawText(x, s);
+  if (s.t === 'bubble') return drawBubble(x, s);
   drawOne(x, s, W, H);
   if (s.sym) { x.save(); x.translate(W, 0); x.scale(-1, 1); drawOne(x, s, W, H); x.restore(); }
+}
+/* ── 글자 · 말풍선 ── */
+const BUBBLES = { speech:'말풍선', think:'생각', shout:'외침', box:'설명 상자' };
+const TAILS = { bl:'↙', br:'↘', tl:'↖', tr:'↗', none:'없음' };
+const tFont = (s, size) => { const f = TITLE_FONTS[s.font] || TITLE_FONTS.jua; return \`\${f.w} \${Math.round(size)}px \${f.css}\`; };
+function textBox(s) {
+  const c = brushCv.getContext('2d'); c.font = tFont(s, s.size);
+  const lines = String(s.v || '').split('\\n'), lh = s.size * 1.25;
+  const w = Math.max(s.size * 1.6, ...lines.map(l => c.measureText(l).width)), h = Math.max(1, lines.length) * lh;
+  return { x: s.x - w / 2, y: s.y - h / 2, w, h };
+}
+function bubbleBox(s) { const [a, b, c, d] = s.a; return { x: Math.min(a, c), y: Math.min(b, d), w: Math.abs(c - a), h: Math.abs(d - b) }; }
+const itemBox = (s) => s.t === 'text' ? textBox(s) : bubbleBox(s);
+function drawText(x, s) {
+  const lines = String(s.v || '').split('\\n'), lh = s.size * 1.25;
+  x.save(); x.font = tFont(s, s.size); x.textAlign = 'center'; x.textBaseline = 'middle';
+  const y0 = s.y - (lines.length * lh) / 2 + lh / 2;
+  if (s.ol) { x.lineJoin = 'round'; x.strokeStyle = '#fff'; x.lineWidth = Math.max(4, s.size * 0.2); lines.forEach((l, i) => x.strokeText(l, s.x, y0 + i * lh)); }
+  x.fillStyle = s.c; lines.forEach((l, i) => x.fillText(l, s.x, y0 + i * lh));
+  x.restore();
+}
+function drawBubble(x, s) {
+  const b = bubbleBox(s); if (b.w < 4 || b.h < 4) return;
+  const { x: x1, y: y1, w, h } = b, cx = x1 + w / 2, cy = y1 + h / 2, m = Math.min(w, h), L = Math.max(3, m * 0.025);
+  const shapes = [];   // 몸통·꼬리 경로를 그리는 함수들
+  if (s.k === 'box') shapes.push(c => c.rect(x1, y1, w, h));
+  else if (s.k === 'shout') shapes.push(c => { for (let i = 0; i < 22; i++) { const a = i / 22 * Math.PI * 2 - Math.PI / 2, r = i % 2 ? 0.84 : 1.1; c[i ? 'lineTo' : 'moveTo'](cx + Math.cos(a) * w / 2 * r, cy + Math.sin(a) * h / 2 * r); } c.closePath(); });
+  else if (s.k === 'think') {
+    shapes.push(c => c.ellipse(cx, cy, w / 2 * 0.9, h / 2 * 0.86, 0, 0, Math.PI * 2));
+    for (let i = 0; i < 14; i++) { const a = i / 14 * Math.PI * 2; shapes.push(c => c.arc(cx + Math.cos(a) * w / 2 * 0.86, cy + Math.sin(a) * h / 2 * 0.82, m * 0.2, 0, Math.PI * 2)); }
+  } else shapes.push(c => roundRect(c, x1, y1, w, h, m * 0.45));
+  const dir = { bl: [-1, 1], br: [1, 1], tl: [-1, -1], tr: [1, -1] }[s.tail];
+  if (dir && s.k !== 'box') {
+    const tx = cx + dir[0] * w * 0.42, ty = dir[1] > 0 ? y1 + h + h * 0.42 : y1 - h * 0.42;
+    if (s.k === 'think') {
+      shapes.push(c => c.arc(cx + (tx - cx) * 0.72, cy + (ty - cy) * 0.72, m * 0.08, 0, Math.PI * 2));
+      shapes.push(c => c.arc(tx, ty, m * 0.045, 0, Math.PI * 2));
+    } else {
+      const bx = cx + dir[0] * w * 0.16, by = cy + dir[1] * h * 0.25, bw = m * 0.13;
+      shapes.push(c => { c.moveTo(bx - bw, by); c.lineTo(tx, ty); c.lineTo(bx + bw, by); c.closePath(); });
+    }
+  }
+  x.save(); x.lineJoin = 'round'; x.strokeStyle = s.c; x.lineWidth = L * 2; x.fillStyle = s.bg || '#ffffff';
+  for (const f of shapes) { x.beginPath(); f(x); x.stroke(); }   // 테두리를 두껍게 먼저 그리고
+  for (const f of shapes) { x.beginPath(); f(x); x.fill(); }     // 안을 흰색으로 덮으면 이음매 없이 합쳐짐
+  // 안쪽 글자: 칸에 맞게 크기를 줄임
+  const k = { speech: [0.78, 0.68], think: [0.68, 0.6], shout: [0.6, 0.52], box: [0.88, 0.8] }[s.k] || [0.78, 0.68];
+  const iw = w * k[0], ih = h * k[1];
+  let size = s.size, lines = [];
+  for (; size >= 12; size -= 2) {
+    x.font = tFont(s, size);
+    lines = String(s.v || '').split('\\n').flatMap(par => par ? wrapLines(x, par, iw) : ['']);
+    if (lines.length * size * 1.25 <= ih) break;
+  }
+  const lh = size * 1.25, y0 = cy - lines.length * lh / 2 + lh / 2;
+  x.fillStyle = s.tc || '#1c1f24'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  lines.forEach((l, i) => x.fillText(l, cx, y0 + i * lh));
+  x.restore();
+}
+/* 글자·말풍선에 쓰인 글꼴을 미리 불러옴 */
+async function preloadStrokeFonts(layers) {
+  const keys = new Set();
+  for (const L of layers) for (const s of (L.strokes || [])) if (s.t === 'text' || s.t === 'bubble') keys.add(s.font || 'jua');
+  await Promise.all([...keys].map(k => ensureFont(TITLE_FONTS[k] || TITLE_FONTS.jua)));
 }
 /* 채우기 영역 계산: 누른 순간의 '보이는 선'을 경계로 구간(y, x1, x2)들을 저장 */
 function computeFillSpans(src, sx, sy, W, H) {
@@ -1651,12 +1741,12 @@ function computeFillSpans(src, sx, sy, W, H) {
 function committedLayer(dr, W, H) {
   const arr = dr.strokes, n = arr.length, last = arr[n - 1];
   let e = layerCache.find(c => c.dr === dr);
-  if (e && e.arr === arr && e.n === n && e.last === last && e.W === W && e.H === H) return e.cv;
+  if (e && e.arr === arr && e.n === n && e.last === last && e.W === W && e.H === H && e.rv === (dr.rv || 0)) return e.cv;
   if (!e) { e = { dr, cv: document.createElement('canvas') }; layerCache.unshift(e); if (layerCache.length > 12) layerCache.pop(); }
   e.cv.width = W; e.cv.height = H;
   const x = e.cv.getContext('2d', { willReadFrequently: true });
   for (const st of arr) drawStroke(x, st, W, H);
-  Object.assign(e, { arr, n, last, W, H });
+  Object.assign(e, { arr, n, last, W, H, rv: dr.rv || 0 });
   return e.cv;
 }
 function renderDrawing(ctx, dr, live, W = 1000, H = 1414) {
@@ -1975,6 +2065,7 @@ function openBook(id, toPane) {
   schedulePreview(30);
 }
 function setPane(p) {
+  if (txState) finishTextEdit();
   pane = p;
   $$('.nav-i').forEach(x => x.classList.toggle('on', x.dataset.pane === p));
   $$('.pane').forEach(x => x.classList.toggle('on', x.id === 'pane-' + p));
@@ -2176,6 +2267,7 @@ let stRaf = 0;
 function stDraw() { if (stRaf) return; stRaf = requestAnimationFrame(async () => { stRaf = 0; if (st.dr) await paintStudio(stCanvas, studioCtl.live, true); }); }
 async function paintStudio(cv, live, guide) {
   const d = st.dr, W = d.w, H = d.h;
+  await preloadStrokeFonts(d.layers);
   if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; if (cv === stCanvas) layoutCanvas(); }
   const x = cv.getContext('2d');
   x.globalAlpha = 1; x.fillStyle = '#fff'; x.fillRect(0, 0, W, H);
@@ -2183,6 +2275,7 @@ async function paintStudio(cv, live, guide) {
   if (im && d.bgVisible) { const r = Math.min(W / im.width, H / im.height); x.globalAlpha = d.bgOpacity; x.drawImage(im, (W - im.width * r) / 2, (H - im.height * r) / 2, im.width * r, im.height * r); }
   d.layers.forEach((L, i) => { if (!L.visible) return; x.globalAlpha = L.opacity; renderDrawing(x, L, i === d.active ? live : null, W, H); });
   x.globalAlpha = 1;
+  if (guide) editOverlay(x, cv);
   if (guide && pen.sym) { x.save(); x.strokeStyle = 'rgba(54,81,184,.55)'; x.lineWidth = 2; x.setLineDash([14, 10]); x.beginPath(); x.moveTo(W / 2, 0); x.lineTo(W / 2, H); x.stroke(); x.restore(); }
   return cv;
 }
@@ -2331,11 +2424,13 @@ async function openStudio(i) {
   requestAnimationFrame(() => { layoutCanvas(); stDraw(); });
 }
 function closeStudio(force) {
+  if (txState) finishTextEdit();
   if (!force && st.dirty && !confirm('그린 그림을 넣지 않고 닫을까요?')) return;
   $('#studio').hidden = true; st.i = -1; ptrs.clear(); pinch = panning = null;
 }
 $('#stCancel').onclick = () => closeStudio(false);
 $('#stSave').onclick = async () => {
+  if (txState) finishTextEdit();
   const c = book.chapters[st.i]; if (!c) return closeStudio(true);
   if (!totalStrokes() && !st.dr.bg) { toast('아직 그린 것이 없음'); return; }
   const out = await paintStudio(document.createElement('canvas'), null, false);
@@ -2357,7 +2452,7 @@ $('#stFile').onchange = async e => {
 };
 $('#stPhotoDel').onclick = () => { st.dr.bg = null; st.dirty = true; renderStudioBar(); renderLayers(); stDraw(); };
 addEventListener('keydown', e => {
-  if ($('#studio').hidden) return;
+  if ($('#studio').hidden || !$('#txEd').hidden) return;
   const k = e.key.toLowerCase(), typing = /INPUT|TEXTAREA/.test(document.activeElement.tagName) && document.activeElement.type !== 'range' && document.activeElement.type !== 'checkbox';
   if ((e.ctrlKey || e.metaKey) && k === 'z') { e.preventDefault(); e.shiftKey ? studioCtl.redoOne() : studioCtl.undo(); }
   else if ((e.ctrlKey || e.metaKey) && k === 'y') { e.preventDefault(); studioCtl.redoOne(); }
@@ -2543,7 +2638,7 @@ const pen = { t: 'pen', c: '#1c1f24', f: false, sym: false,
 let penSeenAt = 0;
 function toolPanelHTML() {
   return \`<div class="lbl">그리기</div><div class="pens" data-role="free"></div>
-<div class="lbl" style="margin-top:12px">도형 · 채우기 · 도우미</div><div class="pens sh" data-role="shapes"></div>
+<div class="lbl" style="margin-top:12px">글자 · 도형 · 채우기 · 도우미</div><div class="pens sh" data-role="shapes"></div>
 <label class="check" style="padding-top:8px"><input type="checkbox" data-role="sfill"><span>도형 속 채우기<small>Shift를 누른 채 그리면 반듯한 정사각형·원</small></span></label>
 <label class="check" style="padding-top:2px"><input type="checkbox" data-role="sym"><span>좌우 대칭 그리기<small>한쪽에 그리면 반대쪽에 거울처럼 그려짐</small></span></label>
 <div class="lbl" style="margin-top:12px">색</div><div class="swatches" data-role="colors"></div>
@@ -2555,7 +2650,7 @@ const r2 = (v) => Math.round(v * 100) / 100;
 /* opts: root(도구판), canvas, capture(포인터 잡을 곳), hand(손 도구 표시), size()→[W,H], dr()→지금 층,
          boundary()→채우기 경계 캔버스, pick()→스포이트로 읽을 캔버스, live(), commit(), extra() */
 function makeDrawCtl(opts) {
-  const ctl = { live: null, redo: [], prev: 'pen' };
+  const ctl = { live: null, redo: [], prev: 'pen', moving: null, opts };
   const root = opts.root; root.innerHTML = toolPanelHTML();
   const q = (r) => root.querySelector(\`[data-role=\${r}]\`);
   const tb = (k) => {
@@ -2567,7 +2662,7 @@ function makeDrawCtl(opts) {
   ctl.render = () => {
     if (pen.t === 'hand' && !opts.hand) pen.t = 'pen';
     q('free').innerHTML = ['pencil', 'pen', 'brush', 'marker', 'crayon', 'watercolor', 'spray', 'eraser'].map(tb).join('');
-    q('shapes').innerHTML = ['fill', 'pick', ...(opts.hand ? ['hand'] : []), 'line', 'rect', 'ellipse', 'star', 'heart'].map(tb).join('');
+    q('shapes').innerHTML = ['text', 'bubble', 'fill', 'pick', ...(opts.hand ? ['hand'] : []), 'line', 'rect', 'ellipse', 'star', 'heart'].map(tb).join('');
     q('sfill').checked = pen.f; q('sym').checked = pen.sym;
     q('colors').innerHTML = PEN_COLORS.map(c => \`<button class="sw \${pen.c === c ? 'on' : ''}" data-pc="\${c}" style="background:\${c}"></button>\`).join('') +
       \`<label class="sw pick \${PEN_COLORS.includes(pen.c) ? '' : 'on'}" title="다른 색"><input type="color" data-role="pickc" value="\${pen.c}"></label>\`;
@@ -2599,8 +2694,28 @@ function makeDrawCtl(opts) {
   ctl.down = (e) => {
     if (e.pointerType === 'pen') penSeenAt = Date.now();
     else if (e.pointerType === 'touch' && Date.now() - penSeenAt < 4000) return; // 펜슬 쓰는 중 손바닥 닿음 무시
+    if (txState) { finishTextEdit(); return; }   // 글자 고치는 중이면 먼저 마침
     const p = pt(e), kind = TOOLS[pen.t].kind, [W, H] = opts.size();
     if (kind === 'hand') return;
+    if (kind === 'text' || kind === 'bubble') {
+      const dr = opts.dr(), arr = dr.strokes;
+      for (let i = arr.length - 1; i >= 0; i--) {   // 이미 있는 글자·말풍선을 누르면 옮기기/고치기
+        const it = arr[i]; if (it.t !== 'text' && it.t !== 'bubble') continue;
+        const bx = itemBox(it), pad = 18;
+        if (p.x >= bx.x - pad && p.x <= bx.x + bx.w + pad && p.y >= bx.y - pad && p.y <= bx.y + bx.h + pad) {
+          ctl.moving = { s: it, dr, p, moved: false, o: it.t === 'text' ? [it.x, it.y] : it.a.slice() };
+          try { (opts.capture || opts.canvas).setPointerCapture(e.pointerId); } catch (err) {}
+          return;
+        }
+      }
+      if (kind === 'text') {
+        const s = { t: 'text', x: Math.round(p.x), y: Math.round(p.y), v: '', c: pen.c, size: Math.round(textPref.size * W / 1200), font: textPref.font, ol: textPref.ol };
+        arr.push(s); ctl.redo = []; openTextEditor(ctl, s, dr, true); return;
+      }
+      ctl.live = { t: 'bubble', k: textPref.kind, tail: textPref.tail, a: [p.x, p.y, p.x, p.y].map(Math.round), c: pen.c === '#ffffff' ? '#1c1f24' : pen.c, size: Math.round(textPref.bsize * W / 1200), font: textPref.font, v: '' };
+      try { (opts.capture || opts.canvas).setPointerCapture(e.pointerId); } catch (err) {}
+      opts.live(); return;
+    }
     if (kind === 'pick') {
       const cv = opts.pick(), px = Math.round(p.x), py = Math.round(p.y);
       if (px < 0 || py < 0 || px >= cv.width || py >= cv.height) return;
@@ -2622,7 +2737,15 @@ function makeDrawCtl(opts) {
     opts.live();
   };
   ctl.move = (e) => {
+    const M = ctl.moving;
+    if (M) {
+      const p = pt(e), dx = Math.round(p.x - M.p.x), dy = Math.round(p.y - M.p.y);
+      if (Math.abs(dx) + Math.abs(dy) > 3) M.moved = true;
+      if (M.s.t === 'text') { M.s.x = M.o[0] + dx; M.s.y = M.o[1] + dy; } else M.s.a = [M.o[0] + dx, M.o[1] + dy, M.o[2] + dx, M.o[3] + dy];
+      M.dr.rv = (M.dr.rv || 0) + 1; opts.live(); return true;
+    }
     const L = ctl.live; if (!L) return false;
+    if (L.t === 'bubble') { const p = pt(e); L.a[2] = Math.round(p.x); L.a[3] = Math.round(p.y); opts.live(); return true; }
     if (L.t === 'shape') {
       const p = pt(e); let dx = p.x - L.a[0], dy = p.y - L.a[1];
       if (e.shiftKey && L.k !== 'line') { const m = Math.max(Math.abs(dx), Math.abs(dy)); dx = Math.sign(dx || 1) * m; dy = Math.sign(dy || 1) * m; }
@@ -2637,12 +2760,20 @@ function makeDrawCtl(opts) {
     opts.live(); return true;
   };
   ctl.up = () => {
+    const M = ctl.moving;
+    if (M) { ctl.moving = null; if (M.moved) opts.commit(); else openTextEditor(ctl, M.s, M.dr, false); return true; }
     const L = ctl.live; if (!L) return false;
     ctl.live = null;
+    if (L.t === 'bubble') {
+      const [W, H] = opts.size(), b = bubbleBox(L);
+      if (b.w < 60 || b.h < 40) { const w = W * 0.36, h = W * 0.2; L.a = [L.a[0] - w / 2, L.a[1] - h / 2, L.a[0] + w / 2, L.a[1] + h / 2].map(Math.round); }
+      else L.a = [b.x, b.y, b.x + b.w, b.y + b.h].map(Math.round);
+      const dr = opts.dr(); dr.strokes.push(L); ctl.redo = []; opts.live(); openTextEditor(ctl, L, dr, true); return true;
+    }
     if (!(L.t === 'shape' && Math.abs(L.a[2] - L.a[0]) + Math.abs(L.a[3] - L.a[1]) < 6)) { opts.dr().strokes.push(L); ctl.redo = []; }
     ctl.render(); opts.commit(); return true;
   };
-  ctl.cancel = () => { if (ctl.live) { ctl.live = null; opts.live(); } };
+  ctl.cancel = () => { ctl.moving = null; if (ctl.live) { ctl.live = null; opts.live(); } };
   ctl.undo = () => { const st = opts.dr().strokes.pop(); if (st) { ctl.redo.push(st); ctl.render(); opts.commit(); } };
   ctl.redoOne = () => { const st = ctl.redo.pop(); if (st) { opts.dr().strokes.push(st); ctl.render(); opts.commit(); } };
   ctl.clear = () => {
@@ -2652,6 +2783,78 @@ function makeDrawCtl(opts) {
   };
   return ctl;
 }
+/* ── 글자·말풍선 편집 창 ── */
+const textPref = { font: 'jua', size: 72, bsize: 48, ol: true, kind: 'speech', tail: 'bl' };
+let txState = null;
+const TX_COLORS = ['#1c1f24', '#ffffff', '#c92a2a', '#e8590c', '#f59f00', '#2b8a3e', '#1c7ed6', '#7048e8', '#d6336c'];
+$('#txFont').innerHTML = Object.entries(TITLE_FONTS).map(([k, f]) => \`<option value="\${k}" style="font-family:\${f.css}">\${f.name}</option>\`).join('');
+$('#txKind').innerHTML = Object.entries(BUBBLES).map(([k, n]) => \`<button data-bk="\${k}">\${n}</button>\`).join('');
+$('#txTail').innerHTML = Object.entries(TAILS).map(([k, n]) => \`<button data-tl="\${k}">\${n}</button>\`).join('');
+function txRefresh() {
+  const { ctl } = txState;
+  txState.dr.rv = (txState.dr.rv || 0) + 1; ctl.opts.live();
+}
+function renderTextEditor() {
+  const { s } = txState, isB = s.t === 'bubble';
+  $('#txBubRow').hidden = !isB; $('#txTailRow').hidden = !isB || s.k === 'box'; $('#txOlBox').hidden = isB;
+  $$('#txKind button').forEach(b => b.classList.toggle('on', b.dataset.bk === s.k));
+  $$('#txTail button').forEach(b => b.classList.toggle('on', b.dataset.tl === (s.tail || 'none')));
+  $('#txFont').value = s.font || 'jua'; $('#txSize').value = s.size; $('#txOl').checked = !!s.ol;
+  $('#txColors').innerHTML = TX_COLORS.map(c => \`<button class="sw \${s.c === c ? 'on' : ''}" data-txc="\${c}" style="background:\${c}" title="\${isB ? '테두리 색' : '글자 색'}"></button>\`).join('');
+}
+function positionTextEditor() {
+  if (!txState) return;
+  const { s, ctl } = txState, ed = $('#txEd'), r = ctl.opts.canvas.getBoundingClientRect(), [W, H] = ctl.opts.size();
+  const b = itemBox(s), k = r.width / W;
+  const top = r.top + (b.y + b.h) * (r.height / H) + 14, bottomUp = r.top + b.y * (r.height / H) - 14;
+  const eh = ed.offsetHeight || 230, ew = ed.offsetWidth || 380;
+  let y = top + eh > innerHeight - 8 ? bottomUp - eh : top; y = Math.max(8, Math.min(innerHeight - eh - 8, y));
+  let x = r.left + (b.x + b.w / 2) * k - ew / 2; x = Math.max(8, Math.min(innerWidth - ew - 8, x));
+  Object.assign(ed.style, { left: x + 'px', top: y + 'px' });
+}
+async function openTextEditor(ctl, s, dr, isNew) {
+  txState = { ctl, s, dr, isNew, canvas: ctl.opts.canvas };
+  await ensureFont(TITLE_FONTS[s.font] || TITLE_FONTS.jua);
+  $('#txVal').value = s.v || '';
+  $('#txEd').hidden = false; renderTextEditor(); positionTextEditor(); txRefresh();
+  setTimeout(() => { const t = $('#txVal'); t.focus(); t.setSelectionRange(t.value.length, t.value.length); }, 30);
+}
+function finishTextEdit(remove) {
+  if (!txState) return;
+  const { s, dr, ctl } = txState;
+  s.v = String(s.v || '').replace(/\\s+$/, '');
+  if (remove || !s.v.trim()) { const i = dr.strokes.indexOf(s); if (i >= 0) dr.strokes.splice(i, 1); }
+  dr.rv = (dr.rv || 0) + 1;
+  txState = null; $('#txEd').hidden = true;
+  ctl.render(); ctl.opts.commit();
+}
+$('#txVal').addEventListener('input', e => { if (!txState) return; txState.s.v = e.target.value; txRefresh(); positionTextEditor(); });
+$('#txVal').addEventListener('keydown', e => {
+  if (e.key === 'Escape' || ((e.ctrlKey || e.metaKey) && e.key === 'Enter')) { e.preventDefault(); e.stopPropagation(); finishTextEdit(); }
+});
+$('#txFont').addEventListener('change', async e => { if (!txState) return; const k = e.target.value; await ensureFont(TITLE_FONTS[k]); txState.s.font = textPref.font = k; txRefresh(); });
+$('#txSize').addEventListener('input', e => {
+  if (!txState) return; const s = txState.s, [W] = txState.ctl.opts.size();
+  s.size = +e.target.value; if (s.t === 'text') textPref.size = Math.round(s.size * 1200 / W); else textPref.bsize = Math.round(s.size * 1200 / W);
+  txRefresh(); positionTextEditor();
+});
+$('#txOl').addEventListener('change', e => { if (!txState) return; txState.s.ol = textPref.ol = e.target.checked; txRefresh(); });
+$('#txEd').addEventListener('click', e => {
+  if (!txState) return; const s = txState.s;
+  const c = e.target.closest('[data-txc]'); if (c) { s.c = c.dataset.txc; renderTextEditor(); txRefresh(); return; }
+  const k = e.target.closest('[data-bk]'); if (k) { s.k = textPref.kind = k.dataset.bk; renderTextEditor(); txRefresh(); return; }
+  const t = e.target.closest('[data-tl]'); if (t) { s.tail = textPref.tail = t.dataset.tl; renderTextEditor(); txRefresh(); return; }
+  if (e.target.closest('#txDone')) finishTextEdit();
+  else if (e.target.closest('#txDel')) finishTextEdit(true);
+});
+/* 고치는 글자 둘레에 점선 표시 (화면에만, 저장 그림에는 안 들어감) */
+function editOverlay(ctx, canvasEl) {
+  if (!txState || txState.canvas !== canvasEl) return;
+  const b = itemBox(txState.s), pad = 14;
+  ctx.save(); ctx.strokeStyle = '#3651b8'; ctx.lineWidth = 3; ctx.setLineDash([12, 8]);
+  ctx.strokeRect(b.x - pad, b.y - pad, b.w + pad * 2, b.h + pad * 2); ctx.restore();
+}
+addEventListener('resize', positionTextEditor);
 const coverCtl = makeDrawCtl({
   root: $('#coverTools'), canvas: $('#coverStage'), size: () => [1000, 1414], dr: () => book.cover.drawing, pick: () => $('#coverStage'),
   live: () => drawStage(), commit: () => { drawStage(); touch(); },
@@ -2745,7 +2948,7 @@ stage.addEventListener('pointermove', e => {
 const endDrag = () => { if (coverCtl.up()) return; if (drag && drag.moved) touch(); drag = null; stage.style.cursor = ''; };
 stage.addEventListener('pointerup', endDrag); stage.addEventListener('pointercancel', endDrag);
 addEventListener('keydown', e => {
-  if (!$('#studio').hidden || pane !== 'cover' || cdTab !== 'draw' || document.body.dataset.view !== 'editor' || /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
+  if (!$('#studio').hidden || !$('#txEd').hidden || pane !== 'cover' || cdTab !== 'draw' || document.body.dataset.view !== 'editor' || /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? coverCtl.redoOne() : coverCtl.undo(); }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') { e.preventDefault(); coverCtl.redoOne(); }
 });
