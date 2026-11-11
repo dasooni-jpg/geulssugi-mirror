@@ -36,6 +36,7 @@ body{
   font-variant-numeric:tabular-nums;
 }
 button{font-family:inherit;cursor:pointer;color:inherit}
+button:focus-visible{outline:3px solid var(--brand);outline-offset:3px}
 .hidden{display:none !important}
 
 /* ─────────── 3D 화면 ─────────── */
@@ -53,8 +54,8 @@ button{font-family:inherit;cursor:pointer;color:inherit}
 
 /* ══════════════ HUD (놀이 중 화면 표시) ══════════════ */
 #hud{position:fixed;inset:0;pointer-events:none;z-index:10;
-  padding:calc(10px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right))
-          calc(12px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));
+  padding-top:calc(10px + env(safe-area-inset-top, 0px));padding-bottom:calc(12px + env(safe-area-inset-bottom, 0px));
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));
   font-weight:900}
 #hud.off{display:none}
 .hud-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
@@ -93,15 +94,15 @@ button{font-family:inherit;cursor:pointer;color:inherit}
 @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.2)}}
 
 /* 우두머리 체력 막대 */
-#boss{position:absolute;left:50%;top:calc(62px + env(safe-area-inset-top));transform:translateX(-50%);
+#boss{position:absolute;left:50%;top:calc(62px + env(safe-area-inset-top, 0px));transform:translateX(-50%);
   width:min(440px,70vw);text-align:center}
 #boss .bn{font-size:15px;color:#fff;text-shadow:0 2px 0 #3a2616,0 0 6px rgba(0,0,0,.6);margin-bottom:3px}
 #boss .bbar{height:16px;border-radius:999px;background:rgba(40,20,40,.75);border:2.5px solid #fff;overflow:hidden}
 #boss .bbar i{display:block;height:100%;width:100%;background:linear-gradient(#ff8a7a,#e8433a);transition:width .15s linear}
 
 /* 알림(가운데 위에서 내려오는 띠) */
-#toast{position:absolute;left:50%;top:calc(104px + env(safe-area-inset-top));transform:translateX(-50%);
-  display:flex;flex-direction:column;align-items:center;gap:6px;width:92vw;pointer-events:none}
+#toast{position:absolute;left:50%;top:calc(104px + env(safe-area-inset-top, 0px));transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:6px;width:calc(100% - 32px);pointer-events:none}
 .toast{
   padding:9px 20px;border-radius:999px;background:rgba(58,38,22,.9);color:#fff6e0;font-size:17px;
   border:2.5px solid #ffd77a;box-shadow:0 4px 12px rgba(0,0,0,.3);text-align:center;
@@ -113,8 +114,8 @@ button{font-family:inherit;cursor:pointer;color:inherit}
 @keyframes toastOut{to{opacity:0;transform:translateY(-10px)}}
 
 /* 아래쪽 도움말 */
-#hint{position:absolute;left:50%;bottom:calc(26px + env(safe-area-inset-bottom));transform:translateX(-50%);
-  max-width:92vw;padding:10px 20px;border-radius:16px;background:rgba(255,250,240,.93);
+#hint{position:absolute;left:50%;bottom:calc(26px + env(safe-area-inset-bottom, 0px));transform:translateX(-50%);
+  max-width:calc(100% - 32px);width:max-content;padding:10px 20px;border-radius:16px;background:rgba(255,250,240,.93);
   border:3px solid #7a5230;font-size:17px;text-align:center;line-height:1.35;
   box-shadow:0 4px 0 rgba(58,38,22,.3);transition:opacity .3s}
 #hint.off{opacity:0}
@@ -129,7 +130,8 @@ button{font-family:inherit;cursor:pointer;color:inherit}
 /* ══════════════ 메뉴 화면 ══════════════ */
 .screen{
   position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;
-  padding:calc(14px + env(safe-area-inset-top)) 14px calc(14px + env(safe-area-inset-bottom));
+  padding-top:calc(14px + env(safe-area-inset-top, 0px));padding-bottom:calc(14px + env(safe-area-inset-bottom, 0px));
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));
   overflow:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y
 }
 #title{background:linear-gradient(rgba(58,38,22,.25),rgba(58,38,22,.62))}
@@ -193,6 +195,10 @@ h2.ttl{margin:0 0 4px;font-size:30px;font-weight:900}
   background:#3a2616;color:#fff6e0;font-size:22px;font-weight:900;flex-direction:column;gap:14px}
 #loading i{font-style:normal;font-size:46px;animation:pulse 1s ease-in-out infinite}
 
+/* 기기에서 '움직임 줄이기'를 켠 경우: 깜빡이는 꾸밈과 화면 흔들림을 끔 */
+@media (prefers-reduced-motion:reduce){
+  .toast,.pill.bump,#track .nd.now,#loading i{animation:none}
+}
 @media (max-width:640px){
   .stages{grid-template-columns:1fr;gap:8px}
   .stg{display:grid;grid-template-columns:54px 1fr;text-align:left;column-gap:8px;padding:8px 10px}
@@ -2766,6 +2772,7 @@ function updCamera(dt) {
    8. 화면 그리기
    ══════════════════════════════════════════════════════════════════ */
 const QUAL = { scale: 1, shadow: true, slow: 0, ms: 16 };
+const CALM = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);   // 움직임 줄이기
 let NOISE = null, RINGTEX = null, DISCTEX = null;
 const OPAQUE = [], BLEND = [];
 
@@ -3084,7 +3091,7 @@ function render(t) {
   // 카메라: 비스듬히 내려다봄. 세로로 긴 화면일수록 더 멀리서 봄
   const aspect = R.w / R.h;
   const k = CAM.k * clamp(1.3 / aspect, 1, 2.1);
-  const sh = G.shake * G.shake * 0.6;
+  const sh = CALM ? 0 : G.shake * G.shake * 0.6;
   const cx = CAM.x + (sh ? rr(-sh, sh) : 0), cz = CAM.z + (sh ? rr(-sh, sh) : 0);
   if (G.demo) {
     const a = t * 0.1;
