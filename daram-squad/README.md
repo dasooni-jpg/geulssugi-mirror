@@ -84,6 +84,9 @@
 
 ## 🌐 온라인 주소 만들기 (Cloudflare Worker, 1회)
 
+> **가장 쉬운 길**: `daram-squad-cloudflare.zip` 을 받아 풀면 `1-읽어보세요.txt` 와 함께
+> **방법 A(Pages에 폴더 끌어다 놓기)** · **방법 B(Worker에 붙여넣기)** 두 폴더가 나옴. 둘 중 하나만 하면 됨.
+
 `daram-squad-worker.js` 하나에 게임 화면과 다람쌤 그림이 모두 들어 있음.
 
 1. Cloudflare 대시보드 → **Workers & Pages → Create → Worker** (이름 예: `daram-squad`)
